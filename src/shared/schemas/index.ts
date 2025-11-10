@@ -1,0 +1,174 @@
+import { z } from 'zod';
+import { 
+  USER_ROLES, 
+  USER_STATUS, 
+  PROVIDER_STATUS, 
+  PROJECT_STATUS,
+  PRODUCT_TYPES,
+  CURRENCIES,
+  BOX_TYPES,
+  AREA_LEVELS
+} from '../constants';
+
+// Validación personalizada de RUT
+const rutSchema = z.string()
+  .min(8, 'RUT debe tener al menos 8 caracteres')
+  .max(12, 'RUT no puede tener más de 12 caracteres')
+  .regex(/^[0-9]+[-|‐]{1}[0-9kK]{1}$/, 'Formato de RUT inválido (Ej: 12345678-9)');
+
+// Validación de email
+const emailSchema = z.string()
+  .email('Email inválido')
+  .min(5, 'Email debe tener al menos 5 caracteres')
+  .max(100, 'Email no puede tener más de 100 caracteres');
+
+// Validación de teléfono chileno
+const phoneSchema = z.string()
+  .regex(/^(\+?56)?[9]\d{8}$/, 'Teléfono inválido (Ej: +56912345678)')
+  .or(z.string().length(0)); // Permite vacío si es opcional
+
+// ────────────────────────────────────────────────────────────────
+// USER SCHEMAS
+// ────────────────────────────────────────────────────────────────
+
+export const createUserSchema = z.object({
+  name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(50),
+  lastName: z.string().min(2, 'Apellido debe tener al menos 2 caracteres').max(50),
+  email: emailSchema,
+  rut: rutSchema,
+  phone: phoneSchema.optional(),
+  role: z.enum([USER_ROLES.ADMIN, USER_ROLES.JEFE, USER_ROLES.SUPERVISOR]),
+  status: z.enum([USER_STATUS.HABILITADO, USER_STATUS.DESHABILITADO]).default(USER_STATUS.HABILITADO),
+  areas: z.array(z.string()).default([]),
+  warehouses: z.array(z.string()).default([]),
+  tenantId: z.string().min(1),
+});
+
+export const updateUserSchema = createUserSchema.partial().extend({
+  id: z.string().min(1),
+});
+
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
+// ────────────────────────────────────────────────────────────────
+// AREA SCHEMAS
+// ────────────────────────────────────────────────────────────────
+
+export const createAreaSchema = z.object({
+  name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
+  level: z.enum([AREA_LEVELS.PRINCIPAL, AREA_LEVELS.DEPENDIENTE]),
+  parentId: z.string().optional(),
+  status: z.string().default('ACTIVO'),
+  tenantId: z.string().min(1),
+});
+
+export const updateAreaSchema = createAreaSchema.partial().extend({
+  id: z.string().min(1),
+});
+
+export type CreateAreaInput = z.infer<typeof createAreaSchema>;
+export type UpdateAreaInput = z.infer<typeof updateAreaSchema>;
+
+// ────────────────────────────────────────────────────────────────
+// WAREHOUSE SCHEMAS
+// ────────────────────────────────────────────────────────────────
+
+export const createWarehouseSchema = z.object({
+  name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
+  capacityKg: z.number().min(0, 'Capacidad debe ser mayor a 0'),
+  status: z.string().default('ACTIVO'),
+  areaId: z.string().optional(),
+  supervisorId: z.string().optional(),
+  tenantId: z.string().min(1),
+});
+
+export const updateWarehouseSchema = createWarehouseSchema.partial().extend({
+  id: z.string().min(1),
+});
+
+export type CreateWarehouseInput = z.infer<typeof createWarehouseSchema>;
+export type UpdateWarehouseInput = z.infer<typeof updateWarehouseSchema>;
+
+// ────────────────────────────────────────────────────────────────
+// BOX SCHEMAS
+// ────────────────────────────────────────────────────────────────
+
+export const createBoxSchema = z.object({
+  code: z.string().min(1, 'Código es requerido').max(50),
+  type: z.enum([BOX_TYPES.CARTON, BOX_TYPES.PLASTICO, BOX_TYPES.MADERA, BOX_TYPES.METALICA]),
+  status: z.string().default('DISPONIBLE'),
+  unitCost: z.number().min(0, 'Costo debe ser mayor o igual a 0'),
+  currency: z.enum([CURRENCIES.CLP, CURRENCIES.USD, CURRENCIES.EUR]),
+  history: z.array(z.any()).default([]),
+  tenantId: z.string().min(1),
+});
+
+export const updateBoxSchema = createBoxSchema.partial().extend({
+  id: z.string().min(1),
+});
+
+export type CreateBoxInput = z.infer<typeof createBoxSchema>;
+export type UpdateBoxInput = z.infer<typeof updateBoxSchema>;
+
+// ────────────────────────────────────────────────────────────────
+// PRODUCT SCHEMAS
+// ────────────────────────────────────────────────────────────────
+
+export const createProductSchema = z.object({
+  sku: z.string().min(1, 'SKU es requerido').max(50),
+  description: z.string().min(5, 'Descripción debe tener al menos 5 caracteres').max(500),
+  type: z.enum([PRODUCT_TYPES.EQUIPO, PRODUCT_TYPES.MATERIAL, PRODUCT_TYPES.REPUESTO]),
+  status: z.string().default('ACTIVO'),
+  uom: z.string().optional(), // Unit of measure
+  unitCost: z.number().min(0).optional(),
+  currency: z.enum([CURRENCIES.CLP, CURRENCIES.USD, CURRENCIES.EUR]).optional(),
+  providerId: z.string().optional(),
+  projectId: z.string().optional(),
+  tenantId: z.string().min(1),
+});
+
+export const updateProductSchema = createProductSchema.partial().extend({
+  id: z.string().min(1),
+});
+
+export type CreateProductInput = z.infer<typeof createProductSchema>;
+export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+
+// ────────────────────────────────────────────────────────────────
+// PROVIDER SCHEMAS
+// ────────────────────────────────────────────────────────────────
+
+export const createProviderSchema = z.object({
+  name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
+  status: z.enum([PROVIDER_STATUS.ACTIVO, PROVIDER_STATUS.INACTIVO]).default(PROVIDER_STATUS.ACTIVO),
+  productsCount: z.number().default(0),
+  tenantId: z.string().min(1),
+});
+
+export const updateProviderSchema = createProviderSchema.partial().extend({
+  id: z.string().min(1),
+});
+
+export type CreateProviderInput = z.infer<typeof createProviderSchema>;
+export type UpdateProviderInput = z.infer<typeof updateProviderSchema>;
+
+// ────────────────────────────────────────────────────────────────
+// PROJECT SCHEMAS
+// ────────────────────────────────────────────────────────────────
+
+export const createProjectSchema = z.object({
+  name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
+  code: z.string().min(1, 'Código es requerido').max(50),
+  status: z.enum([PROJECT_STATUS.ACTIVO, PROJECT_STATUS.INACTIVO, PROJECT_STATUS.FINALIZADO])
+    .default(PROJECT_STATUS.ACTIVO),
+  productsCount: z.number().default(0),
+  tenantId: z.string().min(1),
+});
+
+export const updateProjectSchema = createProjectSchema.partial().extend({
+  id: z.string().min(1),
+});
+
+export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
