@@ -1,15 +1,40 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/presentation/providers/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Mock login - redirect to dashboard
-    router.push("/dashboard");
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Mock login - cualquier credencial funciona
+      await login("user@kreatech.cl", "password");
+      
+      toast({
+        title: "¡Bienvenido!",
+        description: "Has iniciado sesión correctamente",
+      });
+      
+      router.push("/dashboard");
+    } catch {
+      toast({
+        title: "Error",
+        description: "Error al iniciar sesión",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -27,12 +52,21 @@ export default function LoginPage() {
         <CardContent className="space-y-4 pb-8">
           <Button
             onClick={handleLogin}
+            disabled={isLoading}
             className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 text-base font-medium"
           >
-            Iniciar sesión con Google
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Iniciando sesión...
+              </>
+            ) : (
+              "Iniciar sesión con Google"
+            )}
           </Button>
           <Button
             onClick={handleLogin}
+            disabled={isLoading}
             variant="outline"
             className="w-full h-12 border-2 text-base font-medium"
           >

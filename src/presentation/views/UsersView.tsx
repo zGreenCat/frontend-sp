@@ -17,11 +17,14 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { UserDialog } from "@/presentation/components/UserDialog";
 import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 import { CreateUserInput } from "@/shared/schemas";
+import { PERMISSIONS } from "@/shared/permissions";
 
 export function UsersView() {
   const { userRepo } = useRepositories();
   const { toast } = useToast();
+  const { can } = usePermissions();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -151,13 +154,15 @@ export function UsersView() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Usuarios</h1>
             <p className="text-muted-foreground">Gestión de usuarios del sistema</p>
           </div>
-          <Button 
-            className="bg-primary text-primary-foreground h-10 gap-2"
-            onClick={openCreateDialog}
-          >
-            <Plus className="h-4 w-4" />
-            Nuevo Usuario
-          </Button>
+          {can(PERMISSIONS.USERS_CREATE) && (
+            <Button 
+              className="bg-primary text-primary-foreground h-10 gap-2"
+              onClick={openCreateDialog}
+            >
+              <Plus className="h-4 w-4" />
+              Nuevo Usuario
+            </Button>
+          )}
         </div>
 
       <Card className="shadow-sm">
@@ -211,22 +216,26 @@ export function UsersView() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(user)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteConfirm(user)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {can(PERMISSIONS.USERS_EDIT) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(user)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {can(PERMISSIONS.USERS_DELETE) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteConfirm(user)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
