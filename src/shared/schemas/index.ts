@@ -36,7 +36,7 @@ export const createUserSchema = z.object({
   lastName: z.string().min(2, 'Apellido debe tener al menos 2 caracteres').max(50),
   email: emailSchema,
   rut: rutSchema,
-  phone: phoneSchema.optional(),
+  phone: phoneSchema.or(z.string()).default(""),
   role: z.enum([USER_ROLES.ADMIN, USER_ROLES.JEFE, USER_ROLES.SUPERVISOR]),
   status: z.enum([USER_STATUS.HABILITADO, USER_STATUS.DESHABILITADO]).default(USER_STATUS.HABILITADO),
   areas: z.array(z.string()).default([]),

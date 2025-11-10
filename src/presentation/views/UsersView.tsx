@@ -2,16 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { ListUsers } from "@/application/usecases/user/ListUsers";
+import { CreateUser } from "@/application/usecases/user/CreateUser";
+import { UpdateUser } from "@/application/usecases/user/UpdateUser";
+import { DisableUser } from "@/application/usecases/user/DisableUser";
 import { TENANT_ID } from "@/shared/constants";
 import { User } from "@/domain/entities/User";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { UserDialog } from "@/presentation/components/UserDialog";
+import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
+import { CreateUserInput } from "@/shared/schemas";
 
 export function UsersView() {
   const { userRepo } = useRepositories();
@@ -19,10 +25,10 @@ export function UsersView() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -41,6 +47,96 @@ export function UsersView() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreate = async (data: CreateUserInput) => {
+    setActionLoading(true);
+    const useCase = new CreateUser(userRepo);
+    const result = await useCase.execute(data);
+    
+    if (result.ok) {
+      toast({
+        title: "Éxito",
+        description: "Usuario creado correctamente",
+      });
+      await loadUsers();
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Error al crear usuario",
+        variant: "destructive",
+      });
+    }
+    setActionLoading(false);
+  };
+
+  const handleUpdate = async (data: CreateUserInput) => {
+    if (!selectedUser) return;
+    
+    setActionLoading(true);
+    const useCase = new UpdateUser(userRepo);
+    const result = await useCase.execute(selectedUser.id, data, TENANT_ID);
+    
+    if (result.ok) {
+      toast({
+        title: "Éxito",
+        description: "Usuario actualizado correctamente",
+      });
+      await loadUsers();
+      setSelectedUser(null);
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Error al actualizar usuario",
+        variant: "destructive",
+      });
+    }
+    setActionLoading(false);
+  };
+
+  const handleDisable = async () => {
+    if (!selectedUser) return;
+    
+    setActionLoading(true);
+    const useCase = new DisableUser(userRepo);
+    const result = await useCase.execute(selectedUser.id, TENANT_ID);
+    
+    if (result.ok) {
+      toast({
+        title: "Éxito",
+        description: "Usuario deshabilitado correctamente",
+      });
+      await loadUsers();
+      setSelectedUser(null);
+      setConfirmOpen(false);
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Error al deshabilitar usuario",
+        variant: "destructive",
+      });
+    }
+    setActionLoading(false);
+  };
+
+  const openCreateDialog = () => {
+    setSelectedUser(null);
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (user: User) => {
+    setSelectedUser(user);
+    setDialogOpen(true);
+  };
+
+  const openDeleteConfirm = (user: User) => {
+    setSelectedUser(user);
+    setConfirmOpen(true);
+  };
+
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.lastName.toLowerCase().includes(search.toLowerCase()) ||
@@ -48,17 +144,21 @@ export function UsersView() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Usuarios</h1>
-          <p className="text-muted-foreground">Gestión de usuarios del sistema</p>
+    <>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Usuarios</h1>
+            <p className="text-muted-foreground">Gestión de usuarios del sistema</p>
+          </div>
+          <Button 
+            className="bg-primary text-primary-foreground h-10 gap-2"
+            onClick={openCreateDialog}
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Usuario
+          </Button>
         </div>
-        <Button className="bg-primary text-primary-foreground h-10 gap-2">
-          <Plus className="h-4 w-4" />
-          Nuevo Usuario
-        </Button>
-      </div>
 
       <Card className="shadow-sm">
         <CardHeader>
@@ -89,6 +189,7 @@ export function UsersView() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Rol</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Estado</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Áreas</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -108,6 +209,26 @@ export function UsersView() {
                       <td className="py-4 px-4 text-sm text-muted-foreground">
                         {user.areas.length} área(s)
                       </td>
+                      <td className="py-4 px-4">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(user)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteConfirm(user)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -116,6 +237,26 @@ export function UsersView() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+
+      {/* Dialog para crear/editar usuario */}
+      <UserDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSubmit={selectedUser ? handleUpdate : handleCreate}
+        defaultValues={selectedUser || undefined}
+        isLoading={actionLoading}
+        mode={selectedUser ? "edit" : "create"}
+      />
+
+      {/* Dialog de confirmación para deshabilitar */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={handleDisable}
+        title="¿Deshabilitar usuario?"
+        description={`¿Está seguro de deshabilitar al usuario ${selectedUser?.name} ${selectedUser?.lastName}? Esta acción puede revertirse más tarde.`}
+      />
+    </>
   );
 }
