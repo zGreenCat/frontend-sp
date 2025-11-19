@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/presentation/providers/AuthProvider";
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 
 export function AppTopbar() {
@@ -21,16 +21,27 @@ export function AppTopbar() {
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
   };
 
   const handleProfile = () => {
     router.push('/profile');
   };
 
-  const userInitials = user 
-    ? `${user.name.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
-    : 'U';
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    
+    if (user.name) {
+      const nameParts = user.name.split(' ');
+      if (nameParts.length > 1) {
+        return `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase();
+      }
+      return user.name.substring(0, 2).toUpperCase();
+    }
+    
+    return user.email.substring(0, 2).toUpperCase();
+  };
+
+  const userInitials = getUserInitials();
 
   return (
     <header className="h-16 border-b border-border bg-card flex items-center px-4 gap-4">
@@ -69,7 +80,7 @@ export function AppTopbar() {
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">
-                  {user?.name} {user?.lastName}
+                  {user?.name || 'Usuario'}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user?.email}

@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { RepositoryProvider } from "@/presentation/providers/RepositoryProvider";
-import { AuthProvider } from "@/presentation/providers/AuthProvider";
+import { AuthProvider as NewAuthProvider } from "@/hooks/use-auth";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -13,7 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <NewAuthProvider>
         <TooltipProvider>
           <RepositoryProvider>
             {children}
@@ -21,7 +21,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <Sonner />
           </RepositoryProvider>
         </TooltipProvider>
-      </AuthProvider>
+      </NewAuthProvider>
     </QueryClientProvider>
   );
 }
