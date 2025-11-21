@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,19 +33,43 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-hero p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -20, scale: 0.95 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="w-full max-w-lg"
+      >
+        <Card className="w-full shadow-2xl">
         <CardHeader className="space-y-3 text-center pb-6">
-          <div className="mx-auto h-16 w-16 bg-primary rounded-2xl flex items-center justify-center mb-2 shadow-lg">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+            className="mx-auto h-16 w-16 bg-primary rounded-2xl flex items-center justify-center mb-2 shadow-lg"
+          >
             <Package className="text-primary-foreground h-8 w-8" />
-          </div>
-          <CardTitle className="text-3xl font-bold">Smart Packaging</CardTitle>
-          <CardDescription className="text-base">
-            Inicia sesión para continuar
-          </CardDescription>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <CardTitle className="text-3xl font-bold">Smart Packaging</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Inicia sesión para continuar
+            </CardDescription>
+          </motion.div>
         </CardHeader>
         
         <CardContent className="space-y-6 pb-8">
-          <form onSubmit={handleLogin} className="space-y-4">
+          <motion.form
+            onSubmit={handleLogin}
+            className="space-y-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
                 Correo electrónico
@@ -108,9 +133,14 @@ export default function LoginPage() {
             >
               {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
             </Button>
-          </form>
+          </motion.form>
 
-          <div className="relative">
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -119,18 +149,25 @@ export default function LoginPage() {
                 ¿No tienes cuenta?
               </span>
             </div>
-          </div>
+          </motion.div>
 
-          <Link href="/register">
-            <Button
-              variant="outline"
-              className="w-full h-12 border-2 text-base font-medium rounded-xl hover:bg-secondary/50 transition-all"
-            >
-              Crear cuenta nueva
-            </Button>
-          </Link>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Link href="/register">
+              <Button
+                variant="outline"
+                className="w-full h-12 border-2 text-base font-medium rounded-xl hover:bg-secondary/50 transition-all"
+              >
+                Crear cuenta nueva
+              </Button>
+            </Link>
+          </motion.div>
         </CardContent>
       </Card>
+      </motion.div>
     </div>
   );
 }

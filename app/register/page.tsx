@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Mail, Lock, Eye, EyeOff, User } from "lucide-react";
+import { Package, Mail, Lock, Eye, EyeOff, User, ArrowRight, ArrowLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -38,7 +40,7 @@ export default function RegisterPage() {
     }
   };
 
-  const validateForm = () => {
+  const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
@@ -50,6 +52,13 @@ export default function RegisterPage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Correo electrónico inválido";
     }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const newErrors: Record<string, string> = {};
 
     if (!formData.password) {
       newErrors.password = "La contraseña es requerida";
@@ -69,10 +78,22 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleNextStep = () => {
+    if (validateStep1()) {
+      setStep(2);
+      setErrors({});
+    }
+  };
+
+  const handlePrevStep = () => {
+    setStep(1);
+    setErrors({});
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateStep2()) {
       return;
     }
 
@@ -94,164 +115,229 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-hero p-4 py-8">
-      <Card className="w-full max-w-md shadow-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -20, scale: 0.95 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="w-full max-w-lg"
+      >
+        <Card className="w-full shadow-2xl">
         <CardHeader className="space-y-3 text-center pb-6">
-          <div className="mx-auto h-16 w-16 bg-success rounded-2xl flex items-center justify-center mb-2 shadow-lg">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+            className="mx-auto h-16 w-16 bg-success rounded-2xl flex items-center justify-center mb-2 shadow-lg"
+          >
             <Package className="text-success-foreground h-8 w-8" />
-          </div>
-          <CardTitle className="text-3xl font-bold">Crear cuenta</CardTitle>
-          <CardDescription className="text-base">
-            Únete a Smart Packaging
-          </CardDescription>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <CardTitle className="text-3xl font-bold">Crear cuenta</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Únete a Smart Packaging
+            </CardDescription>
+          </motion.div>
         </CardHeader>
         
         <CardContent className="space-y-6 pb-8">
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium">
-                Nombre completo
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  placeholder="Juan Pérez"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`pl-10 h-12 rounded-xl ${errors.name ? "border-destructive" : ""}`}
-                  required
-                />
-              </div>
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name}</p>
-              )}
-            </div>
+          {/* Indicador de pasos */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className={`h-2 w-12 rounded-full transition-all ${step === 1 ? 'bg-success' : 'bg-success/30'}`} />
+            <div className={`h-2 w-12 rounded-full transition-all ${step === 2 ? 'bg-success' : 'bg-success/30'}`} />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Correo electrónico
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="tu@email.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`pl-10 h-12 rounded-xl ${errors.email ? "border-destructive" : ""}`}
-                  required
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
-                Contraseña
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`pl-10 pr-10 h-12 rounded-xl ${errors.password ? "border-destructive" : ""}`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirmar contraseña
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`pl-10 pr-10 h-12 rounded-xl ${errors.confirmPassword ? "border-destructive" : ""}`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-              )}
-            </div>
-
-            <div className="flex items-start space-x-3 pt-2">
-              <Checkbox
-                id="terms"
-                checked={acceptTerms}
-                onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                className="mt-1"
-              />
-              <Label
-                htmlFor="terms"
-                className="text-sm leading-relaxed cursor-pointer"
+          <AnimatePresence mode="wait">
+            {step === 1 ? (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
               >
-                Acepto los{" "}
-                <Link href="/terms" className="text-primary hover:text-primary/80 font-medium">
-                  términos y condiciones
-                </Link>{" "}
-                y la{" "}
-                <Link href="/privacy" className="text-primary hover:text-primary/80 font-medium">
-                  política de privacidad
-                </Link>
-              </Label>
-            </div>
-            {errors.terms && (
-              <p className="text-sm text-destructive">{errors.terms}</p>
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-medium">
+                    Nombre completo
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                    <Input
+                      id="name"
+                      name="name"
+                      type="text"
+                      placeholder="Juan Pérez"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className={`pl-10 h-12 rounded-xl ${errors.name ? "border-destructive" : ""}`}
+                    />
+                  </div>
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Correo electrónico
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="tu@email.com"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`pl-10 h-12 rounded-xl ${errors.email ? "border-destructive" : ""}`}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleNextStep}
+                  className="w-full h-12 bg-success text-success-foreground hover:bg-success/90 text-base font-medium rounded-xl shadow-md hover:shadow-lg transition-all mt-6 gap-2"
+                >
+                  Continuar
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </motion.div>
+            ) : (
+              <motion.form
+                key="step2"
+                onSubmit={handleRegister}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Contraseña
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`pl-10 pr-10 h-12 rounded-xl ${errors.password ? "border-destructive" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                    Confirmar contraseña
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className={`pl-10 pr-10 h-12 rounded-xl ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <div className="flex items-start space-x-3 pt-2">
+                  <Checkbox
+                    id="terms"
+                    checked={acceptTerms}
+                    onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+                    className="mt-1"
+                  />
+                  <Label
+                    htmlFor="terms"
+                    className="text-sm leading-relaxed cursor-pointer"
+                  >
+                    Acepto los{" "}
+                    <Link href="/terms" className="text-primary hover:text-primary/80 font-medium">
+                      términos y condiciones
+                    </Link>{" "}
+                    y la{" "}
+                    <Link href="/privacy" className="text-primary hover:text-primary/80 font-medium">
+                      política de privacidad
+                    </Link>
+                  </Label>
+                </div>
+                {errors.terms && (
+                  <p className="text-sm text-destructive">{errors.terms}</p>
+                )}
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    type="button"
+                    onClick={handlePrevStep}
+                    variant="outline"
+                    className="h-12 text-base font-medium rounded-xl gap-2 flex-1"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                    Atrás
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="h-12 bg-success text-success-foreground hover:bg-success/90 text-base font-medium rounded-xl shadow-md hover:shadow-lg transition-all flex-1"
+                  >
+                    {isLoading ? "Creando cuenta..." : "Crear cuenta"}
+                  </Button>
+                </div>
+              </motion.form>
             )}
+          </AnimatePresence>
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-12 bg-success text-success-foreground hover:bg-success/90 text-base font-medium rounded-xl shadow-md hover:shadow-lg transition-all mt-6"
-            >
-              {isLoading ? "Creando cuenta..." : "Crear cuenta"}
-            </Button>
-          </form>
-
-          <div className="relative">
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -260,18 +346,25 @@ export default function RegisterPage() {
                 ¿Ya tienes cuenta?
               </span>
             </div>
-          </div>
+          </motion.div>
 
-          <Link href="/login">
-            <Button
-              variant="outline"
-              className="w-full h-12 border-2 text-base font-medium rounded-xl hover:bg-secondary/50 transition-all"
-            >
-              Iniciar sesión
-            </Button>
-          </Link>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Link href="/login">
+              <Button
+                variant="outline"
+                className="w-full h-12 border-2 text-base font-medium rounded-xl hover:bg-secondary/50 transition-all"
+              >
+                Iniciar sesión
+              </Button>
+            </Link>
+          </motion.div>
         </CardContent>
       </Card>
+      </motion.div>
     </div>
   );
 }
