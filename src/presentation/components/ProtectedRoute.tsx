@@ -2,13 +2,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/presentation/providers/AuthProvider";
-import { Permission } from "@/shared/permissions";
-import { hasPermission } from "@/shared/permissions";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredPermission?: Permission;
+  requiredPermission?: string;
   fallbackPath?: string;
 }
 
@@ -21,7 +19,7 @@ export function ProtectedRoute({
   requiredPermission, 
   fallbackPath = "/dashboard" 
 }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasPermission } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -35,10 +33,10 @@ export function ProtectedRoute({
     }
 
     // Si se especifica un permiso requerido, verificar que el usuario lo tenga
-    if (requiredPermission && !hasPermission(user.role, requiredPermission)) {
+    if (requiredPermission && !hasPermission(requiredPermission)) {
       router.push(fallbackPath);
     }
-  }, [user, isLoading, requiredPermission, fallbackPath, router]);
+  }, [user, isLoading, requiredPermission, fallbackPath, router, hasPermission]);
 
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
@@ -58,7 +56,7 @@ export function ProtectedRoute({
   }
 
   // Si hay permiso requerido y el usuario no lo tiene, no renderizar nada
-  if (requiredPermission && !hasPermission(user.role, requiredPermission)) {
+  if (requiredPermission && !hasPermission(requiredPermission)) {
     return null;
   }
 

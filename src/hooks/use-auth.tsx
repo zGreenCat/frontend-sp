@@ -14,6 +14,7 @@ interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -122,6 +123,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const hasPermission = (_permission: string): boolean => {
+    // TODO: Implementar lógica de permisos basada en el rol del usuario
+    // Por ahora retorna true para todos los permisos
+    return true;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -132,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         refreshUser,
+        hasPermission,
       }}
     >
       {children}

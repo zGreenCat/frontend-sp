@@ -1,12 +1,12 @@
-import { useAuth } from '@/presentation/providers/AuthProvider';
-import { hasPermission, hasAllPermissions, Permission } from '@/shared/permissions';
+import { useAuth } from '@/hooks/use-auth';
+import { Permission } from '@/shared/permissions';
 
 /**
  * Hook personalizado para verificar permisos del usuario autenticado
  * Proporciona una interfaz sencilla para control de acceso basado en roles
  */
 export function usePermissions() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   /**
    * Verifica si el usuario tiene un permiso específico
@@ -14,8 +14,7 @@ export function usePermissions() {
    * @returns true si el usuario tiene el permiso, false en caso contrario
    */
   const can = (permission: Permission): boolean => {
-    if (!user) return false;
-    return hasPermission(user.role, permission);
+    return hasPermission(permission);
   };
 
   /**
@@ -25,7 +24,7 @@ export function usePermissions() {
    */
   const canAll = (permissions: Permission[]): boolean => {
     if (!user) return false;
-    return hasAllPermissions(user.role, permissions);
+    return permissions.every(permission => hasPermission(permission));
   };
 
   /**
@@ -35,7 +34,7 @@ export function usePermissions() {
    */
   const canAny = (permissions: Permission[]): boolean => {
     if (!user) return false;
-    return permissions.some(permission => hasPermission(user.role, permission));
+    return permissions.some(permission => hasPermission(permission));
   };
 
   /**
@@ -43,8 +42,8 @@ export function usePermissions() {
    * @returns true si el usuario tiene rol de ADMIN
    */
   const isAdmin = (): boolean => {
-    if (!user) return false;
-    return user.role === 'ADMIN';
+    if (!user || !user.role) return false;
+    return user.role.name === 'ADMIN' || user.roleId === 'ADMIN';
   };
 
   /**
@@ -52,8 +51,8 @@ export function usePermissions() {
    * @returns true si el usuario tiene rol de JEFE
    */
   const isManager = (): boolean => {
-    if (!user) return false;
-    return user.role === 'JEFE';
+    if (!user || !user.role) return false;
+    return user.role.name === 'JEFE' || user.roleId === 'JEFE';
   };
 
   /**
@@ -61,8 +60,8 @@ export function usePermissions() {
    * @returns true si el usuario tiene rol de SUPERVISOR
    */
   const isSupervisor = (): boolean => {
-    if (!user) return false;
-    return user.role === 'SUPERVISOR';
+    if (!user || !user.role) return false;
+    return user.role.name === 'SUPERVISOR' || user.roleId === 'SUPERVISOR';
   };
 
   return {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/presentation/providers/AuthProvider";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ export function ProfileView() {
     router.push('/login');
   };
 
-  const userInitials = `${user.name.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+  const userInitials = `${(user.name || 'U').charAt(0)}${(user.lastName || 'S').charAt(0)}`.toUpperCase();
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -64,12 +64,12 @@ export function ProfileView() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <CardTitle className="text-2xl">{user.name} {user.lastName}</CardTitle>
+                <CardTitle className="text-2xl">{user.name} {user.lastName || ''}</CardTitle>
                 <CardDescription className="text-base mt-1">
-                  {translateRole(user.role)}
+                  {user.role?.name || 'Usuario'}
                 </CardDescription>
                 <div className="mt-2">
-                  <EntityBadge status={user.status} />
+                  <EntityBadge status={user.status || 'HABILITADO'} />
                 </div>
               </div>
             </div>
@@ -116,7 +116,7 @@ export function ProfileView() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Teléfono</p>
-                <p className="font-medium">{formatPhone(user.phone)}</p>
+                <p className="font-medium">{user.phone ? formatPhone(user.phone) : 'No especificado'}</p>
               </div>
             </div>
 
@@ -126,7 +126,7 @@ export function ProfileView() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">RUT</p>
-                <p className="font-medium font-mono">{user.rut}</p>
+                <p className="font-medium font-mono">{user.rut || 'No especificado'}</p>
               </div>
             </div>
 
@@ -136,7 +136,7 @@ export function ProfileView() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Rol</p>
-                <p className="font-medium">{translateRole(user.role)}</p>
+                <p className="font-medium">{user.role?.name || 'Usuario'}</p>
               </div>
             </div>
           </div>
@@ -151,7 +151,7 @@ export function ProfileView() {
                 <h3 className="font-semibold">Áreas Asignadas</h3>
               </div>
               <div className="flex flex-wrap gap-2">
-                {user.areas.length > 0 ? (
+                {user.areas && user.areas.length > 0 ? (
                   user.areas.map((areaId) => (
                     <Badge key={areaId} variant="secondary">
                       {areaId}
@@ -169,7 +169,7 @@ export function ProfileView() {
                 <h3 className="font-semibold">Bodegas Asignadas</h3>
               </div>
               <div className="flex flex-wrap gap-2">
-                {user.warehouses.length > 0 ? (
+                {user.warehouses && user.warehouses.length > 0 ? (
                   user.warehouses.map((warehouseId) => (
                     <Badge key={warehouseId} variant="secondary">
                       {warehouseId}
@@ -192,7 +192,7 @@ export function ProfileView() {
             Permisos del Rol
           </CardTitle>
           <CardDescription>
-            Funcionalidades disponibles para el rol de {translateRole(user.role)}
+            Funcionalidades disponibles para el rol de {user.role?.name || 'Usuario'}
           </CardDescription>
         </CardHeader>
         <CardContent>

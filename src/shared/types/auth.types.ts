@@ -19,8 +19,14 @@ export interface User {
   id: string;
   email: string;
   name: string | null;
+  lastName?: string;
+  rut?: string;
+  phone?: string;
   roleId: string;
   role?: Role;
+  status?: string;
+  areas?: string[];
+  warehouses?: string[];
   createdAt: string;
   updatedAt: string;
 }
