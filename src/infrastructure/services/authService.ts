@@ -1,4 +1,5 @@
 import { apiClient } from "@/infrastructure/api/apiClient";
+import { roleService } from "@/infrastructure/services/roleService";
 import {
   LoginRequest,
   RegisterRequest,
@@ -97,6 +98,8 @@ export class AuthService {
     if (typeof window !== "undefined") {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
+      // Limpiar cache de roles
+      roleService.clearCache();
     }
   }
 

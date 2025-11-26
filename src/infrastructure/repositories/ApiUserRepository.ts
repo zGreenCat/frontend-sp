@@ -2,6 +2,7 @@ import { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { User } from '@/domain/entities/User';
 import { apiClient } from '@/infrastructure/api/apiClient';
 import { roleService } from '@/infrastructure/services/roleService';
+import { mapFrontendRoleToBackend, mapBackendRoleToFrontend } from '@/shared/constants';
 
 // Tipo para el usuario del backend
 interface BackendUser {
@@ -17,18 +18,15 @@ interface BackendUser {
     name: string;
     description?: string;
   };
+  isEnabled?: boolean; // Estado del usuario
   tenantId: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export class ApiUserRepository implements IUserRepository {
-  constructor() {
-    // Cargar roles al inicializar
-    roleService.loadRoles().catch(err => 
-      console.error('Failed to load roles:', err)
-    );
-  }
+  // No cargar roles en constructor para evitar errores de SSR
+  // Los roles se cargarán solo cuando sean necesarios
 
   // Asignar un Jefe a un área
   private async assignManagerToArea(areaId: string, managerId: string): Promise<void> {
@@ -75,6 +73,11 @@ export class ApiUserRepository implements IUserRepository {
 
   // Mapear usuario del backend al dominio
   private mapBackendUser(backendUser: BackendUser): User {
+    // Mapear rol del backend al frontend (AREA_MANAGER -> JEFE, WAREHOUSE_SUPERVISOR -> SUPERVISOR)
+    const backendRoleName = backendUser.role?.name || 'WAREHOUSE_SUPERVISOR';
+    const frontendRole = mapBackendRoleToFrontend(backendRoleName);
+    console.log('🔄 Role mapping (Backend -> Frontend):', backendRoleName, '→', frontendRole);
+    
     return {
       id: backendUser.id,
       name: backendUser.firstName, // Mapear firstName -> name
@@ -82,8 +85,8 @@ export class ApiUserRepository implements IUserRepository {
       email: backendUser.email,
       rut: backendUser.rut || '',
       phone: backendUser.phone || '',
-      role: (backendUser.role?.name || 'SUPERVISOR') as 'ADMIN' | 'JEFE' | 'SUPERVISOR',
-      status: 'HABILITADO' as const,
+      role: frontendRole as 'ADMIN' | 'JEFE' | 'SUPERVISOR',
+      status: backendUser.isEnabled !== false ? 'HABILITADO' : 'DESHABILITADO',
       areas: [], // TODO: Backend debe agregar estos campos
       warehouses: [], // TODO: Backend debe agregar estos campos
       tenantId: backendUser.tenantId,
@@ -92,19 +95,20 @@ export class ApiUserRepository implements IUserRepository {
 
   // Mapear usuario del dominio al backend
   private async mapDomainUser(user: Omit<User, 'id'>) {
-    // Asegurar que los roles están cargados
-    await roleService.loadRoles();
+    // Mapear rol de frontend a backend (JEFE -> AREA_MANAGER)
+    const backendRole = mapFrontendRoleToBackend(user.role);
+    console.log('🔄 Role mapping for create:', user.role, '→', backendRole);
     
-    // Obtener roleId desde el nombre del rol
-    const roleId = roleService.getRoleIdByName(user.role);
+    // Limpiar RUT: quitar puntos y guiones
+    const cleanRut = user.rut ? user.rut.replace(/[.-]/g, '') : null;
     
     return {
       email: user.email,
       firstName: user.name, // Mapear name -> firstName
       lastName: user.lastName,
-      rut: user.rut || null,
+      rut: cleanRut,
       phone: user.phone || null,
-      roleId: roleId || user.role, // Usar roleId si está disponible, sino el nombre
+      role: backendRole, // Enviar SOLO el nombre del rol (no roleId)
       areas: user.areas,
       warehouses: user.warehouses,
     };
@@ -182,20 +186,28 @@ export class ApiUserRepository implements IUserRepository {
 
   async update(id: string, updates: Partial<User>, tenantId: string): Promise<User> {
     try {
-      await roleService.loadRoles(); // Asegurar roles cargados
-      
       const payload: any = {};
       if (updates.name) payload.firstName = updates.name;
       if (updates.lastName) payload.lastName = updates.lastName;
       if (updates.email) payload.email = updates.email;
-      if (updates.rut !== undefined) payload.rut = updates.rut || null;
-      if (updates.phone !== undefined) payload.phone = updates.phone || null;
-      if (updates.role) {
-        const roleId = roleService.getRoleIdByName(updates.role);
-        payload.roleId = roleId || updates.role;
+      
+      // Limpiar RUT: quitar puntos y guiones antes de enviar
+      if (updates.rut !== undefined) {
+        payload.rut = updates.rut ? updates.rut.replace(/[.-]/g, '') : null;
       }
       
-      // No enviar areas/warehouses en el payload del usuario
+      if (updates.phone !== undefined) payload.phone = updates.phone || null;
+      
+      // Mapear status a isEnabled (backend usa isEnabled en lugar de status)
+      if (updates.status !== undefined) {
+        payload.isEnabled = updates.status === 'HABILITADO';
+      }
+      
+      // ⚠️ IMPORTANTE: El endpoint PUT /users/{id} NO acepta 'role'
+      // El rol no se puede actualizar después de la creación
+      // Solo se pueden actualizar: email, firstName, lastName, rut, phone, isEnabled
+      
+      // No enviar areas/warehouses/role en el payload del usuario
       const hasAssignments = updates.areas || updates.warehouses;
       
       console.log('📤 Updating user:', id, payload);
@@ -221,7 +233,9 @@ export class ApiUserRepository implements IUserRepository {
 
   async disable(id: string, tenantId: string): Promise<void> {
     try {
-      await apiClient.delete(`/users/${id}`, true);
+      // Deshabilitar usuario actualizando isEnabled a false
+      await apiClient.put(`/users/${id}`, { isEnabled: false }, true);
+      console.log('✅ Usuario deshabilitado:', id);
     } catch (error) {
       console.error('Error disabling user:', error);
       throw error;

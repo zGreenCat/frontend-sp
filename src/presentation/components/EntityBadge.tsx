@@ -17,10 +17,13 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   EN_USO: { label: "En Uso", className: "bg-primary text-primary-foreground" },
   FINALIZADO: { label: "Finalizado", className: "bg-secondary text-secondary-foreground" },
   
-  // User roles
+  // User roles (todos con estilo azul)
   ADMIN: { label: "Admin", className: "bg-primary text-primary-foreground" },
-  JEFE: { label: "Jefe", className: "bg-accent text-accent-foreground" },
-  SUPERVISOR: { label: "Supervisor", className: "bg-secondary text-secondary-foreground" },
+  JEFE: { label: "Jefe de Área", className: "bg-primary text-primary-foreground" },
+  SUPERVISOR: { label: "Supervisor", className: "bg-primary text-primary-foreground" },
+  // Roles del backend mapeados
+  AREA_MANAGER: { label: "Jefe de Área", className: "bg-primary text-primary-foreground" },
+  WAREHOUSE_SUPERVISOR: { label: "Supervisor", className: "bg-primary text-primary-foreground" },
   
   // Product types
   EQUIPO: { label: "Equipo", className: "bg-primary text-primary-foreground" },

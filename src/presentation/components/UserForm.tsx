@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MultiSelect, type Option } from "@/components/ui/multi-select";
-import { USER_ROLES, USER_STATUS, TENANT_ID } from "@/shared/constants";
+import { USER_ROLES, USER_STATUS, TENANT_ID, mapBackendRoleToFrontend } from "@/shared/constants";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
@@ -46,8 +46,64 @@ export function UserForm({
   const { user: currentUser } = useAuth();
   const [areasOptions, setAreasOptions] = useState<Option[]>([]);
   const [warehousesOptions, setWarehousesOptions] = useState<Option[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingOptions, setLoadingOptions] = useState(false);
   const [emailCheckLoading, setEmailCheckLoading] = useState(false);
+
+  // Helper para extraer el rol del usuario correctamente
+  const getUserRole = (): string => {
+    if (!currentUser) return USER_ROLES.SUPERVISOR;
+    
+    if (typeof currentUser.role === 'string') {
+      return currentUser.role;
+    } else if (currentUser.role && typeof currentUser.role === 'object' && 'name' in currentUser.role) {
+      return (currentUser.role as any).name;
+    } else {
+      return currentUser.roleId || USER_ROLES.SUPERVISOR;
+    }
+  };
+
+  // Helper para extraer el rol de defaultValues (puede venir como string u objeto)
+  const getDefaultRole = (): UserRole => {
+    if (!defaultValues?.role) return USER_ROLES.SUPERVISOR;
+    
+    console.log('📋 Raw defaultValues.role:', defaultValues.role);
+    
+    let backendRole: string;
+    
+    if (typeof defaultValues.role === 'string') {
+      backendRole = defaultValues.role;
+      console.log('✅ Role is string:', backendRole);
+    } else if (typeof defaultValues.role === 'object' && 'name' in defaultValues.role) {
+      backendRole = (defaultValues.role as any).name;
+      console.log('✅ Role extracted from object.name:', backendRole);
+    } else {
+      console.warn('⚠️ Could not extract role, defaulting to SUPERVISOR');
+      return USER_ROLES.SUPERVISOR;
+    }
+    
+    // Mapear rol del backend al frontend
+    const frontendRole = mapBackendRoleToFrontend(backendRole);
+    console.log('🔄 Mapped role:', backendRole, '→', frontendRole);
+    
+    return frontendRole as UserRole;
+  };
+
+  // Helper para formatear RUT con puntos y guión (Ej: 12.345.678-9)
+  const formatRutValue = (rut: string): string => {
+    if (!rut) return "";
+    // Remover todo excepto números y K/k
+    const clean = rut.replace(/[^0-9kK]/g, '');
+    if (clean.length < 2) return clean;
+    
+    // Separar cuerpo y dígito verificador
+    const body = clean.slice(0, -1);
+    const dv = clean.slice(-1).toUpperCase();
+    
+    // Formatear cuerpo con puntos cada 3 dígitos de derecha a izquierda
+    const formattedBody = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    return `${formattedBody}-${dv}`;
+  };
 
   const form = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -55,9 +111,9 @@ export function UserForm({
       name: defaultValues?.name || "",
       lastName: defaultValues?.lastName || "",
       email: defaultValues?.email || "",
-      rut: defaultValues?.rut || "",
+      rut: formatRutValue(defaultValues?.rut || ""),
       phone: defaultValues?.phone || "",
-      role: defaultValues?.role || USER_ROLES.SUPERVISOR,
+      role: getDefaultRole(),
       status: defaultValues?.status || USER_STATUS.HABILITADO,
       areas: defaultValues?.areas || [],
       warehouses: defaultValues?.warehouses || [],
@@ -69,6 +125,24 @@ export function UserForm({
     loadOptions();
   }, []);
 
+  // Actualizar formulario cuando cambien los defaultValues (modo edición)
+  useEffect(() => {
+    if (defaultValues) {
+      form.reset({
+        name: defaultValues.name || "",
+        lastName: defaultValues.lastName || "",
+        email: defaultValues.email || "",
+        rut: formatRutValue(defaultValues.rut || ""),
+        phone: defaultValues.phone || "",
+        role: getDefaultRole(),
+        status: defaultValues.status || USER_STATUS.HABILITADO,
+        areas: defaultValues.areas || [],
+        warehouses: defaultValues.warehouses || [],
+        tenantId: defaultValues.tenantId || TENANT_ID,
+      });
+    }
+  }, [defaultValues]);
+
   const loadOptions = async () => {
     setLoadingOptions(true);
     try {
@@ -77,7 +151,7 @@ export function UserForm({
         warehouseRepo.findAll(TENANT_ID),
       ]);
 
-      const userRole = currentUser?.role || currentUser?.roleId;
+      const userRole = getUserRole();
       const userAreas = currentUser?.areas || [];
 
       // Si es Jefe de Área, solo puede ver/asignar sus propias áreas
@@ -121,19 +195,28 @@ export function UserForm({
   const getAllowedRoles = (): UserRole[] => {
     if (!currentUser) return [USER_ROLES.SUPERVISOR];
 
-    const userRole = currentUser.role || currentUser.roleId;
+    const userRole = getUserRole();
+    console.log('🔐 Current user role:', userRole);
+    console.log('👤 Current user:', currentUser);
 
     switch (userRole) {
       case USER_ROLES.ADMIN:
+      case 'ADMIN':
         // Admin puede crear cualquier rol
+        console.log('✅ Admin detected - All roles allowed');
         return [USER_ROLES.ADMIN, USER_ROLES.JEFE, USER_ROLES.SUPERVISOR];
       case USER_ROLES.JEFE:
+      case 'JEFE':
         // Jefe solo puede crear Supervisores
+        console.log('✅ Jefe detected - Only SUPERVISOR allowed');
         return [USER_ROLES.SUPERVISOR];
       case USER_ROLES.SUPERVISOR:
+      case 'SUPERVISOR':
         // Supervisor no puede crear usuarios
+        console.log('⚠️ Supervisor detected - Cannot create users');
         return [];
       default:
+        console.warn('⚠️ Unknown role:', userRole, '- Defaulting to SUPERVISOR only');
         return [USER_ROLES.SUPERVISOR];
     }
   };
@@ -144,9 +227,10 @@ export function UserForm({
   // Determinar descripción contextual del campo de rol
   const getRoleDescription = (): string => {
     if (!currentUser) return "";
-    const userRole = currentUser.role || currentUser.roleId;
+    
+    const userRole = getUserRole();
 
-    if (userRole === USER_ROLES.JEFE) {
+    if (userRole === USER_ROLES.JEFE || userRole === 'JEFE') {
       return "Como Jefe de Área, solo puedes crear usuarios con rol Supervisor";
     }
     return "Selecciona el rol del usuario según sus responsabilidades";
@@ -268,12 +352,21 @@ export function UserForm({
               <FormLabel>RUT</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="12345678-9"
+                  placeholder="12.345.678-9"
                   {...field}
+                  onChange={(e) => {
+                    // Formatear RUT automáticamente mientras escribe
+                    const formatted = formatRutValue(e.target.value);
+                    field.onChange(formatted);
+                  }}
                   disabled={isLoading}
                   className="h-10"
+                  maxLength={12}
                 />
               </FormControl>
+              <FormDescription className="text-xs">
+                Formato: 12.345.678-9 (con puntos y guión)
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -309,7 +402,7 @@ export function UserForm({
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                disabled={isLoading || !canCreateUsers}
+                disabled={isLoading || !canCreateUsers || !!defaultValues}
               >
                 <FormControl>
                   <SelectTrigger className="h-10">
@@ -328,11 +421,15 @@ export function UserForm({
                   )}
                 </SelectContent>
               </Select>
-              {getRoleDescription() && (
+              {defaultValues ? (
+                <FormDescription className="text-xs text-amber-600">
+                  ⚠️ El rol no se puede modificar después de la creación
+                </FormDescription>
+              ) : getRoleDescription() ? (
                 <FormDescription className="text-xs text-muted-foreground">
                   {getRoleDescription()}
                 </FormDescription>
-              )}
+              ) : null}
               <FormMessage />
             </FormItem>
           )}

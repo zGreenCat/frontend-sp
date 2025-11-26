@@ -12,9 +12,9 @@ import {
 
 // Validación personalizada de RUT
 const rutSchema = z.string()
-  .min(8, 'RUT debe tener al menos 8 caracteres')
-  .max(12, 'RUT no puede tener más de 12 caracteres')
-  .regex(/^[0-9]+[-|‐]{1}[0-9kK]{1}$/, 'Formato de RUT inválido (Ej: 12345678-9)');
+  .min(9, 'RUT debe tener al menos 9 caracteres')
+  .max(15, 'RUT no puede tener más de 15 caracteres')
+  .regex(/^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}[-|‐]{1}[0-9kK]{1}$/, 'Formato de RUT inválido (Ej: 12.345.678-9)');
 
 // Validación de email
 const emailSchema = z.string()

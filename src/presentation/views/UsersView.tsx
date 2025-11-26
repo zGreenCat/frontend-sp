@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Search, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, AlertTriangle, UserX, UserCheck } from "lucide-react";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { ListUsers } from "@/application/usecases/user/ListUsers";
 import { CreateUser } from "@/application/usecases/user/CreateUser";
@@ -249,34 +249,34 @@ export function UsersView() {
     if (!selectedUser) return;
     
     setActionLoading(true);
-    const useCase = new DisableUser(userRepo);
-    const result = await useCase.execute(selectedUser.id, TENANT_ID);
     
-    if (result.ok) {
+    try {
+      // Cambiar estado: si está habilitado, deshabilitar; si está deshabilitado, habilitar
+      const newStatus = selectedUser.status === 'HABILITADO' ? 'DESHABILITADO' as const : 'HABILITADO' as const;
+      
+      // Llamar directamente al repositorio para actualizar solo el estado
+      await userRepo.update(selectedUser.id, { status: newStatus }, TENANT_ID);
+      
       toast({
         title: "Éxito",
-        description: "Usuario deshabilitado correctamente",
+        description: `Usuario ${newStatus === 'HABILITADO' ? 'habilitado' : 'deshabilitado'} correctamente`,
       });
       await loadUsers();
       setSelectedUser(null);
       setConfirmOpen(false);
-    } else {
+    } catch (error) {
       toast({
         title: "Error",
-        description: result.error || "Error al deshabilitar usuario",
+        description: "Error al cambiar estado del usuario",
         variant: "destructive",
       });
     }
+    
     setActionLoading(false);
   };
 
   const openCreateDialog = () => {
     setSelectedUser(null);
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (user: User) => {
-    setSelectedUser(user);
     setDialogOpen(true);
   };
 
@@ -289,15 +289,26 @@ export function UsersView() {
   const filterUsersByHierarchy = (allUsers: User[]): User[] => {
     if (!currentUser) return allUsers;
 
-    const userRole = currentUser.role || currentUser.roleId;
+    // Extraer rol correctamente - puede venir como string o como objeto
+    let userRole: string;
+    if (typeof currentUser.role === 'string') {
+      userRole = currentUser.role;
+    } else if (currentUser.role && typeof currentUser.role === 'object' && 'name' in currentUser.role) {
+      userRole = (currentUser.role as any).name;
+    } else {
+      userRole = currentUser.roleId || '';
+    }
+    
     const userAreas = currentUser.areas || [];
 
     switch (userRole) {
       case USER_ROLES.ADMIN:
+      case 'ADMIN':
         // Admin ve todos los usuarios
         return allUsers;
       
       case USER_ROLES.JEFE:
+      case 'JEFE':
         // Jefe de Área solo ve usuarios de sus áreas asignadas
         if (userAreas.length === 0) return [];
         return allUsers.filter(u => {
@@ -306,6 +317,7 @@ export function UsersView() {
         });
       
       case USER_ROLES.SUPERVISOR:
+      case 'SUPERVISOR':
         // Supervisor no ve listado administrativo de usuarios
         return [];
       
@@ -381,7 +393,7 @@ export function UsersView() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Rol</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Estado</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Áreas / Bodegas</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Acciones</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -523,20 +535,14 @@ export function UsersView() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => openEditDialog(user)}
+                              onClick={() => openDeleteConfirm(user)}
                               className="h-8 w-8 p-0"
                             >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {can(PERMISSIONS.USERS_DELETE) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteConfirm(user)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
+                              {user.status === 'HABILITADO' ? (
+                                <UserX className="h-4 w-4 text-amber-600" />
+                              ) : (
+                                <UserCheck className="h-4 w-4 text-success" />
+                              )}
                             </Button>
                           )}
                         </div>
@@ -561,13 +567,13 @@ export function UsersView() {
         mode={selectedUser ? "edit" : "create"}
       />
 
-      {/* Dialog de confirmación para deshabilitar */}
+      {/* Dialog de confirmación para cambiar estado */}
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         onConfirm={handleDisable}
-        title="¿Deshabilitar usuario?"
-        description={`¿Está seguro de deshabilitar al usuario ${selectedUser?.name} ${selectedUser?.lastName}? Esta acción puede revertirse más tarde.`}
+        title={selectedUser?.status === 'HABILITADO' ? '¿Deshabilitar usuario?' : '¿Habilitar usuario?'}
+        description={`¿Está seguro de ${selectedUser?.status === 'HABILITADO' ? 'deshabilitar' : 'habilitar'} al usuario ${selectedUser?.name} ${selectedUser?.lastName}?`}
       />
     </>
   );

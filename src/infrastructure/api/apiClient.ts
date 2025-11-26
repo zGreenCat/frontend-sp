@@ -23,9 +23,29 @@ export class ApiClient {
 
     if (includeAuth) {
       const token = this.getToken();
-      console.log('🔐 Token being used:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
       if (token) {
+        console.log('🔐 Token being used:', `${token.substring(0, 20)}...`);
         headers["Authorization"] = `Bearer ${token}`;
+        
+        // Decodificar JWT para debug (solo en desarrollo)
+        if (process.env.NODE_ENV === 'development') {
+          try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              const exp = payload.exp ? new Date(payload.exp * 1000) : null;
+              const now = new Date();
+              console.log('📋 Token info:', {
+                userId: payload.sub || payload.userId,
+                email: payload.email,
+                expires: exp?.toLocaleString(),
+                isExpired: exp ? exp < now : 'unknown',
+              });
+            }
+          } catch (e) {
+            console.warn('⚠️ Could not decode token', e);
+          }
+        }
       } else {
         console.warn('⚠️ Auth required but no token found in localStorage');
       }

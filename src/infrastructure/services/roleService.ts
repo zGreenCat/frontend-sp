@@ -12,9 +12,28 @@ class RoleService {
   private roleMapIdCache: Map<string, string> = new Map(); // id -> name
 
   async loadRoles(): Promise<void> {
-    if (this.rolesCache) return; // Ya cargados
+    if (this.rolesCache) {
+      console.log('📦 Using cached roles');
+      return; // Ya cargados
+    }
+
+    // Verificar que estamos en el navegador
+    if (typeof window === 'undefined') {
+      console.warn('⚠️ Not in browser, skipping role loading');
+      this.rolesCache = [];
+      return;
+    }
+
+    // Verificar si hay token antes de hacer la llamada
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn('⚠️ No token found, skipping role loading');
+      this.rolesCache = [];
+      return;
+    }
 
     try {
+      console.log('🔄 Loading roles from backend...');
       const response = await apiClient.get<any>('/roles', true);
       
       // El backend puede devolver array directo o { data: [...] }
@@ -40,8 +59,15 @@ class RoleService {
       });
       
       console.log('✅ Loaded', roles.length, 'roles:', roles.map(r => r.name).join(', '));
-    } catch (error) {
-      console.error('Error loading roles:', error);
+    } catch (error: any) {
+      console.error('❌ Error loading roles:', error);
+      
+      // Si es 401, el token expiró o es inválido
+      if (error?.statusCode === 401) {
+        console.error('🔒 Unauthorized: Token may be expired or invalid');
+      }
+      
+      // Inicializar cache vacío para evitar llamadas repetidas
       this.rolesCache = [];
     }
   }
@@ -56,6 +82,17 @@ class RoleService {
 
   getAllRoles(): Role[] {
     return this.rolesCache || [];
+  }
+
+  clearCache(): void {
+    console.log('🗑️ Clearing role cache');
+    this.rolesCache = null;
+    this.roleMapCache.clear();
+    this.roleMapIdCache.clear();
+  }
+
+  isLoaded(): boolean {
+    return this.rolesCache !== null;
   }
 }
 

@@ -17,8 +17,7 @@ import {
   Edit,
   LogOut,
   CheckCircle2,
-  XCircle,
-  Key
+  XCircle
 } from "lucide-react";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { translateRole } from "@/shared/utils/badges";
@@ -26,13 +25,11 @@ import { formatPhone } from "@/shared/utils/formatters";
 import { PERMISSIONS } from "@/shared/permissions";
 import { useRouter } from "next/navigation";
 import { EditProfileDialog } from "@/presentation/components/EditProfileDialog";
-import { ChangePasswordDialog } from "@/presentation/components/ChangePasswordDialog";
 
 export function ProfileView() {
   const { user, logout, hasPermission } = useAuth();
   const router = useRouter();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   if (!user) {
     return (
@@ -84,17 +81,8 @@ export function ProfileView() {
                 onClick={() => setEditDialogOpen(true)}
                 className="gap-2"
               >
-                <Edit className="h-4 w-4" />
-                Editar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPasswordDialogOpen(true)}
-                className="gap-2"
-              >
-                <Key className="h-4 w-4" />
-                Cambiar Contraseña
+                <Phone className="h-4 w-4" />
+                Editar Teléfono
               </Button>
               <Button
                 variant="destructive"
@@ -257,14 +245,10 @@ export function ProfileView() {
         </CardContent>
       </Card>
 
-      {/* Diálogos de edición */}
+      {/* Diálogo de edición de teléfono */}
       <EditProfileDialog 
         open={editDialogOpen} 
         onOpenChange={setEditDialogOpen} 
-      />
-      <ChangePasswordDialog 
-        open={passwordDialogOpen} 
-        onOpenChange={setPasswordDialogOpen} 
       />
     </div>
   );

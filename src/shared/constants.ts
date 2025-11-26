@@ -29,12 +29,37 @@ export const USER_STATUS = {
   DESHABILITADO: 'DESHABILITADO',
 } as const;
 
-// User Roles
+// User Roles (Frontend)
 export const USER_ROLES = {
   ADMIN: 'ADMIN',
   JEFE: 'JEFE',
   SUPERVISOR: 'SUPERVISOR',
 } as const;
+
+// Mapeo entre roles del Backend y Frontend
+export const BACKEND_ROLE_MAP: Record<string, string> = {
+  // Backend -> Frontend
+  'ADMIN': 'ADMIN',
+  'AREA_MANAGER': 'JEFE',
+  'WAREHOUSE_SUPERVISOR': 'SUPERVISOR',
+  'SUPERVISOR': 'SUPERVISOR', // Backend también usa SUPERVISOR directamente
+  // Frontend -> Backend
+  'JEFE': 'AREA_MANAGER',
+};
+
+// Helper para convertir rol del backend al frontend
+export const mapBackendRoleToFrontend = (backendRole: string): string => {
+  return BACKEND_ROLE_MAP[backendRole] || backendRole;
+};
+
+// Helper para convertir rol del frontend al backend
+export const mapFrontendRoleToBackend = (frontendRole: string): string => {
+  // ADMIN se mapea a sí mismo, JEFE a AREA_MANAGER, SUPERVISOR a WAREHOUSE_SUPERVISOR
+  if (frontendRole === 'ADMIN') return 'ADMIN';
+  if (frontendRole === 'JEFE') return 'AREA_MANAGER';
+  if (frontendRole === 'SUPERVISOR') return 'WAREHOUSE_SUPERVISOR';
+  return frontendRole;
+};
 
 // Provider Status
 export const PROVIDER_STATUS = {
