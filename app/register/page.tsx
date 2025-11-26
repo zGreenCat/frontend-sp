@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Mail, Lock, Eye, EyeOff, User, ArrowRight, ArrowLeft } from "lucide-react";
+import { Package, Mail, Lock, Eye, EyeOff, User, ArrowRight, ArrowLeft, AlertCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -178,7 +178,14 @@ export default function RegisterPage() {
                     />
                   </div>
                   {errors.name && (
-                    <p className="text-sm text-destructive">{errors.name}</p>
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg"
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.name}</span>
+                    </motion.div>
                   )}
                 </div>
 
@@ -199,7 +206,14 @@ export default function RegisterPage() {
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg"
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.email}</span>
+                    </motion.div>
                   )}
                 </div>
 
@@ -249,7 +263,14 @@ export default function RegisterPage() {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg"
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.password}</span>
+                    </motion.div>
                   )}
                 </div>
 
@@ -281,7 +302,14 @@ export default function RegisterPage() {
                     </button>
                   </div>
                   {errors.confirmPassword && (
-                    <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg"
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.confirmPassword}</span>
+                    </motion.div>
                   )}
                 </div>
 
@@ -307,7 +335,14 @@ export default function RegisterPage() {
                   </Label>
                 </div>
                 {errors.terms && (
-                  <p className="text-sm text-destructive">{errors.terms}</p>
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{errors.terms}</span>
+                  </motion.div>
                 )}
 
                 <div className="flex gap-3 mt-6">

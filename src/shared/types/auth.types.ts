@@ -27,6 +27,7 @@ export interface User {
   status?: string;
   areas?: string[];
   warehouses?: string[];
+  tenantId: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -17,18 +17,22 @@ import {
   Edit,
   LogOut,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Key
 } from "lucide-react";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { translateRole } from "@/shared/utils/badges";
 import { formatPhone } from "@/shared/utils/formatters";
 import { PERMISSIONS } from "@/shared/permissions";
 import { useRouter } from "next/navigation";
+import { EditProfileDialog } from "@/presentation/components/EditProfileDialog";
+import { ChangePasswordDialog } from "@/presentation/components/ChangePasswordDialog";
 
 export function ProfileView() {
   const { user, logout, hasPermission } = useAuth();
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   if (!user) {
     return (
@@ -77,11 +81,20 @@ export function ProfileView() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => setEditDialogOpen(true)}
                 className="gap-2"
               >
                 <Edit className="h-4 w-4" />
                 Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPasswordDialogOpen(true)}
+                className="gap-2"
+              >
+                <Key className="h-4 w-4" />
+                Cambiar Contraseña
               </Button>
               <Button
                 variant="destructive"
@@ -243,6 +256,16 @@ export function ProfileView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Diálogos de edición */}
+      <EditProfileDialog 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+      />
+      <ChangePasswordDialog 
+        open={passwordDialogOpen} 
+        onOpenChange={setPasswordDialogOpen} 
+      />
     </div>
   );
 }

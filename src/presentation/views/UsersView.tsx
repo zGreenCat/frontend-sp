@@ -18,13 +18,16 @@ import { UserDialog } from "@/presentation/components/UserDialog";
 import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAuth } from "@/hooks/use-auth";
 import { CreateUserInput } from "@/shared/schemas";
 import { PERMISSIONS } from "@/shared/permissions";
+import { USER_ROLES } from "@/shared/constants";
 
 export function UsersView() {
   const { userRepo } = useRepositories();
   const { toast } = useToast();
   const { can } = usePermissions();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -140,7 +143,38 @@ export function UsersView() {
     setConfirmOpen(true);
   };
 
-  const filteredUsers = users.filter(u =>
+  // Filtrar usuarios según jerarquía del usuario autenticado
+  const filterUsersByHierarchy = (allUsers: User[]): User[] => {
+    if (!currentUser) return allUsers;
+
+    const userRole = currentUser.role || currentUser.roleId;
+    const userAreas = currentUser.areas || [];
+
+    switch (userRole) {
+      case USER_ROLES.ADMIN:
+        // Admin ve todos los usuarios
+        return allUsers;
+      
+      case USER_ROLES.JEFE:
+        // Jefe de Área solo ve usuarios de sus áreas asignadas
+        if (userAreas.length === 0) return [];
+        return allUsers.filter(u => {
+          const userAreasSet = new Set(u.areas);
+          return userAreas.some(areaId => userAreasSet.has(areaId));
+        });
+      
+      case USER_ROLES.SUPERVISOR:
+        // Supervisor no ve listado administrativo de usuarios
+        return [];
+      
+      default:
+        return allUsers;
+    }
+  };
+
+  const usersByHierarchy = filterUsersByHierarchy(users);
+
+  const filteredUsers = usersByHierarchy.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.lastName.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
@@ -152,7 +186,14 @@ export function UsersView() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Usuarios</h1>
-            <p className="text-muted-foreground">Gestión de usuarios del sistema</p>
+            <p className="text-muted-foreground">
+              Gestión de usuarios del sistema
+              {currentUser?.role === USER_ROLES.JEFE && (
+                <span className="block text-xs mt-1 text-primary">
+                  Mostrando solo usuarios de tus áreas asignadas
+                </span>
+              )}
+            </p>
           </div>
           {can(PERMISSIONS.USERS_CREATE) && (
             <Button 

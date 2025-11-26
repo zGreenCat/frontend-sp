@@ -15,6 +15,7 @@ interface AuthContextType {
   logout: () => void;
   refreshUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  getUserRole: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -129,6 +130,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const getUserRole = (): string | null => {
+    if (!user) return null;
+    // Normalizar el rol desde diferentes estructuras
+    if (typeof user.role === 'string') return user.role;
+    if (user.role && typeof user.role === 'object') return user.role.name;
+    return user.roleId || null;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -140,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         refreshUser,
         hasPermission,
+        getUserRole,
       }}
     >
       {children}

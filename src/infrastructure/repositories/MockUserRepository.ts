@@ -108,6 +108,37 @@ export class MockUserRepository implements IUserRepository {
     }
   }
 
+  async checkEmailExists(email: string, tenantId: string, excludeUserId?: string): Promise<boolean> {
+    await this.simulateLatency();
+    const emailLower = email.toLowerCase();
+    return users.some(u => 
+      u.email.toLowerCase() === emailLower && 
+      u.tenantId === tenantId &&
+      u.id !== excludeUserId
+    );
+  }
+
+  async verifyPassword(userId: string, password: string, tenantId: string): Promise<boolean> {
+    await this.simulateLatency();
+    // En mock: verificar que el usuario exista
+    const user = users.find(u => u.id === userId && u.tenantId === tenantId);
+    if (!user) return false;
+    
+    // Simular validación - en producción debe hacer hash comparison
+    // Para testing, cualquier contraseña con al menos 6 caracteres es válida
+    return password.length >= 6;
+  }
+
+  async changePassword(userId: string, newPassword: string, tenantId: string): Promise<void> {
+    await this.simulateLatency();
+    const user = users.find(u => u.id === userId && u.tenantId === tenantId);
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+    // En mock: solo simulamos el cambio (en producción se hashearía y guardaría)
+    console.log(`Contraseña cambiada para usuario ${userId}`);
+  }
+
   private simulateLatency(): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, 300));
   }
