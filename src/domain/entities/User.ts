@@ -1,3 +1,5 @@
+import { AssignmentHistoryEntry } from './AssignmentHistory';
+
 export type UserRole = 'ADMIN' | 'JEFE' | 'SUPERVISOR';
 export type UserStatus = 'HABILITADO' | 'DESHABILITADO';
 
@@ -12,5 +14,6 @@ export interface User {
   status: UserStatus;
   areas: string[];
   warehouses: string[];
+  assignmentHistory?: AssignmentHistoryEntry[];
   tenantId: string;
 }

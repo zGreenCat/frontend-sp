@@ -10,6 +10,7 @@ import { ListUsers } from "@/application/usecases/user/ListUsers";
 import { CreateUser } from "@/application/usecases/user/CreateUser";
 import { UpdateUser } from "@/application/usecases/user/UpdateUser";
 import { DisableUser } from "@/application/usecases/user/DisableUser";
+import { LogAssignmentChange } from "@/application/usecases/user/LogAssignmentChange";
 import { TENANT_ID } from "@/shared/constants";
 import { User } from "@/domain/entities/User";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
@@ -24,7 +25,7 @@ import { PERMISSIONS } from "@/shared/permissions";
 import { USER_ROLES } from "@/shared/constants";
 
 export function UsersView() {
-  const { userRepo } = useRepositories();
+  const { userRepo, assignmentHistoryRepo, areaRepo, warehouseRepo } = useRepositories();
   const { toast } = useToast();
   const { can } = usePermissions();
   const { user: currentUser } = useAuth();
@@ -64,6 +65,25 @@ export function UsersView() {
     const result = await useCase.execute(data);
     
     if (result.ok) {
+      // Registrar asignaciones iniciales en el historial
+      if (currentUser && (data.areas.length > 0 || data.warehouses.length > 0)) {
+        const logUseCase = new LogAssignmentChange(
+          assignmentHistoryRepo,
+          areaRepo,
+          warehouseRepo
+        );
+        await logUseCase.execute({
+          userId: result.value.id,
+          previousAreas: [],
+          newAreas: data.areas,
+          previousWarehouses: [],
+          newWarehouses: data.warehouses,
+          performedBy: currentUser.id,
+          performedByName: `${currentUser.name} ${currentUser.lastName || ''}`.trim(),
+          tenantId: TENANT_ID,
+        });
+      }
+
       toast({
         title: "Éxito",
         description: "Usuario creado correctamente",
@@ -83,10 +103,37 @@ export function UsersView() {
     if (!selectedUser) return;
     
     setActionLoading(true);
+
+    // Detectar cambios en asignaciones
+    const previousAreas = selectedUser.areas || [];
+    const previousWarehouses = selectedUser.warehouses || [];
+    const hasAssignmentChanges = 
+      JSON.stringify(previousAreas.sort()) !== JSON.stringify(data.areas.sort()) ||
+      JSON.stringify(previousWarehouses.sort()) !== JSON.stringify(data.warehouses.sort());
+
     const useCase = new UpdateUser(userRepo);
     const result = await useCase.execute(selectedUser.id, data, TENANT_ID);
     
     if (result.ok) {
+      // Registrar cambios en asignaciones si hubo modificaciones
+      if (currentUser && hasAssignmentChanges) {
+        const logUseCase = new LogAssignmentChange(
+          assignmentHistoryRepo,
+          areaRepo,
+          warehouseRepo
+        );
+        await logUseCase.execute({
+          userId: selectedUser.id,
+          previousAreas,
+          newAreas: data.areas,
+          previousWarehouses,
+          newWarehouses: data.warehouses,
+          performedBy: currentUser.id,
+          performedByName: `${currentUser.name} ${currentUser.lastName || ''}`.trim(),
+          tenantId: TENANT_ID,
+        });
+      }
+
       toast({
         title: "Éxito",
         description: "Usuario actualizado correctamente",
@@ -188,11 +235,15 @@ export function UsersView() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Usuarios</h1>
             <p className="text-muted-foreground">
               Gestión de usuarios del sistema
-              {currentUser?.role === USER_ROLES.JEFE && (
-                <span className="block text-xs mt-1 text-primary">
-                  Mostrando solo usuarios de tus áreas asignadas
-                </span>
-              )}
+              {(() => {
+                const role = currentUser?.role;
+                const roleStr = typeof role === 'string' ? role : role?.name || currentUser?.roleId;
+                return roleStr === USER_ROLES.JEFE && (
+                  <span className="block text-xs mt-1 text-primary">
+                    Mostrando solo usuarios de tus áreas asignadas
+                  </span>
+                );
+              })()}
             </p>
           </div>
           {can(PERMISSIONS.USERS_CREATE) && (

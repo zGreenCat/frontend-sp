@@ -8,6 +8,7 @@ import { MockBoxRepository } from '@/infrastructure/repositories/MockBoxReposito
 import { MockProductRepository } from '@/infrastructure/repositories/MockProductRepository';
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
 import { MockProjectRepository } from '@/infrastructure/repositories/MockProjectRepository';
+import { MockAssignmentHistoryRepository } from '@/infrastructure/repositories/MockAssignmentHistoryRepository';
 
 interface Repositories {
   userRepo: MockUserRepository;
@@ -17,6 +18,7 @@ interface Repositories {
   productRepo: MockProductRepository;
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
+  assignmentHistoryRepo: MockAssignmentHistoryRepository;
 }
 
 const RepositoryContext = createContext<Repositories | null>(null);
@@ -30,6 +32,7 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     productRepo: new MockProductRepository(),
     providerRepo: new MockProviderRepository(),
     projectRepo: new MockProjectRepository(),
+    assignmentHistoryRepo: new MockAssignmentHistoryRepository(),
   };
 
   return (
