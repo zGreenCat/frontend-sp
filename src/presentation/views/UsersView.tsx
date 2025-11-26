@@ -4,7 +4,14 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Plus, Search, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { ListUsers } from "@/application/usecases/user/ListUsers";
 import { CreateUser } from "@/application/usecases/user/CreateUser";
@@ -30,6 +37,8 @@ export function UsersView() {
   const { can } = usePermissions();
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [areas, setAreas] = useState<Array<{ id: string; name: string }>>([]);
+  const [warehouses, setWarehouses] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -39,15 +48,28 @@ export function UsersView() {
 
   const loadUsers = async () => {
     setLoading(true);
-    const useCase = new ListUsers(userRepo);
-    const result = await useCase.execute(TENANT_ID);
-    
-    if (result.ok) {
-      setUsers(result.value);
-    } else {
+    try {
+      const [usersResult, areasData, warehousesData] = await Promise.all([
+        new ListUsers(userRepo).execute(TENANT_ID),
+        areaRepo.findAll(TENANT_ID),
+        warehouseRepo.findAll(TENANT_ID),
+      ]);
+      
+      if (usersResult.ok) {
+        setUsers(usersResult.value);
+        setAreas(areasData.map(a => ({ id: a.id, name: a.name })));
+        setWarehouses(warehousesData.map(w => ({ id: w.id, name: w.name })));
+      } else {
+        toast({
+          title: "Error",
+          description: "Error al cargar usuarios",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Error al cargar usuarios",
+        description: "Error al cargar datos",
         variant: "destructive",
       });
     }
@@ -58,6 +80,18 @@ export function UsersView() {
     loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Helper para obtener nombre de área por ID
+  const getAreaName = (areaId: string): string => {
+    const area = areas.find(a => a.id === areaId);
+    return area?.name || areaId;
+  };
+
+  // Helper para obtener nombre de bodega por ID
+  const getWarehouseName = (warehouseId: string): string => {
+    const warehouse = warehouses.find(w => w.id === warehouseId);
+    return warehouse?.name || warehouseId;
+  };
 
   const handleCreate = async (data: CreateUserInput) => {
     setActionLoading(true);
@@ -285,7 +319,7 @@ export function UsersView() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Email</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Rol</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Estado</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Áreas</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Áreas / Bodegas</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Acciones</th>
                   </tr>
                 </thead>
@@ -293,8 +327,26 @@ export function UsersView() {
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-border hover:bg-secondary/20 transition-colors">
                       <td className="py-4 px-4">
-                        <p className="font-medium text-foreground">{user.name} {user.lastName}</p>
-                        <p className="text-sm text-muted-foreground">{user.rut}</p>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <p className="font-medium text-foreground">{user.name} {user.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{user.rut}</p>
+                          </div>
+                          {user.areas.length === 0 && user.warehouses.length === 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex-shrink-0">
+                                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm font-semibold">Usuario sin asignaciones</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-4 text-sm text-foreground">{user.email}</td>
                       <td className="py-4 px-4">
@@ -303,8 +355,106 @@ export function UsersView() {
                       <td className="py-4 px-4">
                         <EntityBadge status={user.status} />
                       </td>
-                      <td className="py-4 px-4 text-sm text-muted-foreground">
-                        {user.areas.length} área(s)
+                      <td className="py-4 px-4">
+                        <div className="space-y-2">
+                          {/* Áreas */}
+                          {user.areas.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {user.areas.slice(0, 2).map((areaId) => (
+                                <Badge 
+                                  key={areaId} 
+                                  variant="secondary" 
+                                  className="text-xs"
+                                >
+                                  {getAreaName(areaId)}
+                                </Badge>
+                              ))}
+                              {user.areas.length > 2 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge 
+                                        variant="outline" 
+                                        className="text-xs cursor-help"
+                                      >
+                                        +{user.areas.length - 2} más
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <div className="space-y-1">
+                                        {user.areas.slice(2).map((areaId) => (
+                                          <p key={areaId} className="text-sm">
+                                            {getAreaName(areaId)}
+                                          </p>
+                                        ))}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Bodegas */}
+                          {user.warehouses.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {user.warehouses.slice(0, 2).map((warehouseId) => (
+                                <Badge 
+                                  key={warehouseId} 
+                                  variant="outline" 
+                                  className="text-xs"
+                                >
+                                  {getWarehouseName(warehouseId)}
+                                </Badge>
+                              ))}
+                              {user.warehouses.length > 2 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge 
+                                        variant="outline" 
+                                        className="text-xs cursor-help"
+                                      >
+                                        +{user.warehouses.length - 2} más
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <div className="space-y-1">
+                                        {user.warehouses.slice(2).map((warehouseId) => (
+                                          <p key={warehouseId} className="text-sm">
+                                            {getWarehouseName(warehouseId)}
+                                          </p>
+                                        ))}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Sin asignaciones */}
+                          {user.areas.length === 0 && user.warehouses.length === 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge 
+                                    variant="destructive" 
+                                    className="text-xs gap-1 cursor-help"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Sin asignar
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">
+                                    Este usuario no tiene áreas ni bodegas asignadas
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2 justify-end">
