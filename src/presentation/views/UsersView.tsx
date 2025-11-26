@@ -118,9 +118,32 @@ export function UsersView() {
         });
       }
 
+      // Toast con detalles de asignaciones
+      const assignmentDetails = [];
+      if (data.areas.length > 0) {
+        const areaNames = data.areas.map(id => getAreaName(id)).join(", ");
+        assignmentDetails.push(`Áreas: ${areaNames}`);
+      }
+      if (data.warehouses.length > 0) {
+        const warehouseNames = data.warehouses.map(id => getWarehouseName(id)).join(", ");
+        assignmentDetails.push(`Bodegas: ${warehouseNames}`);
+      }
+
       toast({
         title: "Éxito",
-        description: "Usuario creado correctamente",
+        description: (
+          <div className="space-y-1">
+            <p>Usuario creado correctamente</p>
+            {assignmentDetails.length > 0 && (
+              <div className="text-xs text-muted-foreground mt-1">
+                <p className="font-semibold">Asignaciones:</p>
+                {assignmentDetails.map((detail, i) => (
+                  <p key={i}>• {detail}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        ),
       });
       await loadUsers();
     } else {
@@ -168,9 +191,47 @@ export function UsersView() {
         });
       }
 
+      // Toast con detalles de cambios en asignaciones
+      const changes = [];
+      if (hasAssignmentChanges) {
+        const addedAreas = data.areas.filter(id => !previousAreas.includes(id));
+        const removedAreas = previousAreas.filter(id => !data.areas.includes(id));
+        const addedWarehouses = data.warehouses.filter(id => !previousWarehouses.includes(id));
+        const removedWarehouses = previousWarehouses.filter(id => !data.warehouses.includes(id));
+
+        if (addedAreas.length > 0) {
+          const names = addedAreas.map(id => getAreaName(id)).join(", ");
+          changes.push(`Áreas agregadas: ${names}`);
+        }
+        if (removedAreas.length > 0) {
+          const names = removedAreas.map(id => getAreaName(id)).join(", ");
+          changes.push(`Áreas removidas: ${names}`);
+        }
+        if (addedWarehouses.length > 0) {
+          const names = addedWarehouses.map(id => getWarehouseName(id)).join(", ");
+          changes.push(`Bodegas agregadas: ${names}`);
+        }
+        if (removedWarehouses.length > 0) {
+          const names = removedWarehouses.map(id => getWarehouseName(id)).join(", ");
+          changes.push(`Bodegas removidas: ${names}`);
+        }
+      }
+
       toast({
         title: "Éxito",
-        description: "Usuario actualizado correctamente",
+        description: (
+          <div className="space-y-1">
+            <p>Usuario actualizado correctamente</p>
+            {changes.length > 0 && (
+              <div className="text-xs text-muted-foreground mt-1">
+                <p className="font-semibold">Cambios en asignaciones:</p>
+                {changes.map((change, i) => (
+                  <p key={i}>• {change}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        ),
       });
       await loadUsers();
       setSelectedUser(null);

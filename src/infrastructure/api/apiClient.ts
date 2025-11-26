@@ -23,8 +23,11 @@ export class ApiClient {
 
     if (includeAuth) {
       const token = this.getToken();
+      console.log('🔐 Token being used:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.warn('⚠️ Auth required but no token found in localStorage');
       }
     }
 

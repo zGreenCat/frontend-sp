@@ -1,38 +1,47 @@
 "use client";
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { MockUserRepository } from '@/infrastructure/repositories/MockUserRepository';
-import { MockAreaRepository } from '@/infrastructure/repositories/MockAreaRepository';
-import { MockWarehouseRepository } from '@/infrastructure/repositories/MockWarehouseRepository';
+// API Repositories
+import { ApiUserRepository } from '@/infrastructure/repositories/ApiUserRepository';
+import { ApiAreaRepository } from '@/infrastructure/repositories/ApiAreaRepository';
+import { ApiWarehouseRepository } from '@/infrastructure/repositories/ApiWarehouseRepository';
+import { ApiAssignmentHistoryRepository } from '@/infrastructure/repositories/ApiAssignmentHistoryRepository';
+// Mock Repositories (mantener para módulos no conectados)
 import { MockBoxRepository } from '@/infrastructure/repositories/MockBoxRepository';
 import { MockProductRepository } from '@/infrastructure/repositories/MockProductRepository';
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
 import { MockProjectRepository } from '@/infrastructure/repositories/MockProjectRepository';
-import { MockAssignmentHistoryRepository } from '@/infrastructure/repositories/MockAssignmentHistoryRepository';
+// Interfaces
+import { IUserRepository } from '@/domain/repositories/IUserRepository';
+import { IAreaRepository } from '@/domain/repositories/IAreaRepository';
+import { IWarehouseRepository } from '@/domain/repositories/IWarehouseRepository';
+import { IAssignmentHistoryRepository } from '@/domain/repositories/IAssignmentHistoryRepository';
 
 interface Repositories {
-  userRepo: MockUserRepository;
-  areaRepo: MockAreaRepository;
-  warehouseRepo: MockWarehouseRepository;
+  userRepo: IUserRepository;
+  areaRepo: IAreaRepository;
+  warehouseRepo: IWarehouseRepository;
   boxRepo: MockBoxRepository;
   productRepo: MockProductRepository;
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
-  assignmentHistoryRepo: MockAssignmentHistoryRepository;
+  assignmentHistoryRepo: IAssignmentHistoryRepository;
 }
 
 const RepositoryContext = createContext<Repositories | null>(null);
 
 export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
   const repos: Repositories = {
-    userRepo: new MockUserRepository(),
-    areaRepo: new MockAreaRepository(),
-    warehouseRepo: new MockWarehouseRepository(),
+    // Repositorios conectados al backend real
+    userRepo: new ApiUserRepository(),
+    areaRepo: new ApiAreaRepository(),
+    warehouseRepo: new ApiWarehouseRepository(),
+    assignmentHistoryRepo: new ApiAssignmentHistoryRepository(),
+    // Repositorios Mock (pendientes de conectar)
     boxRepo: new MockBoxRepository(),
     productRepo: new MockProductRepository(),
     providerRepo: new MockProviderRepository(),
     projectRepo: new MockProjectRepository(),
-    assignmentHistoryRepo: new MockAssignmentHistoryRepository(),
   };
 
   return (
