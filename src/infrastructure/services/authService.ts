@@ -71,6 +71,12 @@ export class AuthService {
 
     console.log('✅ Token extracted successfully:', token.substring(0, 20) + '...');
 
+    // Validar que la cuenta esté habilitada
+    if (user.isEnabled === false) {
+      console.warn('⚠️ User account is disabled:', user.email);
+      throw new Error('Tu cuenta se encuentra deshabilitada. Contacta con el Administrador o Jefatura');
+    }
+
     // Guardar token y usuario en localStorage
     this.saveAuth(token, user);
 

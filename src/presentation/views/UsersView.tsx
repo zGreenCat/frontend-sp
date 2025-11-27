@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -45,6 +52,12 @@ export function UsersView() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Filtros avanzados
+  const [filterRole, setFilterRole] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterArea, setFilterArea] = useState<string>("");
+  const [filterWarehouse, setFilterWarehouse] = useState<string>("");
 
   const loadUsers = async () => {
     setLoading(true);
@@ -61,17 +74,19 @@ export function UsersView() {
         setWarehouses(warehousesData.map(w => ({ id: w.id, name: w.name })));
       } else {
         toast({
-          title: "Error",
-          description: "Error al cargar usuarios",
+          title: "Error al cargar usuarios",
+          description: usersResult.error || "No se pudieron obtener los usuarios del sistema",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message || "Error de conexión con el servidor";
       toast({
-        title: "Error",
-        description: "Error al cargar datos",
+        title: "Error de carga",
+        description: errorMessage,
         variant: "destructive",
       });
+      console.error('LoadUsers error:', error);
     }
     setLoading(false);
   };
@@ -147,9 +162,13 @@ export function UsersView() {
       });
       await loadUsers();
     } else {
+      const errorMsg = result.error || "Error al crear usuario";
+      const isEmailDuplicate = errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('duplicado');
       toast({
-        title: "Error",
-        description: result.error || "Error al crear usuario",
+        title: isEmailDuplicate ? "Email duplicado" : "Error al crear usuario",
+        description: isEmailDuplicate 
+          ? "El email ingresado ya está registrado en el sistema"
+          : errorMsg,
         variant: "destructive",
       });
     }
@@ -236,9 +255,12 @@ export function UsersView() {
       await loadUsers();
       setSelectedUser(null);
     } else {
+      const errorMsg = result.error || "Error al actualizar usuario";
       toast({
-        title: "Error",
-        description: result.error || "Error al actualizar usuario",
+        title: "Error en actualización",
+        description: errorMsg.includes('conexión') || errorMsg.includes('network')
+          ? "Error de conexión. Verifica tu conexión a internet e intenta nuevamente"
+          : errorMsg,
         variant: "destructive",
       });
     }
@@ -328,11 +350,27 @@ export function UsersView() {
 
   const usersByHierarchy = filterUsersByHierarchy(users);
 
-  const filteredUsers = usersByHierarchy.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.lastName.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = usersByHierarchy.filter(u => {
+    // Filtro de búsqueda
+    const matchesSearch = search === "" || 
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.lastName.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase());
+    
+    // Filtro de rol
+    const matchesRole = filterRole === "" || u.role === filterRole;
+    
+    // Filtro de estado
+    const matchesStatus = filterStatus === "" || u.status === filterStatus;
+    
+    // Filtro de área
+    const matchesArea = filterArea === "" || (u.areas && u.areas.includes(filterArea));
+    
+    // Filtro de bodega
+    const matchesWarehouse = filterWarehouse === "" || (u.warehouses && u.warehouses.includes(filterWarehouse));
+    
+    return matchesSearch && matchesRole && matchesStatus && matchesArea && matchesWarehouse;
+  });
 
   return (
     <>
@@ -366,7 +404,7 @@ export function UsersView() {
 
       <Card className="shadow-sm">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -376,6 +414,74 @@ export function UsersView() {
                 className="pl-9 h-10 bg-secondary/30"
               />
             </div>
+            
+            {/* Filtros avanzados */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Filtrar por rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los roles</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="JEFE">Jefe de Área</SelectItem>
+                  <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus || "all"} onValueChange={(value) => setFilterStatus(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="HABILITADO">Habilitado</SelectItem>
+                  <SelectItem value="DESHABILITADO">Deshabilitado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterArea || "all"} onValueChange={(value) => setFilterArea(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Filtrar por área" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map(area => (
+                    <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterWarehouse || "all"} onValueChange={(value) => setFilterWarehouse(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Filtrar por bodega" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las bodegas</SelectItem>
+                  {warehouses.map(warehouse => (
+                    <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Botón para limpiar filtros */}
+            {(filterRole || filterStatus || filterArea || filterWarehouse || search) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setFilterRole("");
+                  setFilterStatus("");
+                  setFilterArea("");
+                  setFilterWarehouse("");
+                }}
+                className="self-start text-xs"
+              >
+                Limpiar filtros
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>

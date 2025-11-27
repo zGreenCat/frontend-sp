@@ -27,6 +27,7 @@ import { USER_ROLES, USER_STATUS, TENANT_ID, mapBackendRoleToFrontend } from "@/
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { UserRole } from "@/domain/entities/User";
 
 interface UserFormProps {
@@ -470,18 +471,27 @@ export function UserForm({
             <FormItem>
               <FormLabel>Áreas Asignadas</FormLabel>
               <FormControl>
-                <MultiSelect
-                  options={areasOptions}
-                  selected={field.value}
-                  onChange={field.onChange}
-                  placeholder={loadingOptions ? "Cargando áreas..." : "Selecciona áreas"}
-                  disabled={isLoading || loadingOptions}
-                  className="w-full"
-                />
+                {loadingOptions ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                ) : (
+                  <MultiSelect
+                    options={areasOptions}
+                    selected={field.value}
+                    onChange={field.onChange}
+                    placeholder="Selecciona áreas"
+                    disabled={isLoading}
+                    className="w-full"
+                  />
+                )}
               </FormControl>
-              <FormDescription className="text-xs text-muted-foreground">
-                Asigna una o más áreas al usuario según su rol
-              </FormDescription>
+              {!loadingOptions && (
+                <FormDescription className="text-xs text-muted-foreground">
+                  Asigna una o más áreas al usuario según su rol
+                </FormDescription>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -495,18 +505,27 @@ export function UserForm({
             <FormItem>
               <FormLabel>Bodegas Asignadas</FormLabel>
               <FormControl>
-                <MultiSelect
-                  options={warehousesOptions}
-                  selected={field.value}
-                  onChange={field.onChange}
-                  placeholder={loadingOptions ? "Cargando bodegas..." : "Selecciona bodegas"}
-                  disabled={isLoading || loadingOptions}
-                  className="w-full"
-                />
+                {loadingOptions ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                ) : (
+                  <MultiSelect
+                    options={warehousesOptions}
+                    selected={field.value}
+                    onChange={field.onChange}
+                    placeholder="Selecciona bodegas"
+                    disabled={isLoading}
+                    className="w-full"
+                  />
+                )}
               </FormControl>
-              <FormDescription className="text-xs text-muted-foreground">
-                Asigna bodegas específicas para Supervisores
-              </FormDescription>
+              {!loadingOptions && (
+                <FormDescription className="text-xs text-muted-foreground">
+                  Asigna bodegas específicas para Supervisores
+                </FormDescription>
+              )}
               <FormMessage />
             </FormItem>
           )}
