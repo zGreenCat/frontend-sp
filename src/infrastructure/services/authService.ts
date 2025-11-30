@@ -15,23 +15,27 @@ export class AuthService {
    * Registrar un nuevo usuario
    */
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    console.log('📤 Register request to:', '/auth/register');
     const response = await apiClient.post<any, RegisterRequest>(
       "/auth/register",
       data,
       false
     );
 
-    console.log('📥 Register response structure:', response);
-
     // El backend puede devolver diferentes estructuras
     const token = response.token || response.access_token || response.accessToken;
-    const user = response.user;
+    const backendUser = response.user;
 
-    if (!token || !user) {
+    if (!token || !backendUser) {
       console.error('❌ Invalid register response:', Object.keys(response));
       throw new Error('Respuesta de registro inválida');
     }
+
+    // Mapear firstName del backend a name del frontend
+    const user: User = {
+      ...backendUser,
+      name: backendUser.firstName || backendUser.name || null,
+      lastName: backendUser.lastName || '',
+    };
 
     // Guardar token y usuario en localStorage
     this.saveAuth(token, user);
@@ -43,39 +47,41 @@ export class AuthService {
    * Iniciar sesión
    */
   async login(data: LoginRequest): Promise<AuthResponse> {
-    console.log('📤 Login request to:', '/auth/login');
     const response = await apiClient.post<any, LoginRequest>(
       "/auth/login",
       data,
       false
     );
 
-    console.log('📥 Login response structure:', response);
-
     // El backend puede devolver diferentes estructuras:
     // Opción 1: { user, token }
     // Opción 2: { access_token, user }
     // Opción 3: { accessToken, user }
     const token = response.token || response.access_token || response.accessToken;
-    const user = response.user;
+    const backendUser = response.user;
 
     if (!token) {
       console.error('❌ No token found in response:', Object.keys(response));
       throw new Error('No se recibió token de autenticación');
     }
 
-    if (!user) {
+    if (!backendUser) {
       console.error('❌ No user found in response:', Object.keys(response));
       throw new Error('No se recibió información del usuario');
     }
 
-    console.log('✅ Token extracted successfully:', token.substring(0, 20) + '...');
-
     // Validar que la cuenta esté habilitada
-    if (user.isEnabled === false) {
-      console.warn('⚠️ User account is disabled:', user.email);
+    if (backendUser.isEnabled === false) {
+      console.warn('⚠️ User account is disabled:', backendUser.email);
       throw new Error('Tu cuenta se encuentra deshabilitada. Contacta con el Administrador o Jefatura');
     }
+
+    // Mapear firstName del backend a name del frontend
+    const user: User = {
+      ...backendUser,
+      name: backendUser.firstName || backendUser.name || null,
+      lastName: backendUser.lastName || '',
+    };
 
     // Guardar token y usuario en localStorage
     this.saveAuth(token, user);
@@ -87,7 +93,14 @@ export class AuthService {
    * Obtener perfil del usuario autenticado
    */
   async getProfile(): Promise<User> {
-    const user = await apiClient.get<User>("/users/me", true);
+    const response = await apiClient.get<any>("/users/me", true);
+    
+    // Mapear firstName del backend a name del frontend
+    const user: User = {
+      ...response,
+      name: response.firstName || response.name || null,
+      lastName: response.lastName || '',
+    };
     
     // Actualizar usuario en localStorage
     if (typeof window !== "undefined") {

@@ -36,7 +36,7 @@ export const createUserSchema = z.object({
   lastName: z.string().min(2, 'Apellido debe tener al menos 2 caracteres').max(50),
   email: emailSchema,
   rut: rutSchema,
-  phone: phoneSchema.or(z.string()).default(""),
+  phone: phoneSchema,
   role: z.enum([USER_ROLES.ADMIN, USER_ROLES.JEFE, USER_ROLES.SUPERVISOR]),
   status: z.enum([USER_STATUS.HABILITADO, USER_STATUS.DESHABILITADO]).default(USER_STATUS.HABILITADO),
   areas: z.array(z.string()).default([]),
@@ -55,15 +55,33 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 // AREA SCHEMAS
 // ────────────────────────────────────────────────────────────────
 
-export const createAreaSchema = z.object({
+const areaBaseSchema = z.object({
   name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
-  level: z.enum([AREA_LEVELS.PRINCIPAL, AREA_LEVELS.DEPENDIENTE]),
+  level: z.number().min(1).max(10),
   parentId: z.string().optional(),
-  status: z.string().default('ACTIVO'),
+  status: z.enum(['ACTIVO', 'INACTIVO']).default('ACTIVO'),
   tenantId: z.string().min(1),
 });
 
-export const updateAreaSchema = createAreaSchema.partial().extend({
+export const createAreaSchema = areaBaseSchema.refine(
+  (data) => {
+    // Si level es 1 (Principal), NO debe tener parentId
+    if (data.level === 1) {
+      return !data.parentId;
+    }
+    // Si level > 1 (Dependiente), DEBE tener parentId
+    if (data.level > 1) {
+      return !!data.parentId;
+    }
+    return true;
+  },
+  {
+    message: 'Las áreas principales no deben tener padre, las dependientes sí',
+    path: ['parentId'],
+  }
+);
+
+export const updateAreaSchema = areaBaseSchema.partial().extend({
   id: z.string().min(1),
 });
 

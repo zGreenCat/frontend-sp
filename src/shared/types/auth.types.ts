@@ -18,7 +18,7 @@ export interface AuthResponse {
 export interface User {
   id: string;
   email: string;
-  name: string | null;
+  firstName: string | null;
   lastName?: string;
   rut?: string;
   phone?: string;

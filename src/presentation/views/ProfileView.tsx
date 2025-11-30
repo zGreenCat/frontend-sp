@@ -14,15 +14,10 @@ import {
   Building2, 
   Warehouse, 
   Shield,
-  Edit,
-  LogOut,
-  CheckCircle2,
-  XCircle
+  LogOut
 } from "lucide-react";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
-import { translateRole } from "@/shared/utils/badges";
 import { formatPhone } from "@/shared/utils/formatters";
-import { PERMISSIONS } from "@/shared/permissions";
 import { useRouter } from "next/navigation";
 import { EditProfileDialog } from "@/presentation/components/EditProfileDialog";
 
@@ -44,7 +39,7 @@ export function ProfileView() {
     router.push('/login');
   };
 
-  const userInitials = `${(user.name || 'U').charAt(0)}${(user.lastName || 'S').charAt(0)}`.toUpperCase();
+  const userInitials = `${(user.firstName || 'U').charAt(0)}${(user.lastName || 'S').charAt(0)}`.toUpperCase();
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -65,7 +60,7 @@ export function ProfileView() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <CardTitle className="text-2xl">{user.name} {user.lastName || ''}</CardTitle>
+                <CardTitle className="text-2xl">{user.firstName || ''} {user.lastName || ''}</CardTitle>
                 <CardDescription className="text-base mt-1">
                   {user.role?.name || 'Usuario'}
                 </CardDescription>
@@ -185,98 +180,11 @@ export function ProfileView() {
         </CardContent>
       </Card>
 
-      {/* Permisos */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Permisos del Rol
-          </CardTitle>
-          <CardDescription>
-            Funcionalidades disponibles para el rol de {user.role?.name || 'Usuario'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Usuarios */}
-            <PermissionGroup
-              title="Usuarios"
-              permissions={[
-                { label: 'Ver usuarios', value: hasPermission(PERMISSIONS.USERS_VIEW) },
-                { label: 'Crear usuarios', value: hasPermission(PERMISSIONS.USERS_CREATE) },
-                { label: 'Editar usuarios', value: hasPermission(PERMISSIONS.USERS_EDIT) },
-                { label: 'Eliminar usuarios', value: hasPermission(PERMISSIONS.USERS_DELETE) },
-              ]}
-            />
-
-            {/* Productos */}
-            <PermissionGroup
-              title="Productos"
-              permissions={[
-                { label: 'Ver productos', value: hasPermission(PERMISSIONS.PRODUCTS_VIEW) },
-                { label: 'Crear productos', value: hasPermission(PERMISSIONS.PRODUCTS_CREATE) },
-                { label: 'Editar productos', value: hasPermission(PERMISSIONS.PRODUCTS_EDIT) },
-                { label: 'Importar catálogo', value: hasPermission(PERMISSIONS.PRODUCTS_IMPORT) },
-              ]}
-            />
-
-            {/* Cajas */}
-            <PermissionGroup
-              title="Cajas"
-              permissions={[
-                { label: 'Ver cajas', value: hasPermission(PERMISSIONS.BOXES_VIEW) },
-                { label: 'Crear cajas', value: hasPermission(PERMISSIONS.BOXES_CREATE) },
-                { label: 'Editar cajas', value: hasPermission(PERMISSIONS.BOXES_EDIT) },
-                { label: 'Exportar datos', value: hasPermission(PERMISSIONS.BOXES_EXPORT) },
-              ]}
-            />
-
-            {/* Proyectos */}
-            <PermissionGroup
-              title="Proyectos"
-              permissions={[
-                { label: 'Ver proyectos', value: hasPermission(PERMISSIONS.PROJECTS_VIEW) },
-                { label: 'Crear proyectos', value: hasPermission(PERMISSIONS.PROJECTS_CREATE) },
-                { label: 'Editar proyectos', value: hasPermission(PERMISSIONS.PROJECTS_EDIT) },
-                { label: 'Finalizar proyectos', value: hasPermission(PERMISSIONS.PROJECTS_FINALIZE) },
-              ]}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Diálogo de edición de teléfono */}
       <EditProfileDialog 
         open={editDialogOpen} 
         onOpenChange={setEditDialogOpen} 
       />
-    </div>
-  );
-}
-
-interface PermissionGroupProps {
-  title: string;
-  permissions: { label: string; value: boolean }[];
-}
-
-function PermissionGroup({ title, permissions }: PermissionGroupProps) {
-  return (
-    <div className="space-y-2">
-      <h4 className="font-semibold text-sm text-foreground mb-3">{title}</h4>
-      <div className="space-y-2">
-        {permissions.map((permission) => (
-          <div key={permission.label} className="flex items-center gap-2">
-            {permission.value ? (
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            ) : (
-              <XCircle className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className={`text-sm ${permission.value ? 'text-foreground' : 'text-muted-foreground'}`}>
-              {permission.label}
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

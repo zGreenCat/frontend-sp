@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       toast({
         title: "¡Bienvenido!",
-        description: `Hola ${response.user.name || response.user.email}`,
+        description: `Hola ${response.user.firstName || response.user.email}`,
         variant: "default",
       });
 

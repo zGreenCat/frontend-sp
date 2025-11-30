@@ -95,4 +95,104 @@ export class ApiAreaRepository implements IAreaRepository {
       throw error;
     }
   }
+
+  // ────────────────────────────────────────────────────────────────
+  // ASIGNACIÓN DE BODEGAS
+  // ────────────────────────────────────────────────────────────────
+
+  async assignWarehouse(areaId: string, warehouseId: string): Promise<void> {
+    try {
+      console.log(`📤 Assigning warehouse ${warehouseId} to area ${areaId}`);
+      await apiClient.post(`/areas/${areaId}/warehouses`, { warehouseId }, true);
+      console.log(`✅ Warehouse assigned successfully`);
+    } catch (error) {
+      console.error('Error assigning warehouse:', error);
+      throw error;
+    }
+  }
+
+  async removeWarehouse(areaId: string, warehouseId: string): Promise<void> {
+    try {
+      console.log(`📤 Removing warehouse ${warehouseId} from area ${areaId}`);
+      await apiClient.delete(`/areas/${areaId}/warehouses/${warehouseId}`, true);
+      console.log(`✅ Warehouse removed successfully`);
+    } catch (error) {
+      console.error('Error removing warehouse:', error);
+      throw error;
+    }
+  }
+
+  async getAssignedWarehouses(areaId: string): Promise<string[]> {
+    try {
+      const response = await apiClient.get<any>(`/areas/${areaId}/warehouses`, true);
+      
+      // El backend puede devolver array directo o { data: [...] }
+      let warehouses: any[];
+      if (Array.isArray(response)) {
+        warehouses = response;
+      } else if (response && Array.isArray(response.data)) {
+        warehouses = response.data;
+      } else if (response && Array.isArray(response.warehouses)) {
+        warehouses = response.warehouses;
+      } else {
+        return [];
+      }
+      
+      // Extraer solo los IDs
+      return warehouses.map(w => w.id || w.warehouseId || w);
+    } catch (error) {
+      console.error('Error fetching assigned warehouses:', error);
+      return [];
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // ASIGNACIÓN DE JEFES (MANAGERS)
+  // ────────────────────────────────────────────────────────────────
+
+  async assignManager(areaId: string, managerId: string): Promise<void> {
+    try {
+      console.log(`📤 Assigning manager ${managerId} to area ${areaId}`);
+      await apiClient.post(`/areas/${areaId}/managers`, { managerId }, true);
+      console.log(`✅ Manager assigned successfully`);
+    } catch (error) {
+      console.error('Error assigning manager:', error);
+      throw error;
+    }
+  }
+
+  async removeManager(areaId: string, managerId: string): Promise<void> {
+    try {
+      console.log(`📤 Removing manager ${managerId} from area ${areaId}`);
+      await apiClient.delete(`/areas/${areaId}/managers/${managerId}`, true);
+      console.log(`✅ Manager removed successfully`);
+    } catch (error) {
+      console.error('Error removing manager:', error);
+      throw error;
+    }
+  }
+
+  async getAssignedManagers(areaId: string): Promise<string[]> {
+    try {
+      const response = await apiClient.get<any>(`/areas/${areaId}/managers`, true);
+      
+      // El backend puede devolver array directo o { data: [...] }
+      let managers: any[];
+      if (Array.isArray(response)) {
+        managers = response;
+      } else if (response && Array.isArray(response.data)) {
+        managers = response.data;
+      } else if (response && Array.isArray(response.managers)) {
+        managers = response.managers;
+      } else {
+        return [];
+      }
+      
+      // Extraer solo los IDs
+      return managers.map(m => m.id || m.userId || m.managerId || m);
+    } catch (error) {
+      console.error('Error fetching assigned managers:', error);
+      return [];
+    }
+  }
 }

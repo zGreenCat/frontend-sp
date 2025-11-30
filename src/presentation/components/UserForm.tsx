@@ -67,25 +67,17 @@ export function UserForm({
   const getDefaultRole = (): UserRole => {
     if (!defaultValues?.role) return USER_ROLES.SUPERVISOR;
     
-    console.log('📋 Raw defaultValues.role:', defaultValues.role);
-    
     let backendRole: string;
     
     if (typeof defaultValues.role === 'string') {
       backendRole = defaultValues.role;
-      console.log('✅ Role is string:', backendRole);
     } else if (typeof defaultValues.role === 'object' && 'name' in defaultValues.role) {
       backendRole = (defaultValues.role as any).name;
-      console.log('✅ Role extracted from object.name:', backendRole);
     } else {
-      console.warn('⚠️ Could not extract role, defaulting to SUPERVISOR');
       return USER_ROLES.SUPERVISOR;
     }
     
-    // Mapear rol del backend al frontend
     const frontendRole = mapBackendRoleToFrontend(backendRole);
-    console.log('🔄 Mapped role:', backendRole, '→', frontendRole);
-    
     return frontendRole as UserRole;
   };
 
@@ -203,21 +195,14 @@ export function UserForm({
     switch (userRole) {
       case USER_ROLES.ADMIN:
       case 'ADMIN':
-        // Admin puede crear cualquier rol
-        console.log('✅ Admin detected - All roles allowed');
         return [USER_ROLES.ADMIN, USER_ROLES.JEFE, USER_ROLES.SUPERVISOR];
       case USER_ROLES.JEFE:
       case 'JEFE':
-        // Jefe solo puede crear Supervisores
-        console.log('✅ Jefe detected - Only SUPERVISOR allowed');
         return [USER_ROLES.SUPERVISOR];
       case USER_ROLES.SUPERVISOR:
       case 'SUPERVISOR':
-        // Supervisor no puede crear usuarios
-        console.log('⚠️ Supervisor detected - Cannot create users');
         return [];
       default:
-        console.warn('⚠️ Unknown role:', userRole, '- Defaulting to SUPERVISOR only');
         return [USER_ROLES.SUPERVISOR];
     }
   };
@@ -379,7 +364,7 @@ export function UserForm({
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Teléfono (opcional)</FormLabel>
+              <FormLabel>Teléfono</FormLabel>
               <FormControl>
                 <Input
                   placeholder="+56912345678"

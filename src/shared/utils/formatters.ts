@@ -89,14 +89,29 @@ export function validateRUT(rut: string): boolean {
 
 /**
  * Formatea un RUT con puntos y guión
+ * Maneja múltiples formatos de entrada:
+ * - 234567896 -> 23.456.789-6
+ * - 198765430 -> 19.876.543-0
+ * - 11111111 -> 1.111.111-1
+ * - 17.567.890-1 -> 17.567.890-1
+ * - 17567890-1 -> 17.567.890-1
  */
-export function formatRUT(rut: string): string {
-  const cleanRut = rut.replace(/[.-]/g, '');
+export function formatRUT(rut: string | null | undefined): string {
+  // Validar entrada
+  if (!rut || typeof rut !== 'string') return '';
   
+  // Limpiar el RUT: eliminar puntos, guiones y espacios
+  const cleanRut = rut.replace(/[.\-\s]/g, '').trim();
+  
+  // Validar que tenga al menos 2 caracteres (1 dígito + DV)
   if (cleanRut.length < 2) return rut;
 
+  // Separar cuerpo y dígito verificador
   const body = cleanRut.slice(0, -1);
-  const dv = cleanRut.slice(-1);
+  const dv = cleanRut.slice(-1).toUpperCase();
+
+  // Validar que el cuerpo solo contenga números
+  if (!/^\d+$/.test(body)) return rut;
 
   // Agregar puntos cada 3 dígitos de derecha a izquierda
   const formattedBody = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');

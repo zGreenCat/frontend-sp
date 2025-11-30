@@ -13,13 +13,11 @@ class RoleService {
 
   async loadRoles(): Promise<void> {
     if (this.rolesCache) {
-      console.log('📦 Using cached roles');
-      return; // Ya cargados
+      return;
     }
 
     // Verificar que estamos en el navegador
     if (typeof window === 'undefined') {
-      console.warn('⚠️ Not in browser, skipping role loading');
       this.rolesCache = [];
       return;
     }
@@ -27,13 +25,11 @@ class RoleService {
     // Verificar si hay token antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!token) {
-      console.warn('⚠️ No token found, skipping role loading');
       this.rolesCache = [];
       return;
     }
 
     try {
-      console.log('🔄 Loading roles from backend...');
       const response = await apiClient.get<any>('/roles', true);
       
       // El backend puede devolver array directo o { data: [...] }
@@ -57,8 +53,6 @@ class RoleService {
         this.roleMapCache.set(role.name, role.id);
         this.roleMapIdCache.set(role.id, role.name);
       });
-      
-      console.log('✅ Loaded', roles.length, 'roles:', roles.map(r => r.name).join(', '));
     } catch (error: any) {
       console.error('❌ Error loading roles:', error);
       
@@ -85,7 +79,6 @@ class RoleService {
   }
 
   clearCache(): void {
-    console.log('🗑️ Clearing role cache');
     this.rolesCache = null;
     this.roleMapCache.clear();
     this.roleMapIdCache.clear();

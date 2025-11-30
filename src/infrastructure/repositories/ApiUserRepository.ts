@@ -22,6 +22,30 @@ interface BackendUser {
   tenantId: string;
   createdAt: string;
   updatedAt: string;
+  // Asignaciones del backend
+  areaAssignments?: Array<{
+    id: string;
+    areaId: string;
+    area?: {
+      id: string;
+      name: string;
+      nodeType: string;
+      level: number;
+    };
+    assignedAt: string;
+    isActive: boolean;
+  }>;
+  warehouseAssignments?: Array<{
+    id: string;
+    warehouseId: string;
+    warehouse?: {
+      id: string;
+      name: string;
+      capacityKg: number;
+    };
+    assignedAt: string;
+    isActive: boolean;
+  }>;
 }
 
 export class ApiUserRepository implements IUserRepository {
@@ -29,54 +53,118 @@ export class ApiUserRepository implements IUserRepository {
   // Los roles se cargarán solo cuando sean necesarios
 
   // Asignar un Jefe a un área
+  // Según backend: Solo ADMIN puede hacer esta asignación
   private async assignManagerToArea(areaId: string, managerId: string): Promise<void> {
     try {
-      await apiClient.post(`/areas/${areaId}/managers`, { managerId }, true);
-      console.log(`✅ Manager ${managerId} assigned to area ${areaId}`);
+      await apiClient.post(`/areas/${areaId}/managers`, { 
+        managerId
+      }, true);
     } catch (error) {
       console.error(`Error assigning manager to area:`, error);
-      // No lanzar error para permitir que continúe con otras asignaciones
+      throw error;
+    }
+  }
+
+  // Remover un Jefe de un área
+  private async removeManagerFromArea(areaId: string, managerId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/areas/${areaId}/managers/${managerId}`, true);
+    } catch (error) {
+      console.error(`Error removing manager from area:`, error);
+      throw error;
     }
   }
 
   // Asignar un Supervisor a una bodega
+  // Según backend: AREA_MANAGER o ADMIN pueden hacer esta asignación
   private async assignSupervisorToWarehouse(warehouseId: string, supervisorId: string): Promise<void> {
     try {
-      await apiClient.post(`/warehouses/${warehouseId}/supervisors`, { supervisorId }, true);
-      console.log(`✅ Supervisor ${supervisorId} assigned to warehouse ${warehouseId}`);
+      await apiClient.post(`/warehouses/${warehouseId}/supervisors`, { 
+        supervisorId
+      }, true);
     } catch (error) {
       console.error(`Error assigning supervisor to warehouse:`, error);
-      // No lanzar error para permitir que continúe con otras asignaciones
+      throw error;
+    }
+  }
+
+  // Remover un Supervisor de una bodega
+  private async removeSupervisorFromWarehouse(warehouseId: string, supervisorId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/warehouses/${warehouseId}/supervisors/${supervisorId}`, true);
+    } catch (error) {
+      console.error(`Error removing supervisor from warehouse:`, error);
+      throw error;
     }
   }
 
   // Procesar asignaciones después de crear/actualizar usuario
-  private async processAssignments(user: User, role: string): Promise<void> {
-    console.log('📋 Processing assignments for user:', user.id, 'Role:', role);
-    
-    // Si es Jefe (JEFE), asignar a áreas
-    if (role === 'JEFE' && user.areas && user.areas.length > 0) {
-      console.log('👔 Assigning JEFE to', user.areas.length, 'areas');
-      for (const areaId of user.areas) {
+  // El backend obtiene assignedBy de la base de datos
+  // Maneja tanto agregar como remover asignaciones
+  private async processAssignments(
+    user: User, 
+    role: string, 
+    previousAreas: string[] = [], 
+    previousWarehouses: string[] = []
+  ): Promise<void> {
+    // Procesar asignaciones de JEFE (Áreas)
+    if (role === 'JEFE') {
+      const currentAreas = user.areas || [];
+      
+      // Áreas a agregar (están en current pero no en previous)
+      const areasToAdd = currentAreas.filter(id => !previousAreas.includes(id));
+      for (const areaId of areasToAdd) {
         await this.assignManagerToArea(areaId, user.id);
+      }
+      
+      // Áreas a remover (están en previous pero no en current)
+      const areasToRemove = previousAreas.filter(id => !currentAreas.includes(id));
+      for (const areaId of areasToRemove) {
+        await this.removeManagerFromArea(areaId, user.id);
       }
     }
     
-    // Si es Supervisor, asignar a bodegas
-    if (role === 'SUPERVISOR' && user.warehouses && user.warehouses.length > 0) {
-      console.log('👷 Assigning SUPERVISOR to', user.warehouses.length, 'warehouses');
-      for (const warehouseId of user.warehouses) {
+    // Procesar asignaciones de SUPERVISOR (Bodegas)
+    if (role === 'SUPERVISOR') {
+      const currentWarehouses = user.warehouses || [];
+      
+      // Bodegas a agregar (están en current pero no en previous)
+      const warehousesToAdd = currentWarehouses.filter(id => !previousWarehouses.includes(id));
+      for (const warehouseId of warehousesToAdd) {
         await this.assignSupervisorToWarehouse(warehouseId, user.id);
+      }
+      
+      // Bodegas a remover (están en previous pero no en current)
+      const warehousesToRemove = previousWarehouses.filter(id => !currentWarehouses.includes(id));
+      for (const warehouseId of warehousesToRemove) {
+        await this.removeSupervisorFromWarehouse(warehouseId, user.id);
       }
     }
   }
 
   // Mapear usuario del backend al dominio
   private mapBackendUser(backendUser: BackendUser): User {
-    // Mapear rol del backend al frontend (AREA_MANAGER -> JEFE, WAREHOUSE_SUPERVISOR -> SUPERVISOR)
-    const backendRoleName = backendUser.role?.name || 'WAREHOUSE_SUPERVISOR';
+    // Mapear rol del backend al frontend (AREA_MANAGER -> JEFE, SUPERVISOR -> SUPERVISOR)
+    const backendRoleName = backendUser.role?.name || 'SUPERVISOR';
     const frontendRole = mapBackendRoleToFrontend(backendRoleName);
-    console.log('🔄 Role mapping (Backend -> Frontend):', backendRoleName, '→', frontendRole);
+    
+    // Extraer IDs de áreas desde areaAssignments (solo las activas)
+    const areas = backendUser.areaAssignments
+      ?.filter(a => a.isActive)
+      .map(a => a.areaId) || [];
+    
+    // Extraer IDs de bodegas desde warehouseAssignments (solo las activas)
+    const warehouses = backendUser.warehouseAssignments
+      ?.filter(w => w.isActive)
+      .map(w => w.warehouseId) || [];
+    
+    // Log para debugging (solo si hay asignaciones)
+    if (areas.length > 0 || warehouses.length > 0) {
+      console.log(`✅ User ${backendUser.firstName} ${backendUser.lastName}:`, {
+        areas: areas.length,
+        warehouses: warehouses.length
+      });
+    }
     
     return {
       id: backendUser.id,
@@ -87,17 +175,16 @@ export class ApiUserRepository implements IUserRepository {
       phone: backendUser.phone || '',
       role: frontendRole as 'ADMIN' | 'JEFE' | 'SUPERVISOR',
       status: backendUser.isEnabled !== false ? 'HABILITADO' : 'DESHABILITADO',
-      areas: [], // TODO: Backend debe agregar estos campos
-      warehouses: [], // TODO: Backend debe agregar estos campos
+      areas,
+      warehouses,
       tenantId: backendUser.tenantId,
     };
   }
 
   // Mapear usuario del dominio al backend
   private async mapDomainUser(user: Omit<User, 'id'>) {
-    // Mapear rol de frontend a backend (JEFE -> AREA_MANAGER)
+    // Mapear rol de frontend a backend (JEFE -> AREA_MANAGER, SUPERVISOR -> SUPERVISOR)
     const backendRole = mapFrontendRoleToBackend(user.role);
-    console.log('🔄 Role mapping for create:', user.role, '→', backendRole);
     
     // Limpiar RUT: quitar puntos y guiones
     const cleanRut = user.rut ? user.rut.replace(/[.-]/g, '') : null;
@@ -117,10 +204,6 @@ export class ApiUserRepository implements IUserRepository {
   async findAll(tenantId: string): Promise<User[]> {
     try {
       const response = await apiClient.get<any>('/users', true);
-      console.log('📥 GET /users response structure:', response);
-      console.log('📥 Response type:', typeof response);
-      console.log('📥 Is array?', Array.isArray(response));
-      console.log('📥 Response keys:', response && typeof response === 'object' ? Object.keys(response) : 'N/A');
       
       // El backend puede devolver diferentes estructuras:
       // Opción 1: Array directo: [user1, user2, ...]
@@ -139,7 +222,6 @@ export class ApiUserRepository implements IUserRepository {
         return [];
       }
       
-      console.log('✅ Extracted', backendUsers.length, 'users');
       return backendUsers.map(u => this.mapBackendUser(u));
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -159,17 +241,37 @@ export class ApiUserRepository implements IUserRepository {
 
   async create(user: Omit<User, 'id'>): Promise<User> {
     try {
-      const mappedUser = await this.mapDomainUser(user);
+      const backendRole = mapFrontendRoleToBackend(user.role);
+      
+      // Cargar roles si no están cargados
+      await roleService.loadRoles();
+      
+      // Obtener roleId
+      let roleId = roleService.getRoleIdByName(backendRole);
+      
+      // Si no se encuentra, lanzar error descriptivo
+      if (!roleId) {
+        const allRoles = roleService.getAllRoles();
+        throw new Error(`Role ID not found for role: ${backendRole}. Available roles: ${allRoles.map(r => r.name).join(', ')}`);
+      }
+      
+      // Limpiar RUT: quitar puntos y guiones
+      const cleanRut = user.rut ? user.rut.replace(/[.-]/g, '') : null;
+      
       const payload = {
-        ...mappedUser,
-        password: 'TempPassword123!@#', // TODO: Implementar generación de contraseña temporal
+        email: user.email,
+        password: 'TempPassword123!@#',
+        firstName: user.name,
+        lastName: user.lastName,
+        rut: cleanRut,
+        phone: user.phone || null,
+        roleId: roleId,
       };
       
-      // No enviar areas/warehouses en el payload del usuario
-      const { areas, warehouses, ...userPayload } = payload;
+      const response = await apiClient.post<any>('/users', payload, true);
       
-      console.log('📤 Creating user:', userPayload);
-      const backendUser = await apiClient.post<BackendUser, typeof userPayload>('/users', userPayload, true);
+      // El backend puede devolver diferentes estructuras
+      const backendUser = response.user || response;
       const createdUser = this.mapBackendUser(backendUser);
       
       // Procesar asignaciones después de crear el usuario
@@ -208,9 +310,20 @@ export class ApiUserRepository implements IUserRepository {
       // Solo se pueden actualizar: email, firstName, lastName, rut, phone, isEnabled
       
       // No enviar areas/warehouses/role en el payload del usuario
-      const hasAssignments = updates.areas || updates.warehouses;
+      const hasAssignments = updates.areas !== undefined || updates.warehouses !== undefined;
       
-      console.log('📤 Updating user:', id, payload);
+      // Obtener asignaciones anteriores si necesitamos procesarlas
+      let previousAreas: string[] = [];
+      let previousWarehouses: string[] = [];
+      
+      if (hasAssignments) {
+        const existingUser = await this.findById(id, tenantId);
+        if (existingUser) {
+          previousAreas = existingUser.areas || [];
+          previousWarehouses = existingUser.warehouses || [];
+        }
+      }
+      
       const backendUser = await apiClient.put<BackendUser, typeof payload>(`/users/${id}`, payload, true);
       const updatedUser = this.mapBackendUser(backendUser);
       
@@ -221,7 +334,7 @@ export class ApiUserRepository implements IUserRepository {
         
         // Usar el rol actualizado o el existente
         const userRole = updates.role || updatedUser.role;
-        await this.processAssignments(updatedUser, userRole);
+        await this.processAssignments(updatedUser, userRole, previousAreas, previousWarehouses);
       }
       
       return updatedUser;
@@ -235,7 +348,6 @@ export class ApiUserRepository implements IUserRepository {
     try {
       // Deshabilitar usuario actualizando isEnabled a false
       await apiClient.put(`/users/${id}`, { isEnabled: false }, true);
-      console.log('✅ Usuario deshabilitado:', id);
     } catch (error) {
       console.error('Error disabling user:', error);
       throw error;

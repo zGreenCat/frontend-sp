@@ -41,8 +41,8 @@ export const BACKEND_ROLE_MAP: Record<string, string> = {
   // Backend -> Frontend
   'ADMIN': 'ADMIN',
   'AREA_MANAGER': 'JEFE',
-  'WAREHOUSE_SUPERVISOR': 'SUPERVISOR',
-  'SUPERVISOR': 'SUPERVISOR', // Backend también usa SUPERVISOR directamente
+  'SUPERVISOR': 'SUPERVISOR',
+  'USER': 'SUPERVISOR', // USER del backend también se mapea a SUPERVISOR
   // Frontend -> Backend
   'JEFE': 'AREA_MANAGER',
 };
@@ -54,10 +54,10 @@ export const mapBackendRoleToFrontend = (backendRole: string): string => {
 
 // Helper para convertir rol del frontend al backend
 export const mapFrontendRoleToBackend = (frontendRole: string): string => {
-  // ADMIN se mapea a sí mismo, JEFE a AREA_MANAGER, SUPERVISOR a WAREHOUSE_SUPERVISOR
+  // ADMIN se mapea a sí mismo, JEFE a AREA_MANAGER, SUPERVISOR a SUPERVISOR
   if (frontendRole === 'ADMIN') return 'ADMIN';
   if (frontendRole === 'JEFE') return 'AREA_MANAGER';
-  if (frontendRole === 'SUPERVISOR') return 'WAREHOUSE_SUPERVISOR';
+  if (frontendRole === 'SUPERVISOR') return 'SUPERVISOR';
   return frontendRole;
 };
 

@@ -29,7 +29,9 @@ import { TENANT_ID } from "@/shared/constants";
 import { User } from "@/domain/entities/User";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { formatRUT } from "@/shared/utils/formatters";
 import { UserDialog } from "@/presentation/components/UserDialog";
+import { AssignmentsDialog } from "@/presentation/components/AssignmentsDialog";
 import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -49,6 +51,7 @@ export function UsersView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [assignmentsDialogOpen, setAssignmentsDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -110,72 +113,77 @@ export function UsersView() {
 
   const handleCreate = async (data: CreateUserInput) => {
     setActionLoading(true);
-    const useCase = new CreateUser(userRepo);
-    const result = await useCase.execute(data);
-    
-    if (result.ok) {
-      // Registrar asignaciones iniciales en el historial
-      if (currentUser && (data.areas.length > 0 || data.warehouses.length > 0)) {
-        const logUseCase = new LogAssignmentChange(
-          assignmentHistoryRepo,
-          areaRepo,
-          warehouseRepo
-        );
-        await logUseCase.execute({
-          userId: result.value.id,
-          previousAreas: [],
-          newAreas: data.areas,
-          previousWarehouses: [],
-          newWarehouses: data.warehouses,
-          performedBy: currentUser.id,
-          performedByName: `${currentUser.name} ${currentUser.lastName || ''}`.trim(),
-          tenantId: TENANT_ID,
+    try {
+      const useCase = new CreateUser(userRepo);
+      const result = await useCase.execute(data);
+      
+      if (result.ok) {
+        // TODO: Registrar asignaciones iniciales en el historial (backend no implementado aún)
+        // if (currentUser && (data.areas.length > 0 || data.warehouses.length > 0)) {
+        //   const logUseCase = new LogAssignmentChange(
+        //     assignmentHistoryRepo,
+        //     areaRepo,
+        //     warehouseRepo
+        //   );
+        //   await logUseCase.execute({
+        //     userId: result.value.id,
+        //     previousAreas: [],
+        //     newAreas: data.areas,
+        //     previousWarehouses: [],
+        //     newWarehouses: data.warehouses,
+        //     performedBy: currentUser.id,
+        //     performedByName: `${currentUser.name} ${currentUser.lastName || ''}`.trim(),
+        //     tenantId: TENANT_ID,
+        //   });
+        // }
+
+        // Toast con detalles de asignaciones
+        const assignmentDetails = [];
+        if (data.areas.length > 0) {
+          const areaNames = data.areas.map(id => getAreaName(id)).join(", ");
+          assignmentDetails.push(`Áreas: ${areaNames}`);
+        }
+        if (data.warehouses.length > 0) {
+          const warehouseNames = data.warehouses.map(id => getWarehouseName(id)).join(", ");
+          assignmentDetails.push(`Bodegas: ${warehouseNames}`);
+        }
+
+        toast({
+          title: "Éxito",
+          description: (
+            <div className="space-y-1">
+              <p>Usuario creado correctamente</p>
+              {assignmentDetails.length > 0 && (
+                <div className="text-xs opacity-80 mt-1">
+                  <p className="font-semibold">Asignaciones:</p>
+                  {assignmentDetails.map((detail, i) => (
+                    <p key={i}>• {detail}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          ),
+          variant: "success",
         });
+        await loadUsers();
+      } else {
+        const errorMsg = result.error || "Error al crear usuario";
+        const isEmailDuplicate = errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('duplicado');
+        toast({
+          title: isEmailDuplicate ? "Email duplicado" : "Error al crear usuario",
+          description: isEmailDuplicate 
+            ? "El email ingresado ya está registrado en el sistema"
+            : errorMsg,
+          variant: "destructive",
+        });
+        throw new Error(errorMsg); // Lanzar error para que el dialog no se cierre
       }
-
-      // Toast con detalles de asignaciones
-      const assignmentDetails = [];
-      if (data.areas.length > 0) {
-        const areaNames = data.areas.map(id => getAreaName(id)).join(", ");
-        assignmentDetails.push(`Áreas: ${areaNames}`);
-      }
-      if (data.warehouses.length > 0) {
-        const warehouseNames = data.warehouses.map(id => getWarehouseName(id)).join(", ");
-        assignmentDetails.push(`Bodegas: ${warehouseNames}`);
-      }
-
-      toast({
-        title: "Éxito",
-        description: (
-          <div className="space-y-1">
-            <p>Usuario creado correctamente</p>
-            {assignmentDetails.length > 0 && (
-              <div className="text-xs text-muted-foreground mt-1">
-                <p className="font-semibold">Asignaciones:</p>
-                {assignmentDetails.map((detail, i) => (
-                  <p key={i}>• {detail}</p>
-                ))}
-              </div>
-            )}
-          </div>
-        ),
-      });
-      await loadUsers();
-    } else {
-      const errorMsg = result.error || "Error al crear usuario";
-      const isEmailDuplicate = errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('duplicado');
-      toast({
-        title: isEmailDuplicate ? "Email duplicado" : "Error al crear usuario",
-        description: isEmailDuplicate 
-          ? "El email ingresado ya está registrado en el sistema"
-          : errorMsg,
-        variant: "destructive",
-      });
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
-  const handleUpdate = async (data: CreateUserInput) => {
+  const handleUpdateAssignments = async (data: { areas: string[]; warehouses: string[] }) => {
     if (!selectedUser) return;
     
     setActionLoading(true);
@@ -191,24 +199,24 @@ export function UsersView() {
     const result = await useCase.execute(selectedUser.id, data, TENANT_ID);
     
     if (result.ok) {
-      // Registrar cambios en asignaciones si hubo modificaciones
-      if (currentUser && hasAssignmentChanges) {
-        const logUseCase = new LogAssignmentChange(
-          assignmentHistoryRepo,
-          areaRepo,
-          warehouseRepo
-        );
-        await logUseCase.execute({
-          userId: selectedUser.id,
-          previousAreas,
-          newAreas: data.areas,
-          previousWarehouses,
-          newWarehouses: data.warehouses,
-          performedBy: currentUser.id,
-          performedByName: `${currentUser.name} ${currentUser.lastName || ''}`.trim(),
-          tenantId: TENANT_ID,
-        });
-      }
+      // TODO: Registrar cambios en asignaciones (backend no implementado aún)
+      // if (currentUser && hasAssignmentChanges) {
+      //   const logUseCase = new LogAssignmentChange(
+      //     assignmentHistoryRepo,
+      //     areaRepo,
+      //     warehouseRepo
+      //   );
+      //   await logUseCase.execute({
+      //     userId: selectedUser.id,
+      //     previousAreas,
+      //     newAreas: data.areas,
+      //     previousWarehouses,
+      //     newWarehouses: data.warehouses,
+      //     performedBy: currentUser.id,
+      //     performedByName: `${currentUser.name} ${currentUser.lastName || ''}`.trim(),
+      //     tenantId: TENANT_ID,
+      //   });
+      // }
 
       // Toast con detalles de cambios en asignaciones
       const changes = [];
@@ -242,7 +250,7 @@ export function UsersView() {
           <div className="space-y-1">
             <p>Usuario actualizado correctamente</p>
             {changes.length > 0 && (
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="text-xs opacity-80 mt-1">
                 <p className="font-semibold">Cambios en asignaciones:</p>
                 {changes.map((change, i) => (
                   <p key={i}>• {change}</p>
@@ -251,11 +259,13 @@ export function UsersView() {
             )}
           </div>
         ),
+        variant: "success",
       });
       await loadUsers();
       setSelectedUser(null);
+      setAssignmentsDialogOpen(false);
     } else {
-      const errorMsg = result.error || "Error al actualizar usuario";
+      const errorMsg = result.error || "Error al actualizar asignaciones";
       toast({
         title: "Error en actualización",
         description: errorMsg.includes('conexión') || errorMsg.includes('network')
@@ -282,6 +292,7 @@ export function UsersView() {
       toast({
         title: "Éxito",
         description: `Usuario ${newStatus === 'HABILITADO' ? 'habilitado' : 'deshabilitado'} correctamente`,
+        variant: "success",
       });
       await loadUsers();
       setSelectedUser(null);
@@ -300,6 +311,11 @@ export function UsersView() {
   const openCreateDialog = () => {
     setSelectedUser(null);
     setDialogOpen(true);
+  };
+
+  const openAssignmentsDialog = (user: User) => {
+    setSelectedUser(user);
+    setAssignmentsDialogOpen(true);
   };
 
   const openDeleteConfirm = (user: User) => {
@@ -509,7 +525,7 @@ export function UsersView() {
                         <div className="flex items-center gap-2">
                           <div>
                             <p className="font-medium text-foreground">{user.name} {user.lastName}</p>
-                            <p className="text-sm text-muted-foreground">{user.rut}</p>
+                            <p className="text-sm text-muted-foreground">{formatRUT(user.rut)}</p>
                           </div>
                           {user.areas.length === 0 && user.warehouses.length === 0 && (
                             <TooltipProvider>
@@ -638,18 +654,47 @@ export function UsersView() {
                       <td className="py-4 px-4">
                         <div className="flex gap-2 justify-end">
                           {can(PERMISSIONS.USERS_EDIT) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteConfirm(user)}
-                              className="h-8 w-8 p-0"
-                            >
-                              {user.status === 'HABILITADO' ? (
-                                <UserX className="h-4 w-4 text-amber-600" />
-                              ) : (
-                                <UserCheck className="h-4 w-4 text-success" />
-                              )}
-                            </Button>
+                            <>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openAssignmentsDialog(user)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Pencil className="h-4 w-4 text-primary" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Modificar asignaciones</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openDeleteConfirm(user)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      {user.status === 'HABILITADO' ? (
+                                        <UserX className="h-4 w-4 text-amber-600" />
+                                      ) : (
+                                        <UserCheck className="h-4 w-4 text-success" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{user.status === 'HABILITADO' ? 'Deshabilitar usuario' : 'Habilitar usuario'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </>
                           )}
                         </div>
                       </td>
@@ -663,15 +708,26 @@ export function UsersView() {
       </Card>
       </div>
 
-      {/* Dialog para crear/editar usuario */}
+      {/* Dialog para crear usuario */}
       <UserDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSubmit={selectedUser ? handleUpdate : handleCreate}
-        defaultValues={selectedUser || undefined}
+        onSubmit={handleCreate}
+        defaultValues={undefined}
         isLoading={actionLoading}
-        mode={selectedUser ? "edit" : "create"}
+        mode="create"
       />
+
+      {/* Dialog para modificar asignaciones */}
+      {selectedUser && (
+        <AssignmentsDialog
+          open={assignmentsDialogOpen}
+          onOpenChange={setAssignmentsDialogOpen}
+          onSubmit={handleUpdateAssignments}
+          user={selectedUser}
+          isLoading={actionLoading}
+        />
+      )}
 
       {/* Dialog de confirmación para cambiar estado */}
       <ConfirmDialog
