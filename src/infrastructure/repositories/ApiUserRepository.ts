@@ -2,7 +2,7 @@ import { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { User } from '@/domain/entities/User';
 import { apiClient } from '@/infrastructure/api/apiClient';
 import { roleService } from '@/infrastructure/services/roleService';
-import { mapFrontendRoleToBackend, mapBackendRoleToFrontend } from '@/shared/constants';
+import { mapFrontendRoleToBackend, mapBackendRoleToFrontend, USER_ROLES } from '@/shared/constants';
 
 // Tipo para el usuario del backend
 interface BackendUser {
@@ -107,8 +107,13 @@ export class ApiUserRepository implements IUserRepository {
     previousAreas: string[] = [], 
     previousWarehouses: string[] = []
   ): Promise<void> {
+    // Normalizar el rol para comparación
+    const normalizedRole = typeof role === 'string' ? role : '';
+    const isJefe = normalizedRole === 'JEFE' || normalizedRole === 'JEFE_AREA' || normalizedRole === USER_ROLES.JEFE;
+    const isSupervisor = normalizedRole === 'SUPERVISOR' || normalizedRole === USER_ROLES.SUPERVISOR;
+    
     // Procesar asignaciones de JEFE (Áreas)
-    if (role === 'JEFE') {
+    if (isJefe) {
       const currentAreas = user.areas || [];
       
       // Áreas a agregar (están en current pero no en previous)
@@ -125,7 +130,7 @@ export class ApiUserRepository implements IUserRepository {
     }
     
     // Procesar asignaciones de SUPERVISOR (Bodegas)
-    if (role === 'SUPERVISOR') {
+    if (isSupervisor) {
       const currentWarehouses = user.warehouses || [];
       
       // Bodegas a agregar (están en current pero no en previous)
@@ -201,28 +206,37 @@ export class ApiUserRepository implements IUserRepository {
     };
   }
 
-  async findAll(tenantId: string): Promise<User[]> {
+  async findAll(tenantId: string, page: number = 1, limit: number = 10): Promise<import('@/domain/repositories/IUserRepository').PaginatedResponse<User>> {
     try {
-      const response = await apiClient.get<any>('/users', true);
+      const url = `/users?page=${page}&limit=${limit}`;
+      console.log('🌐 API Call:', url);
+      const response = await apiClient.get<any>(url, true);
+      console.log('📦 API Response:', response);
       
-      // El backend puede devolver diferentes estructuras:
-      // Opción 1: Array directo: [user1, user2, ...]
-      // Opción 2: Objeto con data: { data: [user1, user2, ...] }
-      // Opción 3: Objeto con users: { users: [user1, user2, ...] }
-      let backendUsers: BackendUser[];
-      
-      if (Array.isArray(response)) {
-        backendUsers = response;
-      } else if (response && Array.isArray(response.data)) {
-        backendUsers = response.data;
-      } else if (response && Array.isArray(response.users)) {
-        backendUsers = response.users;
+      // El backend devuelve estructura paginada:
+      // { data: [...], page: 1, limit: 10, totalPages: 2, total: 17, hasNext: true, hasPrev: false }
+      if (response && Array.isArray(response.data)) {
+        return {
+          data: response.data.map((u: BackendUser) => this.mapBackendUser(u)),
+          page: response.page || page,
+          limit: response.limit || limit,
+          totalPages: response.totalPages || 1,
+          total: response.total || response.data.length,
+          hasNext: response.hasNext || false,
+          hasPrev: response.hasPrev || false,
+        };
       } else {
         console.error('❌ Unexpected response structure from /users:', response);
-        return [];
+        return {
+          data: [],
+          page: 1,
+          limit: 10,
+          totalPages: 0,
+          total: 0,
+          hasNext: false,
+          hasPrev: false,
+        };
       }
-      
-      return backendUsers.map(u => this.mapBackendUser(u));
     } catch (error) {
       console.error('Error fetching users:', error);
       throw error;

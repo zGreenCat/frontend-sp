@@ -11,33 +11,6 @@
 			"name": "Auth",
 			"item": [
 				{
-					"name": "/auth/register",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"nuevo.usuario@example.com\",\n  \"password\": \"Password123!@#\",\n  \"firstName\": \"Nuevo\",\n  \"lastName\": \"Usuario\",\n  \"rut\": \"12345678-9\",\n  \"phone\": \"+56912345678\",\n  \"roleId\": \"{{role_user_id}}\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/register",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"register"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "/auth/login",
 					"event": [
 						{
@@ -197,13 +170,13 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/users/ccea1f9f-6291-417d-9167-d478e5d6beee",
+							"raw": "{{base_url}}/users/37b6119d-6bb0-48c1-978d-f68c76bf65de",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"users",
-								"ccea1f9f-6291-417d-9167-d478e5d6beee"
+								"37b6119d-6bb0-48c1-978d-f68c76bf65de"
 							]
 						}
 					},
@@ -223,15 +196,10 @@
 							]
 						},
 						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
+						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"firstName\": \"Usuario Actualizado\",\n  \"lastName\": \"Apellido Actualizado\",\n  \"phone\": \"+56987654321\"\n}",
+							"raw": "{\r\n  \"email\": \"usuario3.actualizado@example.com\",\r\n  \"firstName\": \"Usuario 3\",\r\n  \"lastName\": \"Actualizado\",\r\n  \"rut\": \"11.111.111-1\",\r\n  \"phone\": \"+56912345678\",\r\n  \"isEnabled\": true\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -239,13 +207,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/users/{{user_id}}",
+							"raw": "{{base_url}}/users/",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"users",
-								"{{user_id}}"
+								""
 							]
 						}
 					},
@@ -314,7 +282,7 @@
 			]
 		},
 		{
-			"name": "Areas",
+			"name": "Area",
 			"item": [
 				{
 					"name": "/areas",
@@ -330,15 +298,15 @@
 							]
 						},
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
+						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Área de Producción\",\n  \"description\": \"Área encargada de la producción\"\n}"
+							"raw": "{\r\n  \"name\": \"Zona Este\",\r\n  \"nodeType\": \"CHILD\",\r\n  \"parentAreaId\": \"278dbc09-b38d-4f65-b482-f2d4f2117351\"\r\n}\r\n\r\n\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{base_url}}/areas",
@@ -395,13 +363,13 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/areas/{{area_id}}",
+							"raw": "{{base_url}}/areas/f8c35061-fa89-4b47-bcdc-a007d09bc8d4",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"areas",
-								"{{area_id}}"
+								"f8c35061-fa89-4b47-bcdc-a007d09bc8d4"
 							]
 						}
 					},
@@ -421,15 +389,15 @@
 							]
 						},
 						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
+						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Área de Producción Actualizada\",\n  \"description\": \"Descripción actualizada\"\n}"
+							"raw": "{\r\n  \"name\": \"Área Actualizada\",\r\n  \"isActive\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{base_url}}/areas/{{area_id}}",
@@ -450,44 +418,6 @@
 			"name": "Assignments",
 			"item": [
 				{
-					"name": "/areas/{areaId}/managers",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"managerId\": \"{{manager_user_id}}\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/areas/{{area_id}}/managers",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"areas",
-								"{{area_id}}",
-								"managers"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "/areas/{areaId}/warehouses",
 					"request": {
 						"auth": {
@@ -501,25 +431,63 @@
 							]
 						},
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
+						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"warehouseId\": \"{{warehouse_id}}\"\n}"
+							"raw": "{\r\n  \"warehouseId\": \"01921be2-9fd3-4d31-98d2-8a979193188a\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
-							"raw": "{{base_url}}/areas/{{area_id}}/warehouses",
+							"raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/warehouses",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"areas",
-								"{{area_id}}",
+								"6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
 								"warehouses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/areas/{areaId}/managers",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"userId\": \"afad5af8-9110-4cad-9a1e-d937a435a827\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/areas/a1000000-0000-0000-0000-000000000001/managers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"areas",
+								"a1000000-0000-0000-0000-000000000001",
+								"managers"
 							]
 						}
 					},
@@ -539,15 +507,15 @@
 							]
 						},
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
+						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"supervisorId\": \"{{supervisor_user_id}}\"\n}"
+							"raw": "{\r\n  \"userId\": \"{{user_id}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{base_url}}/warehouses/{{warehouse_id}}/supervisors",
@@ -558,6 +526,149 @@
 								"warehouses",
 								"{{warehouse_id}}",
 								"supervisors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/assignments",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/assignments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"assignments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/assignments/{id}",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/assignments/{{assignment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"assignments",
+								"{{assignment_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/assignments/{id}",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/assignments/88764947-d4a5-4876-a1da-44a14d94de0e",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"assignments",
+								"88764947-d4a5-4876-a1da-44a14d94de0e"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Warehouses",
+			"item": [
+				{
+					"name": "/warehouses",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/warehouses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"warehouses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/warehouses/{id}",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/warehouses/dac6b1a4-b290-4e42-9856-aca7a39ec275",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"warehouses",
+								"dac6b1a4-b290-4e42-9856-aca7a39ec275"
 							]
 						}
 					},
@@ -588,8 +699,9 @@
 		},
 		{
 			"key": "area_id",
-			"value": "",
-			"type": "string"
+			"value": "a1000000-0000-0000-0000-000000000001",
+			"type": "string",
+			"description": "ID del área Producción"
 		},
 		{
 			"key": "warehouse_id",
@@ -597,17 +709,7 @@
 			"type": "string"
 		},
 		{
-			"key": "manager_user_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "supervisor_user_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "role_user_id",
+			"key": "assignment_id",
 			"value": "",
 			"type": "string"
 		}

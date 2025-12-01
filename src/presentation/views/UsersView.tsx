@@ -18,7 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Search, Pencil, Trash2, AlertTriangle, UserX, UserCheck } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, AlertTriangle, UserX, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { ListUsers } from "@/application/usecases/user/ListUsers";
 import { CreateUser } from "@/application/usecases/user/CreateUser";
@@ -56,6 +56,12 @@ export function UsersView() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  
   // Filtros avanzados
   const [filterRole, setFilterRole] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
@@ -65,14 +71,18 @@ export function UsersView() {
   const loadUsers = async () => {
     setLoading(true);
     try {
+      console.log('🔍 Loading users - Page:', currentPage, 'PageSize:', pageSize);
       const [usersResult, areasData, warehousesData] = await Promise.all([
-        new ListUsers(userRepo).execute(TENANT_ID),
+        new ListUsers(userRepo).execute(TENANT_ID, currentPage, pageSize),
         areaRepo.findAll(TENANT_ID),
         warehouseRepo.findAll(TENANT_ID),
       ]);
       
       if (usersResult.ok) {
-        setUsers(usersResult.value);
+        console.log('✅ Users loaded:', usersResult.value);
+        setUsers(usersResult.value.data);
+        setTotalPages(usersResult.value.totalPages);
+        setTotalUsers(usersResult.value.total);
         setAreas(areasData.map(a => ({ id: a.id, name: a.name })));
         setWarehouses(warehousesData.map(w => ({ id: w.id, name: w.name })));
       } else {
@@ -97,7 +107,7 @@ export function UsersView() {
   useEffect(() => {
     loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentPage, pageSize]);
 
   // Helper para obtener nombre de área por ID
   const getAreaName = (areaId: string): string => {
@@ -366,27 +376,22 @@ export function UsersView() {
 
   const usersByHierarchy = filterUsersByHierarchy(users);
 
-  const filteredUsers = usersByHierarchy.filter(u => {
-    // Filtro de búsqueda
-    const matchesSearch = search === "" || 
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.lastName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
-    
-    // Filtro de rol
-    const matchesRole = filterRole === "" || u.role === filterRole;
-    
-    // Filtro de estado
-    const matchesStatus = filterStatus === "" || u.status === filterStatus;
-    
-    // Filtro de área
-    const matchesArea = filterArea === "" || (u.areas && u.areas.includes(filterArea));
-    
-    // Filtro de bodega
-    const matchesWarehouse = filterWarehouse === "" || (u.warehouses && u.warehouses.includes(filterWarehouse));
-    
-    return matchesSearch && matchesRole && matchesStatus && matchesArea && matchesWarehouse;
-  });
+  // Los filtros locales están deshabilitados mientras se usa paginación del servidor
+  // TODO: Enviar filtros al backend como query params para filtrado en servidor
+  const filteredUsers = usersByHierarchy;
+  
+  // VERSIÓN ANTERIOR CON FILTROS LOCALES (causa problemas con paginación del servidor):
+  // const filteredUsers = usersByHierarchy.filter(u => {
+  //   const matchesSearch = search === "" || 
+  //     u.name.toLowerCase().includes(search.toLowerCase()) ||
+  //     u.lastName.toLowerCase().includes(search.toLowerCase()) ||
+  //     u.email.toLowerCase().includes(search.toLowerCase());
+  //   const matchesRole = filterRole === "" || u.role === filterRole;
+  //   const matchesStatus = filterStatus === "" || u.status === filterStatus;
+  //   const matchesArea = filterArea === "" || (u.areas && u.areas.includes(filterArea));
+  //   const matchesWarehouse = filterWarehouse === "" || (u.warehouses && u.warehouses.includes(filterWarehouse));
+  //   return matchesSearch && matchesRole && matchesStatus && matchesArea && matchesWarehouse;
+  // });
 
   return (
     <>
@@ -433,7 +438,7 @@ export function UsersView() {
             
             {/* Filtros avanzados */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : value)}>
+              <Select value={filterRole || "all"} onValueChange={(value) => { setFilterRole(value === "all" ? "" : value); setCurrentPage(1); }}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Filtrar por rol" />
                 </SelectTrigger>
@@ -445,7 +450,7 @@ export function UsersView() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterStatus || "all"} onValueChange={(value) => setFilterStatus(value === "all" ? "" : value)}>
+              <Select value={filterStatus || "all"} onValueChange={(value) => { setFilterStatus(value === "all" ? "" : value); setCurrentPage(1); }}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Filtrar por estado" />
                 </SelectTrigger>
@@ -456,7 +461,7 @@ export function UsersView() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterArea || "all"} onValueChange={(value) => setFilterArea(value === "all" ? "" : value)}>
+              <Select value={filterArea || "all"} onValueChange={(value) => { setFilterArea(value === "all" ? "" : value); setCurrentPage(1); }}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Filtrar por área" />
                 </SelectTrigger>
@@ -468,7 +473,7 @@ export function UsersView() {
                 </SelectContent>
               </Select>
 
-              <Select value={filterWarehouse || "all"} onValueChange={(value) => setFilterWarehouse(value === "all" ? "" : value)}>
+              <Select value={filterWarehouse || "all"} onValueChange={(value) => { setFilterWarehouse(value === "all" ? "" : value); setCurrentPage(1); }}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Filtrar por bodega" />
                 </SelectTrigger>
@@ -702,6 +707,72 @@ export function UsersView() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {/* Controles de paginación */}
+          {!loading && totalUsers > 0 && (
+            <div className="flex items-center justify-between px-4 py-4 border-t">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Mostrando</span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-16">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>de {totalUsers} usuarios</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('⬅️ Previous page clicked, current:', currentPage);
+                    setCurrentPage(prev => Math.max(1, prev - 1));
+                  }}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1 text-sm">
+                  <span className="text-muted-foreground">Página</span>
+                  <span className="font-medium">{currentPage}</span>
+                  <span className="text-muted-foreground">de</span>
+                  <span className="font-medium">{totalPages}</span>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('➡️ Next page clicked, current:', currentPage, 'totalPages:', totalPages);
+                    setCurrentPage(prev => {
+                      const newPage = Math.min(totalPages, prev + 1);
+                      console.log('📄 New page will be:', newPage);
+                      return newPage;
+                    });
+                  }}
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

@@ -1,7 +1,17 @@
 import { User } from '../entities/User';
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  page: number;
+  limit: number;
+  totalPages: number;
+  total: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export interface IUserRepository {
-  findAll(tenantId: string): Promise<User[]>;
+  findAll(tenantId: string, page?: number, limit?: number): Promise<PaginatedResponse<User>>;
   findById(id: string, tenantId: string): Promise<User | null>;
   create(user: Omit<User, 'id'>): Promise<User>;
   update(id: string, user: Partial<User>, tenantId: string): Promise<User>;

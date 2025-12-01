@@ -20,6 +20,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   // User roles (todos con estilo azul)
   ADMIN: { label: "Admin", className: "bg-primary text-primary-foreground" },
   JEFE: { label: "Jefe de Área", className: "bg-primary text-primary-foreground" },
+  JEFE_AREA: { label: "Jefe de Área", className: "bg-primary text-primary-foreground" },
   SUPERVISOR: { label: "Supervisor", className: "bg-primary text-primary-foreground" },
   // Roles del backend mapeados
   AREA_MANAGER: { label: "Jefe de Área", className: "bg-primary text-primary-foreground" },

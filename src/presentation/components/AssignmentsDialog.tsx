@@ -135,8 +135,10 @@ export function AssignmentsDialog({
   };
 
   // Determinar si se deben mostrar áreas o bodegas según el rol del usuario
-  const showAreas = user.role === 'JEFE';
-  const showWarehouses = user.role === 'SUPERVISOR';
+  // El backend usa JEFE_AREA pero el frontend puede usar JEFE
+  const userRoleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name || '';
+  const showAreas = userRoleName === 'JEFE' || userRoleName === 'JEFE_AREA' || userRoleName === USER_ROLES.JEFE;
+  const showWarehouses = userRoleName === 'SUPERVISOR' || userRoleName === USER_ROLES.SUPERVISOR;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,8 +163,8 @@ export function AssignmentsDialog({
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
             <Badge variant="outline" className="text-sm">
-              {user.role === USER_ROLES.JEFE ? 'Jefe de Área' : 
-               user.role === USER_ROLES.SUPERVISOR ? 'Supervisor' : user.role}
+              {userRoleName === 'JEFE' || userRoleName === 'JEFE_AREA' || userRoleName === USER_ROLES.JEFE ? 'JEFE_AREA' : 
+               userRoleName === 'SUPERVISOR' || userRoleName === USER_ROLES.SUPERVISOR ? 'SUPERVISOR' : userRoleName}
             </Badge>
           </div>
         </div>

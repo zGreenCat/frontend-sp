@@ -72,7 +72,9 @@ export class ApiClient {
   }
 
   async get<T>(endpoint: string, requiresAuth: boolean = true): Promise<T> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const fullUrl = `${this.baseURL}${endpoint}`;
+    console.log('🔗 Full URL:', fullUrl);
+    const response = await fetch(fullUrl, {
       method: "GET",
       headers: this.getHeaders(requiresAuth),
     });
