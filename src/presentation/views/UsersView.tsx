@@ -109,14 +109,26 @@ export function UsersView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize]);
 
-  // Helper para obtener nombre de área por ID
-  const getAreaName = (areaId: string): string => {
+  // Helper para obtener nombre de área por ID desde los detalles del usuario o lista global
+  const getAreaName = (areaId: string, userAreaDetails?: Array<{ id: string; name: string }>): string => {
+    // Primero buscar en los detalles del usuario
+    if (userAreaDetails) {
+      const area = userAreaDetails.find(a => a.id === areaId);
+      if (area) return area.name;
+    }
+    // Si no está, buscar en la lista global
     const area = areas.find(a => a.id === areaId);
     return area?.name || areaId;
   };
 
-  // Helper para obtener nombre de bodega por ID
-  const getWarehouseName = (warehouseId: string): string => {
+  // Helper para obtener nombre de bodega por ID desde los detalles del usuario o lista global
+  const getWarehouseName = (warehouseId: string, userWarehouseDetails?: Array<{ id: string; name: string }>): string => {
+    // Primero buscar en los detalles del usuario
+    if (userWarehouseDetails) {
+      const warehouse = userWarehouseDetails.find(w => w.id === warehouseId);
+      if (warehouse) return warehouse.name;
+    }
+    // Si no está, buscar en la lista global
     const warehouse = warehouses.find(w => w.id === warehouseId);
     return warehouse?.name || warehouseId;
   };
@@ -558,18 +570,18 @@ export function UsersView() {
                       <td className="py-4 px-4">
                         <div className="space-y-2">
                           {/* Áreas */}
-                          {user.areas.length > 0 && (
+                          {user.areaDetails && user.areaDetails.length > 0 && (
                             <div className="flex flex-wrap gap-1">
-                              {user.areas.slice(0, 2).map((areaId) => (
+                              {user.areaDetails.slice(0, 2).map((area) => (
                                 <Badge 
-                                  key={areaId} 
+                                  key={area.id} 
                                   variant="secondary" 
                                   className="text-xs"
                                 >
-                                  {getAreaName(areaId)}
+                                  {area.name}
                                 </Badge>
                               ))}
-                              {user.areas.length > 2 && (
+                              {user.areaDetails.length > 2 && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -577,14 +589,14 @@ export function UsersView() {
                                         variant="outline" 
                                         className="text-xs cursor-help"
                                       >
-                                        +{user.areas.length - 2} más
+                                        +{user.areaDetails.length - 2} más
                                       </Badge>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <div className="space-y-1">
-                                        {user.areas.slice(2).map((areaId) => (
-                                          <p key={areaId} className="text-sm">
-                                            {getAreaName(areaId)}
+                                        {user.areaDetails.slice(2).map((area) => (
+                                          <p key={area.id} className="text-sm">
+                                            {area.name}
                                           </p>
                                         ))}
                                       </div>
@@ -596,18 +608,18 @@ export function UsersView() {
                           )}
                           
                           {/* Bodegas */}
-                          {user.warehouses.length > 0 && (
+                          {user.warehouseDetails && user.warehouseDetails.length > 0 && (
                             <div className="flex flex-wrap gap-1">
-                              {user.warehouses.slice(0, 2).map((warehouseId) => (
+                              {user.warehouseDetails.slice(0, 2).map((warehouse) => (
                                 <Badge 
-                                  key={warehouseId} 
+                                  key={warehouse.id} 
                                   variant="outline" 
                                   className="text-xs"
                                 >
-                                  {getWarehouseName(warehouseId)}
+                                  {warehouse.name}
                                 </Badge>
                               ))}
-                              {user.warehouses.length > 2 && (
+                              {user.warehouseDetails.length > 2 && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -615,14 +627,14 @@ export function UsersView() {
                                         variant="outline" 
                                         className="text-xs cursor-help"
                                       >
-                                        +{user.warehouses.length - 2} más
+                                        +{user.warehouseDetails.length - 2} más
                                       </Badge>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <div className="space-y-1">
-                                        {user.warehouses.slice(2).map((warehouseId) => (
-                                          <p key={warehouseId} className="text-sm">
-                                            {getWarehouseName(warehouseId)}
+                                        {user.warehouseDetails.slice(2).map((warehouse) => (
+                                          <p key={warehouse.id} className="text-sm">
+                                            {warehouse.name}
                                           </p>
                                         ))}
                                       </div>

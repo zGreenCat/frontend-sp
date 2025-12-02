@@ -24,6 +24,7 @@ import { AssignWarehousesDialog } from "@/presentation/components/AssignWarehous
 import { AssignManagersDialog } from "@/presentation/components/AssignManagersDialog";
 import { AreaDialog } from "@/presentation/components/AreaDialog";
 import { UpdateArea } from "@/application/usecases/area/UpdateArea";
+import { GetAreaDetail } from "@/application/usecases/area/GetAreaDetail";
 import { CreateAreaInput } from "@/shared/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/presentation/components/EmptyState";
@@ -54,30 +55,55 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const loadAreaDetails = async () => {
     setLoading(true);
     try {
-      // Cargar área principal
-      const areaData = await areaRepo.findById(areaId, TENANT_ID);
-      if (!areaData) {
+      // Usar el nuevo caso de uso para obtener información completa
+      const getDetailUseCase = new GetAreaDetail(areaRepo);
+      const result = await getDetailUseCase.execute(areaId);
+
+      if (!result.ok || !result.value) {
         toast({
           title: "❌ Área no encontrada",
-          description: "El área solicitada no existe",
+          description: result.error || "El área solicitada no existe",
           variant: "destructive",
         });
         router.push("/areas");
         return;
       }
+
+      const { area: areaData, managers, warehouses } = result.value;
       setArea(areaData);
+
+      // Convertir managers del API a entidades User
+      const managersAsUsers: User[] = managers.map(m => ({
+        id: m.id,
+        name: m.name.split(' ')[0] || m.name,
+        lastName: m.name.split(' ').slice(1).join(' ') || '',
+        email: m.email,
+        rut: '',
+        phone: '',
+        role: 'JEFE' as const,
+        status: 'HABILITADO' as const,
+        areas: [areaId],
+        warehouses: [],
+        tenantId: TENANT_ID,
+      }));
+      setAssignedManagers(managersAsUsers);
+
+      // Convertir warehouses del API a entidades Warehouse
+      const warehousesAsEntities: WarehouseEntity[] = warehouses.map(w => ({
+        id: w.id,
+        name: w.name,
+        capacityKg: 0, // El API podría no enviar este dato
+        status: 'ACTIVO' as const,
+        areaId: areaId,
+        tenantId: TENANT_ID,
+      }));
+      setAssignedWarehouses(warehousesAsEntities);
 
       // Cargar área padre si existe
       if (areaData.parentId) {
         const parent = await areaRepo.findById(areaData.parentId, TENANT_ID);
         setParentArea(parent);
       }
-
-      // Cargar bodegas asignadas
-      await loadWarehouses(areaId);
-
-      // Cargar jefes asignados
-      await loadManagers(areaId);
     } catch (error) {
       console.error("Error al cargar detalles del área:", error);
       toast({
@@ -92,7 +118,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
   const loadWarehouses = async (areaId: string) => {
     try {
-      const warehouseIds = await areaRepo.getAssignedWarehouses(areaId);
+      const warehouseIds = await (areaRepo as any).getAssignedWarehouses(areaId);
       const allWarehouses = await warehouseRepo.findAll(TENANT_ID);
       const filtered = allWarehouses.filter(w => warehouseIds.includes(w.id));
       setAssignedWarehouses(filtered);
@@ -103,7 +129,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
   const loadManagers = async (areaId: string) => {
     try {
-      const managerIds = await areaRepo.getAssignedManagers(areaId);
+      const managerIds = await (areaRepo as any).getAssignedManagers(areaId);
       const allUsers = await userRepo.findAll(TENANT_ID);
       const filtered = allUsers.filter(u => managerIds.includes(u.id));
       setAssignedManagers(filtered);

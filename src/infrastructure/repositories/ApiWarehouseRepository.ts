@@ -5,34 +5,60 @@ import { apiClient } from '@/infrastructure/api/apiClient';
 interface BackendWarehouse {
   id: string;
   name: string;
-  capacityKg: number;
-  status: string;
+  capacityKg?: number;
+  capacity?: number;
+  isEnabled?: boolean;
+  status?: string;
   areaId?: string;
   supervisorId?: string;
-  tenantId: string;
-  createdAt: string;
-  updatedAt: string;
+  tenantId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export class ApiWarehouseRepository implements IWarehouseRepository {
   private mapBackendWarehouse(backendWarehouse: BackendWarehouse): Warehouse {
+    // El backend puede usar isEnabled (boolean) o status (string)
+    let status: 'ACTIVO' | 'INACTIVO' = 'ACTIVO';
+    
+    if (typeof backendWarehouse.isEnabled === 'boolean') {
+      status = backendWarehouse.isEnabled ? 'ACTIVO' : 'INACTIVO';
+    } else if (backendWarehouse.status) {
+      status = backendWarehouse.status === 'ACTIVO' ? 'ACTIVO' : 'INACTIVO';
+    }
+    
     return {
       id: backendWarehouse.id,
       name: backendWarehouse.name,
-      capacityKg: backendWarehouse.capacityKg,
-      status: (backendWarehouse.status || 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
+      capacityKg: backendWarehouse.capacityKg || backendWarehouse.capacity || 0,
+      status,
       areaId: backendWarehouse.areaId,
       supervisorId: backendWarehouse.supervisorId,
-      tenantId: backendWarehouse.tenantId,
+      tenantId: backendWarehouse.tenantId || '',
     };
   }
 
   async findAll(tenantId: string): Promise<Warehouse[]> {
     try {
-      // TODO: Backend debe implementar GET /warehouses
-      // Por ahora retornamos array vacío
-      console.warn('GET /warehouses not implemented in backend, returning empty array');
-      return [];
+      const response = await apiClient.get<any>('/warehouses', true);
+      console.log('📥 GET /warehouses response:', response);
+      
+      // El backend puede devolver array directo o { data: [...] }
+      let backendWarehouses: BackendWarehouse[];
+      
+      if (Array.isArray(response)) {
+        backendWarehouses = response;
+      } else if (response && Array.isArray(response.data)) {
+        backendWarehouses = response.data;
+      } else if (response && Array.isArray(response.warehouses)) {
+        backendWarehouses = response.warehouses;
+      } else {
+        console.error('❌ Unexpected response structure from /warehouses:', response);
+        return [];
+      }
+      
+      console.log('✅ Extracted', backendWarehouses.length, 'warehouses');
+      return backendWarehouses.map(w => this.mapBackendWarehouse(w));
     } catch (error) {
       console.error('Error fetching warehouses:', error);
       return [];
@@ -41,9 +67,11 @@ export class ApiWarehouseRepository implements IWarehouseRepository {
 
   async findById(id: string, tenantId: string): Promise<Warehouse | null> {
     try {
-      // TODO: Backend debe implementar GET /warehouses/{id}
-      console.warn('GET /warehouses/{id} not implemented in backend');
-      return null;
+      const response = await apiClient.get<any>(`/warehouses/${id}`, true);
+      
+      // Manejar posibles estructuras de respuesta
+      const backendWarehouse = response.data || response;
+      return this.mapBackendWarehouse(backendWarehouse);
     } catch (error) {
       console.error('Error fetching warehouse:', error);
       return null;

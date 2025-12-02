@@ -163,11 +163,29 @@ export class ApiUserRepository implements IUserRepository {
       ?.filter(w => w.isActive)
       .map(w => w.warehouseId) || [];
     
+    // Extraer detalles de áreas (ID y nombre)
+    const areaDetails = backendUser.areaAssignments
+      ?.filter(a => a.isActive && a.area)
+      .map(a => ({
+        id: a.areaId,
+        name: a.area!.name
+      })) || [];
+    
+    // Extraer detalles de bodegas (ID y nombre)
+    const warehouseDetails = backendUser.warehouseAssignments
+      ?.filter(w => w.isActive && w.warehouse)
+      .map(w => ({
+        id: w.warehouseId,
+        name: w.warehouse!.name
+      })) || [];
+    
     // Log para debugging (solo si hay asignaciones)
     if (areas.length > 0 || warehouses.length > 0) {
       console.log(`✅ User ${backendUser.firstName} ${backendUser.lastName}:`, {
         areas: areas.length,
-        warehouses: warehouses.length
+        warehouses: warehouses.length,
+        areaDetails: areaDetails.map(a => a.name),
+        warehouseDetails: warehouseDetails.map(w => w.name)
       });
     }
     
@@ -182,6 +200,8 @@ export class ApiUserRepository implements IUserRepository {
       status: backendUser.isEnabled !== false ? 'HABILITADO' : 'DESHABILITADO',
       areas,
       warehouses,
+      areaDetails,
+      warehouseDetails,
       tenantId: backendUser.tenantId,
     };
   }

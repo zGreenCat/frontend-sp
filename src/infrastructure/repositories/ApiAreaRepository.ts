@@ -59,9 +59,42 @@ export class ApiAreaRepository implements IAreaRepository {
       
       // Manejar posibles estructuras de respuesta
       const backendArea = response.data || response;
-      return this.mapBackendArea(backendArea);
+      
+      // El endpoint GET /areas/:id devuelve información completa con managers y warehouses
+      const area = this.mapBackendArea(backendArea);
+      
+      // Agregar información adicional si está disponible en la respuesta
+      if (backendArea.managers) {
+        console.log('📋 Area has managers:', backendArea.managers);
+      }
+      if (backendArea.warehouses) {
+        console.log('📦 Area has warehouses:', backendArea.warehouses);
+      }
+      
+      return area;
     } catch (error) {
       console.error('Error fetching area:', error);
+      return null;
+    }
+  }
+  
+  // Método para obtener detalle completo de área con asignaciones
+  async findByIdWithDetails(id: string): Promise<{
+    area: Area;
+    managers: Array<{ id: string; name: string; email: string }>;
+    warehouses: Array<{ id: string; name: string }>;
+  } | null> {
+    try {
+      const response = await apiClient.get<any>(`/areas/${id}`, true);
+      const backendArea = response.data || response;
+      
+      return {
+        area: this.mapBackendArea(backendArea),
+        managers: backendArea.managers || [],
+        warehouses: backendArea.warehouses || [],
+      };
+    } catch (error) {
+      console.error('Error fetching area with details:', error);
       return null;
     }
   }

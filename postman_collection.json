@@ -1,717 +1,605 @@
 {
-	"info": {
-		"_postman_id": "5f7df3d9-3ee0-4873-a4a1-b298d1d03f87",
-		"name": "SPack",
-		"description": "Colección de endpoints para testear el backend de SmartPack (Auth, Users).",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "38493185"
-	},
-	"item": [
-		{
-			"name": "Auth",
-			"item": [
-				{
-					"name": "/auth/login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"const jsonData = pm.response.json();\r",
-									"\r",
-									"if (jsonData.accessToken) {\r",
-									"    pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);\r",
-									"    console.log(\"Token guardado:\", jsonData.accessToken);\r",
-									"} else {\r",
-									"    console.warn(\"No se encontró 'accessToken' en la respuesta.\");\r",
-									"}\r",
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"fcondori@ekiproject.cl\",\n  \"password\": \"Admin123!@#\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/login",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"login"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Users",
-			"item": [
-				{
-					"name": "/users",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"email\": \"usuario.prueba@example.com\",\r\n  \"password\": \"Password123!@#\",\r\n  \"firstName\": \"Usuario\",\r\n  \"lastName\": \"Prueba\",\r\n  \"rut\": null,\r\n  \"phone\": null,\r\n  \"roleId\": null\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/users",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/users",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/users",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/users/me",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/users/me",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								"me"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/users/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/users/37b6119d-6bb0-48c1-978d-f68c76bf65de",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								"37b6119d-6bb0-48c1-978d-f68c76bf65de"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/users/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"email\": \"usuario3.actualizado@example.com\",\r\n  \"firstName\": \"Usuario 3\",\r\n  \"lastName\": \"Actualizado\",\r\n  \"rut\": \"11.111.111-1\",\r\n  \"phone\": \"+56912345678\",\r\n  \"isEnabled\": true\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/users/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								""
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/users/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/users/ccea1f9f-6291-417d-9167-d478e5d6beee",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								"ccea1f9f-6291-417d-9167-d478e5d6beee"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Roles",
-			"item": [
-				{
-					"name": "/roles",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/roles",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"roles"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Area",
-			"item": [
-				{
-					"name": "/areas",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"Zona Este\",\r\n  \"nodeType\": \"CHILD\",\r\n  \"parentAreaId\": \"278dbc09-b38d-4f65-b482-f2d4f2117351\"\r\n}\r\n\r\n\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/areas",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"areas"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/areas",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/areas",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"areas"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/areas/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/areas/f8c35061-fa89-4b47-bcdc-a007d09bc8d4",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"areas",
-								"f8c35061-fa89-4b47-bcdc-a007d09bc8d4"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/areas/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"Área Actualizada\",\r\n  \"isActive\": true\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/areas/{{area_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"areas",
-								"{{area_id}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Assignments",
-			"item": [
-				{
-					"name": "/areas/{areaId}/warehouses",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"warehouseId\": \"01921be2-9fd3-4d31-98d2-8a979193188a\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/warehouses",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"areas",
-								"6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
-								"warehouses"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/areas/{areaId}/managers",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"userId\": \"afad5af8-9110-4cad-9a1e-d937a435a827\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/areas/a1000000-0000-0000-0000-000000000001/managers",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"areas",
-								"a1000000-0000-0000-0000-000000000001",
-								"managers"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/warehouses/{warehouseId}/supervisors",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"userId\": \"{{user_id}}\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/warehouses/{{warehouse_id}}/supervisors",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"warehouses",
-								"{{warehouse_id}}",
-								"supervisors"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/assignments",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/assignments",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"assignments"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/assignments/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/assignments/{{assignment_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"assignments",
-								"{{assignment_id}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/assignments/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/assignments/88764947-d4a5-4876-a1da-44a14d94de0e",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"assignments",
-								"88764947-d4a5-4876-a1da-44a14d94de0e"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Warehouses",
-			"item": [
-				{
-					"name": "/warehouses",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/warehouses",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"warehouses"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "/warehouses/{id}",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/warehouses/dac6b1a4-b290-4e42-9856-aca7a39ec275",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"warehouses",
-								"dac6b1a4-b290-4e42-9856-aca7a39ec275"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	],
-	"variable": [
-		{
-			"key": "access_token",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "base_url",
-			"value": "http://localhost:3000",
-			"type": "string"
-		},
-		{
-			"key": "user_id",
-			"value": "efa1d4f2-a208-4676-aafb-de5bcda044a2",
-			"type": "string"
-		},
-		{
-			"key": "accessToken",
-			"value": ""
-		},
-		{
-			"key": "area_id",
-			"value": "a1000000-0000-0000-0000-000000000001",
-			"type": "string",
-			"description": "ID del área Producción"
-		},
-		{
-			"key": "warehouse_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "assignment_id",
-			"value": "",
-			"type": "string"
-		}
-	]
+  "info": {
+    "_postman_id": "5f7df3d9-3ee0-4873-a4a1-b298d1d03f87",
+    "name": "SPack",
+    "description": "Colección de endpoints para testear el backend de SmartPack (Auth, Users).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "38493185"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "/auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const jsonData = pm.response.json();\r",
+                  "\r",
+                  "if (jsonData.accessToken) {\r",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);\r",
+                  "    console.log(\"Token guardado:\", jsonData.accessToken);\r",
+                  "} else {\r",
+                  "    console.warn(\"No se encontró 'accessToken' en la respuesta.\");\r",
+                  "}\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"fcondori@ekiproject.cl\",\n  \"password\": \"Admin123!@#\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "/users",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"usuario.prueba@example.com\",\r\n  \"password\": \"Password123!@#\",\r\n  \"firstName\": \"Usuario\",\r\n  \"lastName\": \"Prueba\",\r\n  \"rut\": null,\r\n  \"phone\": null,\r\n  \"roleId\": null\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/users",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users?page=1&limit=10&search=&sortBy=createdAt&order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/users/me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/users/area/{areaId}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/area/6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+              "host": ["{{base_url}}"],
+              "path": ["users", "area", "6ebee4b1-b76a-4aba-bb92-9fe76349bb77"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/users/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/37b6119d-6bb0-48c1-978d-f68c76bf65de",
+              "host": ["{{base_url}}"],
+              "path": ["users", "37b6119d-6bb0-48c1-978d-f68c76bf65de"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/users/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"usuario3.actualizado@example.com\",\r\n  \"firstName\": \"Usuario 3\",\r\n  \"lastName\": \"Actualizado\",\r\n  \"rut\": \"11.111.111-1\",\r\n  \"phone\": \"+56912345678\",\r\n  \"isEnabled\": true\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/users/",
+              "host": ["{{base_url}}"],
+              "path": ["users", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/users/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/ccea1f9f-6291-417d-9167-d478e5d6beee",
+              "host": ["{{base_url}}"],
+              "path": ["users", "ccea1f9f-6291-417d-9167-d478e5d6beee"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "/roles",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["roles"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Area",
+      "item": [
+        {
+          "name": "/areas",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Zona Este\",\r\n  \"nodeType\": \"CHILD\",\r\n  \"parentAreaId\": \"278dbc09-b38d-4f65-b482-f2d4f2117351\"\r\n}\r\n\r\n\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/areas",
+              "host": ["{{base_url}}"],
+              "path": ["areas"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/areas",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/areas",
+              "host": ["{{base_url}}"],
+              "path": ["areas"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/areas/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/areas/f8c35061-fa89-4b47-bcdc-a007d09bc8d4",
+              "host": ["{{base_url}}"],
+              "path": ["areas", "f8c35061-fa89-4b47-bcdc-a007d09bc8d4"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/areas/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/areas/{id}",
+              "host": ["{{base_url}}"],
+              "path": ["areas", "{id}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "item": [
+        {
+          "name": "/areas/{areaId}/warehouses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"warehouseId\": \"01921be2-9fd3-4d31-98d2-8a979193188a\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/warehouses",
+              "host": ["{{base_url}}"],
+              "path": [
+                "areas",
+                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+                "warehouses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/areas/{areaId}/managers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"managerId\": \"afad5af8-9110-4cad-9a1e-d937a435a827\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/managers",
+              "host": ["{{base_url}}"],
+              "path": [
+                "areas",
+                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+                "managers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{warehouseId}/supervisors",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "/warehouses/{warehouseId}/supervisors",
+              "path": ["warehouses", "{warehouseId}", "supervisors"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/assignments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/assignments",
+              "host": ["{{base_url}}"],
+              "path": ["assignments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/assignments/{id}",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "/assignments/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/assignments/88764947-d4a5-4876-a1da-44a14d94de0e",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "88764947-d4a5-4876-a1da-44a14d94de0e"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Warehouses",
+      "item": [
+        {
+          "name": "/warehouses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses/dac6b1a4-b290-4e42-9856-aca7a39ec275",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses", "dac6b1a4-b290-4e42-9856-aca7a39ec275"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "efa1d4f2-a208-4676-aafb-de5bcda044a2",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    }
+  ]
 }

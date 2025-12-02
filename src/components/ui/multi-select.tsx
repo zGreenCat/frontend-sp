@@ -51,8 +51,13 @@ export function MultiSelect({
     <Command className={`overflow-visible bg-transparent ${className}`}>
       <div
         className={`group rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${
-          disabled ? "cursor-not-allowed opacity-50" : ""
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-text"
         }`}
+        onClick={() => {
+          if (!disabled) {
+            inputRef.current?.focus();
+          }
+        }}
       >
         <div className="flex flex-wrap gap-1">
           {selected.map((value) => {
@@ -75,7 +80,10 @@ export function MultiSelect({
                     e.preventDefault();
                     e.stopPropagation();
                   }}
-                  onClick={() => handleUnselect(value)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUnselect(value);
+                  }}
                   disabled={disabled}
                 >
                   <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -87,7 +95,9 @@ export function MultiSelect({
             ref={inputRef}
             value={inputValue}
             onValueChange={setInputValue}
-            onBlur={() => setOpen(false)}
+            onBlur={() => {
+              setTimeout(() => setOpen(false), 200);
+            }}
             onFocus={() => setOpen(true)}
             placeholder={selected.length === 0 ? placeholder : ""}
             disabled={disabled}
