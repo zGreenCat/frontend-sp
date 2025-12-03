@@ -3,10 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-// Importar utilidades de debugging (solo en desarrollo)
-if (process.env.NODE_ENV === 'development') {
-  import('@/lib/authDebug');
-}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

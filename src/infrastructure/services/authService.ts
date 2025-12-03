@@ -30,11 +30,13 @@ export class AuthService {
       throw new Error('Respuesta de registro inválida');
     }
 
-    // Mapear firstName del backend a name del frontend
+    // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
     const user: User = {
       ...backendUser,
       name: backendUser.firstName || backendUser.name || null,
       lastName: backendUser.lastName || '',
+      areas: this.normalizeAreas(backendUser.areas),
+      warehouses: this.normalizeWarehouses(backendUser.warehouses),
     };
 
     // Guardar token y usuario en localStorage
@@ -57,7 +59,7 @@ export class AuthService {
     // Opción 1: { user, token }
     // Opción 2: { access_token, user }
     // Opción 3: { accessToken, user }
-    const token = response.token || response.access_token || response.accessToken;
+    const token = response.accessToken;
     const backendUser = response.user;
 
     if (!token) {
@@ -76,12 +78,16 @@ export class AuthService {
       throw new Error('Tu cuenta se encuentra deshabilitada. Contacta con el Administrador o Jefatura');
     }
 
-    // Mapear firstName del backend a name del frontend
+    // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
     const user: User = {
       ...backendUser,
       name: backendUser.firstName || backendUser.name || null,
       lastName: backendUser.lastName || '',
+      areas: this.normalizeAreas(backendUser.areaAssignments),
+      warehouses: this.normalizeWarehouses(backendUser.warehouses),
     };
+    console.log('✅ User response:', response); // DEBUG
+    console.log('🔍 Mapped user areas:', user.areas);
 
     // Guardar token y usuario en localStorage
     this.saveAuth(token, user);
@@ -95,11 +101,13 @@ export class AuthService {
   async getProfile(): Promise<User> {
     const response = await apiClient.get<any>("/users/me", true);
     
-    // Mapear firstName del backend a name del frontend
+    // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
     const user: User = {
       ...response,
       name: response.firstName || response.name || null,
       lastName: response.lastName || '',
+      areas: this.normalizeAreas(response.areas),
+      warehouses: this.normalizeWarehouses(response.warehouses),
     };
     
     // Actualizar usuario en localStorage
@@ -164,6 +172,46 @@ export class AuthService {
    */
   isAuthenticated(): boolean {
     return !!this.getToken();
+  }
+
+  /**
+   * Normalizar áreas del backend a formato uniforme
+   */
+  private normalizeAreas(areas: any): Array<{ id: string; name: string }> {
+    if (!areas || !Array.isArray(areas)) return [];
+    return areas.map(item => {
+      // Si ya es un objeto con id y name, retornarlo
+      if (item.area && typeof item.area === 'object') {
+        return { 
+          id: item.area.id || item.areaId, 
+          name: item.area.name || item.area.id 
+        };
+      }
+      return null;
+    }).filter(Boolean) as Array<{ id: string; name: string }>;
+  }
+
+  /**
+   * Normalizar bodegas del backend a formato uniforme
+   */
+  private normalizeWarehouses(warehouses: any): Array<{ id: string; name: string }> {
+    if (!warehouses || !Array.isArray(warehouses)) return [];
+    
+    return warehouses.map(warehouse => {
+      // Si ya es un objeto con id y name, retornarlo
+      if (typeof warehouse === 'object' && warehouse.id && warehouse.name) {
+        return { id: warehouse.id, name: warehouse.name };
+      }
+      // Si es un string (solo ID), crear objeto básico
+      if (typeof warehouse === 'string') {
+        return { id: warehouse, name: warehouse };
+      }
+      // Si tiene warehouseId en lugar de id
+      if (warehouse.warehouseId) {
+        return { id: warehouse.warehouseId, name: warehouse.name || warehouse.warehouseId };
+      }
+      return warehouse;
+    }).filter(Boolean);
   }
 }
 

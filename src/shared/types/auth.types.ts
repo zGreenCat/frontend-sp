@@ -15,6 +15,16 @@ export interface AuthResponse {
   token: string;
 }
 
+export interface AreaAssignment {
+  id: string;
+  name: string;
+}
+
+export interface WarehouseAssignment {
+  id: string;
+  name: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -25,8 +35,8 @@ export interface User {
   roleId: string;
   role?: Role;
   status?: string;
-  areas?: string[];
-  warehouses?: string[];
+  areas?: AreaAssignment[];
+  warehouses?: WarehouseAssignment[];
   tenantId: string;
   createdAt: string;
   updatedAt: string;

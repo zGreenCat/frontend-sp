@@ -24,7 +24,6 @@ export class ApiClient {
     if (includeAuth) {
       const token = this.getToken();
       if (token) {
-        console.log('🔐 Token being used:', `${token.substring(0, 20)}...`);
         headers["Authorization"] = `Bearer ${token}`;
         
         // Decodificar JWT para debug (solo en desarrollo)
@@ -35,12 +34,6 @@ export class ApiClient {
               const payload = JSON.parse(atob(parts[1]));
               const exp = payload.exp ? new Date(payload.exp * 1000) : null;
               const now = new Date();
-              console.log('📋 Token info:', {
-                userId: payload.sub || payload.userId,
-                email: payload.email,
-                expires: exp?.toLocaleString(),
-                isExpired: exp ? exp < now : 'unknown',
-              });
             }
           } catch (e) {
             console.warn('⚠️ Could not decode token', e);
@@ -73,7 +66,6 @@ export class ApiClient {
 
   async get<T>(endpoint: string, requiresAuth: boolean = true): Promise<T> {
     const fullUrl = `${this.baseURL}${endpoint}`;
-    console.log('🔗 Full URL:', fullUrl);
     const response = await fetch(fullUrl, {
       method: "GET",
       headers: this.getHeaders(requiresAuth),

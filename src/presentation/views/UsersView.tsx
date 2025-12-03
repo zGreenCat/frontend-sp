@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,23 @@ export function UsersView() {
   const { toast } = useToast();
   const { can } = usePermissions();
   const { user: currentUser } = useAuth();
+  
+  // Extraer valores primitivos para evitar loops en useEffect
+  const currentUserId = currentUser?.id;
+  const currentUserRole = useMemo(() => {
+    if (!currentUser) return '';
+    if (typeof currentUser.role === 'string') return currentUser.role;
+    if (currentUser.role && typeof currentUser.role === 'object' && 'name' in currentUser.role) {
+      return (currentUser.role as any).name;
+    }
+    return currentUser.roleId || '';
+  }, [currentUser]);
+  const currentUserAreas = useMemo(() => {
+    const areas = currentUser?.areas || [];
+    // Extraer solo los IDs para usar en comparaciones
+    return areas.map(a => typeof a === 'string' ? a : a.id);
+  }, [currentUser?.areas]);
+  
   const [users, setUsers] = useState<User[]>([]);
   const [areas, setAreas] = useState<Array<{ id: string; name: string }>>([]);
   const [warehouses, setWarehouses] = useState<Array<{ id: string; name: string }>>([]);
@@ -72,25 +89,66 @@ export function UsersView() {
     setLoading(true);
     try {
       console.log('🔍 Loading users - Page:', currentPage, 'PageSize:', pageSize);
-      const [usersResult, areasData, warehousesData] = await Promise.all([
-        new ListUsers(userRepo).execute(TENANT_ID, currentPage, pageSize),
-        areaRepo.findAll(TENANT_ID),
-        warehouseRepo.findAll(TENANT_ID),
-      ]);
+      console.log('👤 Current user role:', currentUserRole, 'Areas:', currentUserAreas);
       
-      if (usersResult.ok) {
-        console.log('✅ Users loaded:', usersResult.value);
-        setUsers(usersResult.value.data);
-        setTotalPages(usersResult.value.totalPages);
-        setTotalUsers(usersResult.value.total);
+      // Si es JEFE_AREA, cargar usuarios específicos de sus áreas
+      const isJefeArea = currentUserRole === USER_ROLES.JEFE || currentUserRole === 'JEFE_AREA';
+      
+      if (isJefeArea && currentUserAreas.length > 0) {
+        console.log('👤 JEFE_AREA detected, loading users from assigned areas:', currentUserAreas);
+        
+        // Cargar usuarios de cada área asignada al JEFE
+        const usersByAreaPromises = currentUserAreas.map(areaId => 
+          (userRepo as any).findByArea(areaId)
+        );
+        
+        const [usersByArea, areasData, warehousesData] = await Promise.all([
+          Promise.all(usersByAreaPromises),
+          areaRepo.findAll(TENANT_ID),
+          warehouseRepo.findAll(TENANT_ID),
+        ]);
+        
+        // Combinar usuarios de todas las áreas y eliminar duplicados
+        const allUsers = usersByArea.flat();
+        const uniqueUsers = Array.from(
+          new Map(allUsers.map(u => [u.id, u])).values()
+        );
+        
+        // Filtrar solo SUPERVISORES (el JEFE solo debe ver supervisores de sus áreas)
+        const supervisors = uniqueUsers.filter(u => {
+          const uRole = typeof u.role === 'string' ? u.role : (u.role as any)?.name || '';
+          return uRole === 'SUPERVISOR' || uRole === USER_ROLES.SUPERVISOR;
+        });
+        
+        console.log('✅ Loaded supervisors from JEFE areas:', supervisors.length);
+        
+        setUsers(supervisors);
+        setTotalPages(1); // Sin paginación para esta vista
+        setTotalUsers(supervisors.length);
         setAreas(areasData.map(a => ({ id: a.id, name: a.name })));
         setWarehouses(warehousesData.map(w => ({ id: w.id, name: w.name })));
       } else {
-        toast({
-          title: "Error al cargar usuarios",
-          description: usersResult.error || "No se pudieron obtener los usuarios del sistema",
-          variant: "destructive",
-        });
+        // Para ADMIN o cualquier otro rol, cargar normalmente
+        const [usersResult, areasData, warehousesData] = await Promise.all([
+          new ListUsers(userRepo).execute(TENANT_ID, currentPage, pageSize),
+          areaRepo.findAll(TENANT_ID),
+          warehouseRepo.findAll(TENANT_ID),
+        ]);
+        
+        if (usersResult.ok) {
+          console.log('✅ Users loaded:', usersResult.value);
+          setUsers(usersResult.value.data);
+          setTotalPages(usersResult.value.totalPages);
+          setTotalUsers(usersResult.value.total);
+          setAreas(areasData.map(a => ({ id: a.id, name: a.name })));
+          setWarehouses(warehousesData.map(w => ({ id: w.id, name: w.name })));
+        } else {
+          toast({
+            title: "Error al cargar usuarios",
+            description: usersResult.error || "No se pudieron obtener los usuarios del sistema",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error: any) {
       const errorMessage = error?.message || "Error de conexión con el servidor";
@@ -105,9 +163,11 @@ export function UsersView() {
   };
 
   useEffect(() => {
-    loadUsers();
+    if (currentUserId) {
+      loadUsers();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, currentUserId, currentUserRole, currentUserAreas]);
 
   // Helper para obtener nombre de área por ID desde los detalles del usuario o lista global
   const getAreaName = (areaId: string, userAreaDetails?: Array<{ id: string; name: string }>): string => {
@@ -369,12 +429,10 @@ export function UsersView() {
       
       case USER_ROLES.JEFE:
       case 'JEFE':
-        // Jefe de Área solo ve usuarios de sus áreas asignadas
-        if (userAreas.length === 0) return [];
-        return allUsers.filter(u => {
-          const userAreasSet = new Set(u.areas);
-          return userAreas.some(areaId => userAreasSet.has(areaId));
-        });
+      case 'JEFE_AREA':
+        // Jefe de Área - el filtrado ya se hizo en loadUsers
+        // Solo necesitamos retornar los usuarios cargados (ya filtrados por área)
+        return allUsers;
       
       case USER_ROLES.SUPERVISOR:
       case 'SUPERVISOR':
@@ -416,9 +474,9 @@ export function UsersView() {
               {(() => {
                 const role = currentUser?.role;
                 const roleStr = typeof role === 'string' ? role : role?.name || currentUser?.roleId;
-                return roleStr === USER_ROLES.JEFE && (
+                return (roleStr === USER_ROLES.JEFE || roleStr === 'JEFE_AREA') && (
                   <span className="block text-xs mt-1 text-primary">
-                    Mostrando solo usuarios de tus áreas asignadas
+                    📋 Mostrando solo supervisores de las bodegas en tus áreas asignadas
                   </span>
                 );
               })()}

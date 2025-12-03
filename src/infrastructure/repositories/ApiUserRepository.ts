@@ -263,6 +263,34 @@ export class ApiUserRepository implements IUserRepository {
     }
   }
 
+  async findByArea(areaId: string): Promise<User[]> {
+    try {
+      console.log(`🔍 Fetching users for area: ${areaId}`);
+      const response = await apiClient.get<any>(`/users/area/${areaId}`, true);
+      console.log('📦 Users by area response:', response);
+      
+      // El backend puede devolver array directo o { data: [...] }
+      let backendUsers: BackendUser[];
+      
+      if (Array.isArray(response)) {
+        backendUsers = response;
+      } else if (response && Array.isArray(response.data)) {
+        backendUsers = response.data;
+      } else if (response && Array.isArray(response.users)) {
+        backendUsers = response.users;
+      } else {
+        console.error('❌ Unexpected response structure from /users/area:', response);
+        return [];
+      }
+      
+      console.log(`✅ Found ${backendUsers.length} users for area ${areaId}`);
+      return backendUsers.map(u => this.mapBackendUser(u));
+    } catch (error) {
+      console.error('Error fetching users by area:', error);
+      return [];
+    }
+  }
+
   async findById(id: string, tenantId: string): Promise<User | null> {
     try {
       const backendUser = await apiClient.get<BackendUser>(`/users/${id}`, true);

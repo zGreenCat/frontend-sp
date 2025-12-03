@@ -72,27 +72,45 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
       const { area: areaData, managers, warehouses } = result.value;
       setArea(areaData);
 
+      console.log('👥 Managers from API:', managers);
+      console.log('🏢 Warehouses from API:', warehouses);
+
       // Convertir managers del API a entidades User
-      const managersAsUsers: User[] = managers.map(m => ({
-        id: m.id,
-        name: m.name.split(' ')[0] || m.name,
-        lastName: m.name.split(' ').slice(1).join(' ') || '',
-        email: m.email,
-        rut: '',
-        phone: '',
-        role: 'JEFE' as const,
-        status: 'HABILITADO' as const,
-        areas: [areaId],
-        warehouses: [],
-        tenantId: TENANT_ID,
-      }));
+      const managersAsUsers: User[] = managers.map(m => {
+        // El API puede enviar name completo, o firstName/lastName por separado
+        let firstName = '';
+        let lastName = '';
+        
+        if (m.name) {
+          const nameParts = m.name.split(' ');
+          firstName = nameParts[0] || '';
+          lastName = nameParts.slice(1).join(' ') || '';
+        } else if ((m as any).firstName || (m as any).lastName) {
+          firstName = (m as any).firstName || '';
+          lastName = (m as any).lastName || '';
+        }
+
+        return {
+          id: m.id,
+          name: firstName,
+          lastName: lastName,
+          email: m.email || '',
+          rut: '',
+          phone: '',
+          role: 'JEFE' as const,
+          status: 'HABILITADO' as const,
+          areas: [areaId],
+          warehouses: [],
+          tenantId: TENANT_ID,
+        };
+      });
       setAssignedManagers(managersAsUsers);
 
       // Convertir warehouses del API a entidades Warehouse
       const warehousesAsEntities: WarehouseEntity[] = warehouses.map(w => ({
         id: w.id,
-        name: w.name,
-        capacityKg: 0, // El API podría no enviar este dato
+        name: w.name || 'Sin nombre',
+        capacityKg: (w as any).capacityKg || (w as any).capacity || 0,
         status: 'ACTIVO' as const,
         areaId: areaId,
         tenantId: TENANT_ID,

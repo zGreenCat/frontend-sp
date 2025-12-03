@@ -88,10 +88,28 @@ export class ApiAreaRepository implements IAreaRepository {
       const response = await apiClient.get<any>(`/areas/${id}`, true);
       const backendArea = response.data || response;
       
+      console.log('📥 Area detail response:', backendArea);
+      
+      // Mapear managers con manejo seguro
+      const managers = (backendArea.managers || []).map((m: any) => ({
+        id: m.id || m.userId || '',
+        name: m.name || `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Sin nombre',
+        email: m.email || '',
+      }));
+      
+      // Mapear warehouses con manejo seguro
+      const warehouses = (backendArea.warehouses || []).map((w: any) => ({
+        id: w.id || w.warehouseId || '',
+        name: w.name || 'Sin nombre',
+      }));
+      
+      console.log('✅ Mapped managers:', managers);
+      console.log('✅ Mapped warehouses:', warehouses);
+      
       return {
         area: this.mapBackendArea(backendArea),
-        managers: backendArea.managers || [],
-        warehouses: backendArea.warehouses || [],
+        managers,
+        warehouses,
       };
     } catch (error) {
       console.error('Error fetching area with details:', error);

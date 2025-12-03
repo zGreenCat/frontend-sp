@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       const response = await authService.login(data);
       setUser(response.user);
-      
+      console.log('✅ User set in context:', response.user.areas); // DEBUG
       toast({
         title: "¡Bienvenido!",
         description: `Hola ${response.user.firstName || response.user.email}`,
