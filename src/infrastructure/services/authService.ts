@@ -97,9 +97,11 @@ export class AuthService {
 
   /**
    * Obtener perfil del usuario autenticado
+   * Intenta primero con el token de localStorage, si no existe usa cookies (Google OAuth)
    */
   async getProfile(): Promise<User> {
-    const response = await apiClient.get<any>("/users/me", true);
+    const hasToken = !!this.getToken();
+    const response = await apiClient.get<any>("/users/me", true, !hasToken);
     
     // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
     const user: User = {
@@ -116,6 +118,15 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  /**
+   * Iniciar sesión con Google OAuth
+   * Redirige al backend que maneja el flujo de OAuth
+   */
+  loginWithGoogle(): void {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    window.location.href = `${apiUrl}/auth/google`;
   }
 
   /**

@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (data: LoginRequest) => Promise<void>;
+  loginWithGoogle: () => void;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -138,6 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user.roleId || null;
   };
 
+  const loginWithGoogle = () => {
+    authService.loginWithGoogle();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -145,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        loginWithGoogle,
         register,
         logout,
         refreshUser,

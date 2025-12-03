@@ -16,7 +16,7 @@ export class ApiClient {
     return null;
   }
 
-  private getHeaders(includeAuth: boolean = false): HeadersInit {
+  private getHeaders(includeAuth: boolean = false, includeCredentials: boolean = false): HeadersInit {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
@@ -39,7 +39,7 @@ export class ApiClient {
             console.warn('⚠️ Could not decode token', e);
           }
         }
-      } else {
+      } else if (!includeCredentials) {
         console.warn('⚠️ Auth required but no token found in localStorage');
       }
     }
@@ -64,11 +64,11 @@ export class ApiClient {
     return response.json();
   }
 
-  async get<T>(endpoint: string, requiresAuth: boolean = true): Promise<T> {
-    const fullUrl = `${this.baseURL}${endpoint}`;
-    const response = await fetch(fullUrl, {
+  async get<T>(endpoint: string, requiresAuth: boolean = false, withCredentials: boolean = false): Promise<T> {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "GET",
-      headers: this.getHeaders(requiresAuth),
+      headers: this.getHeaders(requiresAuth, withCredentials),
+      credentials: withCredentials ? 'include' : 'same-origin',
     });
 
     return this.handleResponse<T>(response);
@@ -97,15 +97,6 @@ export class ApiClient {
       method: "PUT",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
-    });
-
-    return this.handleResponse<T>(response);
-  }
-
-  async delete<T>(endpoint: string, requiresAuth: boolean = true): Promise<T> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      method: "DELETE",
-      headers: this.getHeaders(requiresAuth),
     });
 
     return this.handleResponse<T>(response);
