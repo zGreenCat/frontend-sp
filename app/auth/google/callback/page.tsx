@@ -2,41 +2,59 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
+import { authService } from "@/infrastructure/services/authService";
 import { Loader2 } from "lucide-react";
 
 export default function GoogleCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleCallback = async () => {
+      console.log('═══════════════════════════════════════════════');
+      console.log('🔄 GOOGLE CALLBACK - INICIANDO FLUJO');
+      console.log('═══════════════════════════════════════════════');
+      
       try {
         // Verificar si hay un error en los parámetros
         const errorParam = searchParams.get("error");
+        const errorMessage = searchParams.get("message");
+        
         if (errorParam) {
-          setError("Error al autenticar con Google");
+          console.error('❌ Error en callback:', errorParam, errorMessage);
+          setError(errorMessage || "Error al autenticar con Google");
           setTimeout(() => router.push("/login"), 3000);
           return;
         }
 
-        // El backend ya estableció la cookie httpOnly con el JWT
-        // Solo necesitamos refrescar el perfil del usuario
-        await refreshUser();
+        console.log('✅ Callback exitoso');
+        console.log('📡 Paso 1: Obteniendo perfil con cookie httpOnly...');
         
-        // Redirigir al dashboard
+        // El backend ya estableció la cookie httpOnly con el JWT
+        // getProfile() enviará la cookie automáticamente y guardará el usuario
+        const user = await authService.getProfile();
+        
+        console.log('✅ Paso 2: Usuario autenticado correctamente');
+        console.log(`   Email: ${user.email}`);
+        console.log(`   Nombre: ${user.firstName} ${user.lastName}`);
+        
+        console.log('📍 Paso 3: Redirigiendo a dashboard...');
+        
+        // Pequeña pausa para que el usuario vea el mensaje de éxito
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         router.push("/dashboard");
+        
       } catch (err) {
-        console.error("Error en callback de Google:", err);
+        console.error("❌ Error en callback de Google:", err);
         setError("Error al completar la autenticación");
         setTimeout(() => router.push("/login"), 3000);
       }
     };
 
     handleCallback();
-  }, [searchParams, refreshUser, router]);
+  }, [searchParams, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-hero">

@@ -16,7 +16,7 @@ export class ApiClient {
     return null;
   }
 
-  private getHeaders(includeAuth: boolean = false, includeCredentials: boolean = false): HeadersInit {
+  private getHeaders(includeAuth: boolean = false): HeadersInit {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
@@ -24,23 +24,12 @@ export class ApiClient {
     if (includeAuth) {
       const token = this.getToken();
       if (token) {
+        // Si hay token en localStorage, usarlo en el header (login tradicional)
         headers["Authorization"] = `Bearer ${token}`;
-        
-        // Decodificar JWT para debug (solo en desarrollo)
-        if (process.env.NODE_ENV === 'development') {
-          try {
-            const parts = token.split('.');
-            if (parts.length === 3) {
-              const payload = JSON.parse(atob(parts[1]));
-              const exp = payload.exp ? new Date(payload.exp * 1000) : null;
-              const now = new Date();
-            }
-          } catch (e) {
-            console.warn('⚠️ Could not decode token', e);
-          }
-        }
-      } else if (!includeCredentials) {
-        console.warn('⚠️ Auth required but no token found in localStorage');
+        console.log('🔑 Usando Authorization header con token');
+      } else {
+        // Si no hay token, usaremos cookie httpOnly (login con Google)
+        console.log('🍪 Usando cookie httpOnly para autenticación');
       }
     }
 
@@ -64,11 +53,11 @@ export class ApiClient {
     return response.json();
   }
 
-  async get<T>(endpoint: string, requiresAuth: boolean = false, withCredentials: boolean = false): Promise<T> {
+  async get<T>(endpoint: string, requiresAuth: boolean = false): Promise<T> {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "GET",
-      headers: this.getHeaders(requiresAuth, withCredentials),
-      credentials: withCredentials ? 'include' : 'same-origin',
+      headers: this.getHeaders(requiresAuth),
+      credentials: requiresAuth ? 'include' : 'same-origin',
     });
 
     return this.handleResponse<T>(response);
@@ -83,6 +72,7 @@ export class ApiClient {
       method: "POST",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
+      credentials: requiresAuth ? 'include' : 'same-origin',
     });
 
     return this.handleResponse<T>(response);
@@ -97,6 +87,7 @@ export class ApiClient {
       method: "PUT",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
+      credentials: requiresAuth ? 'include' : 'same-origin',
     });
 
     return this.handleResponse<T>(response);

@@ -13,7 +13,7 @@ interface AuthContextType {
   login: (data: LoginRequest) => Promise<void>;
   loginWithGoogle: () => void;
   register: (data: RegisterRequest) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   getUserRole: () => string | null;
@@ -30,22 +30,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Cargar usuario al iniciar
   useEffect(() => {
     const initAuth = async () => {
-      const token = authService.getToken();
-      const savedUser = authService.getUser();
-
-      if (token && savedUser) {
-        try {
-          // Verificar token obteniendo perfil actualizado
-          const currentUser = await authService.getProfile();
-          setUser(currentUser);
-        } catch {
-          // Token inválido o expirado
-          authService.logout();
-          setUser(null);
+      console.log('═══════════════════════════════════════════════');
+      console.log('🔐 useAuth - INICIALIZANDO AUTENTICACIÓN');
+      console.log('═══════════════════════════════════════════════');
+      
+      try {
+        // PASO 1: Verificar si hay usuario guardado en localStorage
+        const savedUser = authService.getUser();
+        
+        if (savedUser) {
+          console.log('✅ Usuario encontrado en localStorage');
+          console.log(`👤 Email: ${savedUser.email}`);
+          setUser(savedUser);
+          setIsLoading(false);
+          return;
         }
-      }
 
-      setIsLoading(false);
+        console.log('⚠️ No hay usuario en localStorage');
+        console.log('📡 Intentando obtener perfil con cookie httpOnly...');
+
+        // PASO 2: Intentar obtener perfil usando cookie httpOnly
+        // Si el backend estableció la cookie (login con Google), esto funcionará
+        const currentUser = await authService.getProfile();
+        setUser(currentUser);
+        console.log('✅ Autenticación exitosa con cookie httpOnly');
+        
+      } catch (error) {
+        console.log('ℹ️ Sin autenticación válida (normal en primera carga)');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     initAuth();
@@ -103,8 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    authService.logout();
+  const logout = async () => {
+    await authService.logout();
     setUser(null);
     
     toast({

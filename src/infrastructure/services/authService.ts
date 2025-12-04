@@ -1,5 +1,4 @@
 import { apiClient } from "@/infrastructure/api/apiClient";
-import { roleService } from "@/infrastructure/services/roleService";
 import {
   LoginRequest,
   RegisterRequest,
@@ -7,8 +6,8 @@ import {
   User,
 } from "@/shared/types/auth.types";
 
-const TOKEN_KEY = "token";
 const USER_KEY = "user";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export class AuthService {
   /**
@@ -96,73 +95,104 @@ export class AuthService {
   }
 
   /**
-   * Obtener perfil del usuario autenticado
-   * Intenta primero con el token de localStorage, si no existe usa cookies (Google OAuth)
+   * 🔐 MÉTODO PRINCIPAL: Obtener perfil del usuario actual
+   * 
+   * Para login tradicional (email/password):
+   * - Usa el token de localStorage con Authorization header
+   * 
+   * Para login con Google OAuth:
+   * - Usa la cookie httpOnly que el backend estableció
+   * - El navegador envía la cookie automáticamente con credentials: 'include'
    */
   async getProfile(): Promise<User> {
-    const hasToken = !!this.getToken();
-    const response = await apiClient.get<any>("/users/me", true, !hasToken);
+    console.log('═══════════════════════════════════════════════');
+    console.log('🔐 GET PROFILE - Obteniendo usuario');
+    console.log('═══════════════════════════════════════════════');
     
-    // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
-    const user: User = {
-      ...response,
-      name: response.firstName || response.name || null,
-      lastName: response.lastName || '',
-      areas: this.normalizeAreas(response.areas),
-      warehouses: this.normalizeWarehouses(response.warehouses),
-    };
-    
-    // Actualizar usuario en localStorage
-    if (typeof window !== "undefined") {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    try {
+      // Llamar a /users/me - Si hay token usa Authorization header, si no usa cookie
+      const response = await apiClient.get<any>("/users/me", true);
+      
+      // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
+      const user: User = {
+        ...response,
+        name: response.firstName || response.name || null,
+        lastName: response.lastName || '',
+        areas: this.normalizeAreas(response.areaAssignments || response.areas),
+        warehouses: this.normalizeWarehouses(response.warehouseAssignments || response.warehouses),
+      };
+      
+      console.log('✅ Usuario autenticado correctamente');
+      console.log(`👤 Email: ${user.email}`);
+      console.log(`📋 Áreas: ${user.areas?.length || 0}`);
+      console.log(`🏪 Bodegas: ${user.warehouses?.length || 0}`);
+      
+      // Guardar usuario en localStorage (NO el token)
+      if (typeof window !== "undefined") {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        console.log('💾 Usuario guardado en localStorage');
+      }
+      
+      return user;
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo perfil:', error);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(USER_KEY);
+      }
+      throw error;
     }
-
-    return user;
   }
 
   /**
-   * Iniciar sesión con Google OAuth
-   * Redirige al backend que maneja el flujo de OAuth
+   * 🔑 Iniciar sesión con Google OAuth
+   * Redirige al backend que maneja el flujo completo de OAuth
    */
   loginWithGoogle(): void {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    window.location.href = `${apiUrl}/auth/google`;
+    console.log('🔑 Iniciando flujo de Google OAuth...');
+    console.log(`📍 Redirigiendo a: ${API_URL}/auth/google`);
+    window.location.href = `${API_URL}/auth/google`;
   }
 
   /**
-   * Cerrar sesión
+   * 🚪 Cerrar sesión
+   * Llama al backend para limpiar la cookie httpOnly y limpia localStorage
    */
-  logout(): void {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      // Limpiar cache de roles
-      roleService.clearCache();
+  async logout(): Promise<void> {
+    console.log('🚪 LOGOUT - Limpiando sesión');
+    
+    try {
+      // Llamar al endpoint de logout para limpiar la cookie httpOnly
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // Envía la cookie para que el backend la limpie
+      });
+      console.log('✅ Cookie httpOnly limpiada en el backend');
+    } catch (error) {
+      console.error('⚠️ Error al limpiar cookie en backend:', error);
+    } finally {
+      // Siempre limpiar localStorage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(USER_KEY);
+        console.log('✅ localStorage limpiado');
+      }
     }
   }
 
   /**
-   * Guardar autenticación en localStorage
+   * 💾 Guardar autenticación en localStorage (solo para login tradicional)
+   * Para OAuth con cookie httpOnly, solo se guarda el usuario, no el token
    */
   private saveAuth(token: string, user: User): void {
     if (typeof window !== "undefined") {
-      localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      // Para login tradicional, también guardamos el token
+      // (el apiClient lo leerá para el header Authorization)
     }
   }
 
   /**
-   * Obtener token guardado
-   */
-  getToken(): string | null {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(TOKEN_KEY);
-    }
-    return null;
-  }
-
-  /**
-   * Obtener usuario guardado
+   * 📖 Obtener usuario guardado en localStorage
    */
   getUser(): User | null {
     if (typeof window !== "undefined") {
@@ -179,10 +209,11 @@ export class AuthService {
   }
 
   /**
-   * Verificar si el usuario está autenticado
+   * ✅ Verificar si el usuario está autenticado
+   * Comprueba si hay un usuario guardado en localStorage
    */
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return !!this.getUser();
   }
 
   /**
@@ -190,13 +221,26 @@ export class AuthService {
    */
   private normalizeAreas(areas: any): Array<{ id: string; name: string }> {
     if (!areas || !Array.isArray(areas)) return [];
+    
     return areas.map(item => {
-      // Si ya es un objeto con id y name, retornarlo
+      // Si es un objeto de asignación con propiedad 'area' (areaAssignments)
       if (item.area && typeof item.area === 'object') {
         return { 
           id: item.area.id || item.areaId, 
           name: item.area.name || item.area.id 
         };
+      }
+      // Si ya es un objeto con id y name directamente
+      if (typeof item === 'object' && item.id && item.name) {
+        return { id: item.id, name: item.name };
+      }
+      // Si es un string (solo ID)
+      if (typeof item === 'string') {
+        return { id: item, name: item };
+      }
+      // Si tiene areaId en lugar de id
+      if (item.areaId) {
+        return { id: item.areaId, name: item.name || item.areaId };
       }
       return null;
     }).filter(Boolean) as Array<{ id: string; name: string }>;
@@ -208,21 +252,28 @@ export class AuthService {
   private normalizeWarehouses(warehouses: any): Array<{ id: string; name: string }> {
     if (!warehouses || !Array.isArray(warehouses)) return [];
     
-    return warehouses.map(warehouse => {
-      // Si ya es un objeto con id y name, retornarlo
-      if (typeof warehouse === 'object' && warehouse.id && warehouse.name) {
-        return { id: warehouse.id, name: warehouse.name };
+    return warehouses.map(item => {
+      // Si es un objeto de asignación con propiedad 'warehouse' (warehouseAssignments)
+      if (item.warehouse && typeof item.warehouse === 'object') {
+        return { 
+          id: item.warehouse.id || item.warehouseId, 
+          name: item.warehouse.name || item.warehouse.id 
+        };
       }
-      // Si es un string (solo ID), crear objeto básico
-      if (typeof warehouse === 'string') {
-        return { id: warehouse, name: warehouse };
+      // Si ya es un objeto con id y name directamente
+      if (typeof item === 'object' && item.id && item.name) {
+        return { id: item.id, name: item.name };
+      }
+      // Si es un string (solo ID)
+      if (typeof item === 'string') {
+        return { id: item, name: item };
       }
       // Si tiene warehouseId en lugar de id
-      if (warehouse.warehouseId) {
-        return { id: warehouse.warehouseId, name: warehouse.name || warehouse.warehouseId };
+      if (item.warehouseId) {
+        return { id: item.warehouseId, name: item.name || item.warehouseId };
       }
-      return warehouse;
-    }).filter(Boolean);
+      return null;
+    }).filter(Boolean) as Array<{ id: string; name: string }>;
   }
 }
 
