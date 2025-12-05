@@ -76,18 +76,28 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
       console.log('🏢 Warehouses from API:', warehouses);
 
       // Convertir managers del API a entidades User
-      const managersAsUsers: User[] = managers.map(m => {
-        // El API puede enviar name completo, o firstName/lastName por separado
+      const managersAsUsers: User[] = managers.map((m: any) => {
+        // El API envía { id, name, email } donde name es el nombre completo
         let firstName = '';
         let lastName = '';
+        console.log('Processing manager:', m);
         
+        // El API envía 'name' como nombre completo
         if (m.name) {
-          const nameParts = m.name.split(' ');
+          const nameParts = m.name.trim().split(' ');
           firstName = nameParts[0] || '';
           lastName = nameParts.slice(1).join(' ') || '';
-        } else if ((m as any).firstName || (m as any).lastName) {
-          firstName = (m as any).firstName || '';
-          lastName = (m as any).lastName || '';
+        }
+        // Fallback por si viene fullName
+        else if (m.fullName) {
+          const nameParts = m.fullName.trim().split(' ');
+          firstName = nameParts[0] || '';
+          lastName = nameParts.slice(1).join(' ') || '';
+        }
+        // Fallback por si vienen separados
+        else if (m.firstName || m.lastName) {
+          firstName = m.firstName || '';
+          lastName = m.lastName || '';
         }
 
         return {
@@ -107,10 +117,10 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
       setAssignedManagers(managersAsUsers);
 
       // Convertir warehouses del API a entidades Warehouse
-      const warehousesAsEntities: WarehouseEntity[] = warehouses.map(w => ({
+      const warehousesAsEntities: WarehouseEntity[] = warehouses.map((w: any) => ({
         id: w.id,
         name: w.name || 'Sin nombre',
-        capacityKg: (w as any).capacityKg || (w as any).capacity || 0,
+        capacityKg: w.capacityKg || w.capacity || 0,
         status: 'ACTIVO' as const,
         areaId: areaId,
         tenantId: TENANT_ID,
@@ -149,7 +159,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
     try {
       const managerIds = await (areaRepo as any).getAssignedManagers(areaId);
       const allUsers = await userRepo.findAll(TENANT_ID);
-      const filtered = allUsers.filter(u => managerIds.includes(u.id));
+      const filtered = allUsers.data.filter((u: User) => managerIds.includes(u.id));
       setAssignedManagers(filtered);
     } catch (error) {
       console.error("Error al cargar jefes:", error);

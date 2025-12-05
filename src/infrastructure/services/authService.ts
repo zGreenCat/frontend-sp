@@ -5,6 +5,7 @@ import {
   AuthResponse,
   User,
 } from "@/shared/types/auth.types";
+import { mapBackendRoleToFrontend } from "@/shared/constants";
 
 const USER_KEY = "user";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -114,16 +115,23 @@ export class AuthService {
       const response = await apiClient.get<any>("/users/me", true);
       
       // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
+      // El rol puede venir como objeto { id, name } o como string
+      const roleName = typeof response.role === 'string' 
+        ? response.role 
+        : response.role?.name || 'SUPERVISOR';
+      
       const user: User = {
         ...response,
         name: response.firstName || response.name || null,
         lastName: response.lastName || '',
+        role: mapBackendRoleToFrontend(roleName) as any,
         areas: this.normalizeAreas(response.areaAssignments || response.areas),
         warehouses: this.normalizeWarehouses(response.warehouseAssignments || response.warehouses),
       };
       
       console.log('✅ Usuario autenticado correctamente');
       console.log(`👤 Email: ${user.email}`);
+      console.log(`🔰 Rol: ${user.role}`);
       console.log(`📋 Áreas: ${user.areas?.length || 0}`);
       console.log(`🏪 Bodegas: ${user.warehouses?.length || 0}`);
       
@@ -171,10 +179,17 @@ export class AuthService {
     } catch (error) {
       console.error('⚠️ Error al limpiar cookie en backend:', error);
     } finally {
-      // Siempre limpiar localStorage
+      // Limpiar completamente localStorage y sessionStorage
       if (typeof window !== "undefined") {
+        // Limpiar usuario
         localStorage.removeItem(USER_KEY);
-        console.log('✅ localStorage limpiado');
+        localStorage.removeItem('token'); // Por si hay token de login tradicional
+        
+        // Limpiar sessionStorage también
+        sessionStorage.clear();
+        
+        console.log('✅ localStorage y sessionStorage completamente limpiados');
+        console.log('🍪 Cookie será limpiada por el navegador al cerrar sesión en el backend');
       }
     }
   }

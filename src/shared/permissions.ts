@@ -105,7 +105,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     // Supervisor solo puede ver y editar items básicos
     PERMISSIONS.DASHBOARD_VIEW,
     
-    PERMISSIONS.USERS_VIEW,
+    // Supervisor NO tiene acceso al módulo de usuarios
     
     PERMISSIONS.AREAS_VIEW,
     

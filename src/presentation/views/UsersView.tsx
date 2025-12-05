@@ -91,8 +91,16 @@ export function UsersView() {
       console.log('🔍 Loading users - Page:', currentPage, 'PageSize:', pageSize);
       console.log('👤 Current user role:', currentUserRole, 'Areas:', currentUserAreas);
       
+      // Mapear rol del backend al frontend si es necesario
+      const ROLE_MAP: Record<string, string> = {
+        'JEFE_AREA': 'JEFE',
+        'BODEGUERO': 'SUPERVISOR',
+      };
+      const mappedRole = ROLE_MAP[currentUserRole] || currentUserRole;
+      console.log('🔄 Mapped role:', currentUserRole, '->', mappedRole);
+      
       // Si es JEFE_AREA, cargar usuarios específicos de sus áreas
-      const isJefeArea = currentUserRole === USER_ROLES.JEFE || currentUserRole === 'JEFE_AREA';
+      const isJefeArea = mappedRole === USER_ROLES.JEFE || mappedRole === 'JEFE';
       
       if (isJefeArea && currentUserAreas.length > 0) {
         console.log('👤 JEFE_AREA detected, loading users from assigned areas:', currentUserAreas);

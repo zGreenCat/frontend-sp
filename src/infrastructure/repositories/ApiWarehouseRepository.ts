@@ -58,7 +58,12 @@ export class ApiWarehouseRepository implements IWarehouseRepository {
       }
       
       console.log('✅ Extracted', backendWarehouses.length, 'warehouses');
-      return backendWarehouses.map(w => this.mapBackendWarehouse(w));
+      console.log('🔍 First warehouse from backend:', backendWarehouses[0]);
+      
+      const mapped = backendWarehouses.map(w => this.mapBackendWarehouse(w));
+      console.log('🔍 First warehouse after mapping:', mapped[0]);
+      
+      return mapped;
     } catch (error) {
       console.error('Error fetching warehouses:', error);
       return [];

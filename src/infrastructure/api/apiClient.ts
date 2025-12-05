@@ -21,16 +21,10 @@ export class ApiClient {
       "Content-Type": "application/json",
     };
 
+    // NO incluir Authorization header - usar solo cookie httpOnly
+    // El backend espera la cookie accessToken, no el header Authorization
     if (includeAuth) {
-      const token = this.getToken();
-      if (token) {
-        // Si hay token en localStorage, usarlo en el header (login tradicional)
-        headers["Authorization"] = `Bearer ${token}`;
-        console.log('🔑 Usando Authorization header con token');
-      } else {
-        // Si no hay token, usaremos cookie httpOnly (login con Google)
-        console.log('🍪 Usando cookie httpOnly para autenticación');
-      }
+      console.log('🍪 Usando cookie httpOnly para autenticación');
     }
 
     return headers;
@@ -87,6 +81,19 @@ export class ApiClient {
       method: "PUT",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
+      credentials: requiresAuth ? 'include' : 'same-origin',
+    });
+
+    return this.handleResponse<T>(response);
+  }
+
+  async delete<T>(
+    endpoint: string,
+    requiresAuth: boolean = true
+  ): Promise<T> {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      method: "DELETE",
+      headers: this.getHeaders(requiresAuth),
       credentials: requiresAuth ? 'include' : 'same-origin',
     });
 

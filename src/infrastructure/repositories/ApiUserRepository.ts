@@ -68,7 +68,24 @@ export class ApiUserRepository implements IUserRepository {
   // Remover un Jefe de un área
   private async removeManagerFromArea(areaId: string, managerId: string): Promise<void> {
     try {
-      await apiClient.delete(`/areas/${areaId}/managers/${managerId}`, true);
+      // 1. Obtener todas las asignaciones
+      const assignments = await apiClient.get<any[]>('/assignments', true);
+      
+      // 2. Buscar la asignación específica de tipo AREA_MANAGER
+      const assignment = assignments.find(a => 
+        a.type === 'AREA_MANAGER' && 
+        a.userId === managerId && 
+        a.areaId === areaId &&
+        a.isActive === true
+      );
+      
+      if (!assignment) {
+        console.warn(`No active assignment found for manager ${managerId} in area ${areaId}`);
+        return;
+      }
+      
+      // 3. Eliminar usando el assignmentId
+      await apiClient.delete(`/assignments/${assignment.id}`, true);
     } catch (error) {
       console.error(`Error removing manager from area:`, error);
       throw error;
@@ -91,10 +108,111 @@ export class ApiUserRepository implements IUserRepository {
   // Remover un Supervisor de una bodega
   private async removeSupervisorFromWarehouse(warehouseId: string, supervisorId: string): Promise<void> {
     try {
-      await apiClient.delete(`/warehouses/${warehouseId}/supervisors/${supervisorId}`, true);
+      // 1. Obtener todas las asignaciones
+      const assignments = await apiClient.get<any[]>('/assignments', true);
+      
+      // 2. Buscar la asignación específica de tipo WAREHOUSE_SUPERVISOR
+      const warehouseAssignment = assignments.find(a => 
+        a.type === 'WAREHOUSE_SUPERVISOR' && 
+        a.userId === supervisorId && 
+        a.warehouseId === warehouseId &&
+        a.isActive === true
+      );
+      
+      if (!warehouseAssignment) {
+        console.warn(`No active assignment found for supervisor ${supervisorId} in warehouse ${warehouseId}`);
+        return;
+      }
+      
+      // Obtener el área de la bodega que se va a remover
+      const areaIdOfWarehouse = warehouseAssignment.warehouseName ? 
+        await this.getAreaIdFromWarehouse(warehouseId) : null;
+      
+      // 3. Eliminar la asignación de bodega usando el assignmentId
+      await apiClient.delete(`/assignments/${warehouseAssignment.id}`, true);
+      console.log(`✅ Removed warehouse assignment ${warehouseAssignment.id}`);
+      
+      // 4. Verificar si el supervisor tiene más bodegas asignadas en la misma área
+      if (areaIdOfWarehouse) {
+        // Obtener asignaciones actualizadas después de eliminar
+        const updatedAssignments = await apiClient.get<any[]>('/assignments', true);
+        
+        // Buscar otras bodegas del supervisor en la misma área
+        const otherWarehousesInArea = updatedAssignments.filter(a => 
+          a.type === 'WAREHOUSE_SUPERVISOR' &&
+          a.userId === supervisorId &&
+          a.isActive === true &&
+          a.warehouseId !== warehouseId
+        );
+        
+        // Verificar si alguna de esas bodegas pertenece a la misma área
+        const hasOtherWarehousesInSameArea = await this.hasWarehousesInArea(
+          otherWarehousesInArea.map((a: any) => a.warehouseId),
+          areaIdOfWarehouse
+        );
+        
+        // Si no tiene más bodegas en esa área, remover la asignación de área
+        if (!hasOtherWarehousesInSameArea) {
+          const areaManagerAssignment = updatedAssignments.find(a =>
+            a.type === 'AREA_MANAGER' &&
+            a.userId === supervisorId &&
+            a.areaId === areaIdOfWarehouse &&
+            a.isActive === true
+          );
+          
+          if (areaManagerAssignment) {
+            await apiClient.delete(`/assignments/${areaManagerAssignment.id}`, true);
+            console.log(`✅ Removed area assignment ${areaManagerAssignment.id} (no more warehouses in area)`);
+          }
+        }
+      }
     } catch (error) {
       console.error(`Error removing supervisor from warehouse:`, error);
       throw error;
+    }
+  }
+  
+  // Método auxiliar para obtener el areaId de una bodega
+  private async getAreaIdFromWarehouse(warehouseId: string): Promise<string | null> {
+    try {
+      const assignments = await apiClient.get<any[]>('/assignments', true);
+      const warehouseAreaAssignment = assignments.find(a =>
+        a.type === 'AREA_WAREHOUSE' &&
+        a.warehouseId === warehouseId &&
+        a.isActive === true
+      );
+      return warehouseAreaAssignment?.areaId || null;
+    } catch (error) {
+      console.error('Error getting area from warehouse:', error);
+      return null;
+    }
+  }
+  
+  // Método auxiliar para verificar si hay bodegas en un área específica
+  private async hasWarehousesInArea(warehouseIds: string[], areaId: string): Promise<boolean> {
+    try {
+      if (warehouseIds.length === 0) return false;
+      
+      const assignments = await apiClient.get<any[]>('/assignments', true);
+      
+      // Verificar si alguna de las bodegas pertenece al área especificada
+      for (const warehouseId of warehouseIds) {
+        const warehouseAreaAssignment = assignments.find(a =>
+          a.type === 'AREA_WAREHOUSE' &&
+          a.warehouseId === warehouseId &&
+          a.areaId === areaId &&
+          a.isActive === true
+        );
+        
+        if (warehouseAreaAssignment) {
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking warehouses in area:', error);
+      return false;
     }
   }
 
@@ -303,17 +421,22 @@ export class ApiUserRepository implements IUserRepository {
 
   async create(user: Omit<User, 'id'>): Promise<User> {
     try {
+      console.log('📝 Creating user with role:', user.role);
       const backendRole = mapFrontendRoleToBackend(user.role);
+      console.log('🔄 Backend role:', backendRole);
       
       // Cargar roles si no están cargados
+      console.log('🔄 Loading roles...');
       await roleService.loadRoles();
       
       // Obtener roleId
       let roleId = roleService.getRoleIdByName(backendRole);
+      console.log('🔑 Role ID found:', roleId);
       
       // Si no se encuentra, lanzar error descriptivo
       if (!roleId) {
         const allRoles = roleService.getAllRoles();
+        console.error('❌ Role ID not found. Available roles:', allRoles);
         throw new Error(`Role ID not found for role: ${backendRole}. Available roles: ${allRoles.map(r => r.name).join(', ')}`);
       }
       

@@ -22,14 +22,17 @@ class RoleService {
       return;
     }
 
-    // Verificar si hay token antes de hacer la llamada
+    // Verificar si hay autenticación (token en localStorage O usuario en localStorage para OAuth)
     const token = localStorage.getItem('token');
-    if (!token) {
+    const savedUser = localStorage.getItem('user');
+    if (!token && !savedUser) {
+      console.log('⚠️ No authentication found, skipping role loading');
       this.rolesCache = [];
       return;
     }
 
     try {
+      console.log('🔄 Loading roles from API...');
       const response = await apiClient.get<any>('/roles', true);
       
       // El backend puede devolver array directo o { data: [...] }
@@ -53,6 +56,8 @@ class RoleService {
         this.roleMapCache.set(role.name, role.id);
         this.roleMapIdCache.set(role.id, role.name);
       });
+      
+      console.log(`✅ Loaded ${roles.length} roles:`, roles.map(r => r.name).join(', '));
     } catch (error: any) {
       console.error('❌ Error loading roles:', error);
       

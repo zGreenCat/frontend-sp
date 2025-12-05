@@ -93,7 +93,7 @@ export class ApiAreaRepository implements IAreaRepository {
       // Mapear managers con manejo seguro
       const managers = (backendArea.managers || []).map((m: any) => ({
         id: m.id || m.userId || '',
-        name: m.name || `${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Sin nombre',
+        name: m.name ||  m.fullName || 'Sin nombre',
         email: m.email || '',
       }));
       
