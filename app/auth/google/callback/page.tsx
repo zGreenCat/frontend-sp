@@ -23,7 +23,14 @@ export default function GoogleCallbackPage() {
         
         if (errorParam) {
           console.error('❌ Error en callback:', errorParam, errorMessage);
-          setError(errorMessage || "Error al autenticar con Google");
+          
+          // Mapear errores comunes de OAuth
+          let friendlyError = errorMessage || "Error al autenticar con Google";
+          if (errorParam === "access_denied") {
+            friendlyError = "Has cancelado el inicio de sesión con Google";
+          }
+          
+          setError(friendlyError);
           setTimeout(() => router.push("/login"), 3000);
           return;
         }
