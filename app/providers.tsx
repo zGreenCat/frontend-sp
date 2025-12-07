@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { RepositoryProvider } from "@/presentation/providers/RepositoryProvider";
 import { AuthProvider as NewAuthProvider } from "@/hooks/use-auth";
+import { SessionExpiredHandler } from "@/components/SessionExpiredHandler";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <NewAuthProvider>
         <TooltipProvider>
           <RepositoryProvider>
+            <SessionExpiredHandler />
             {children}
             <Toaster />
             <Sonner />

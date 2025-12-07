@@ -70,11 +70,15 @@ export function AreasView() {
   };
 
   // Helper que aplica TODOS los filtros a un nodo individual
-  const matchesFilters = (area: Area): boolean => {
+  // Recibe el depth calculado para determinar el nivel visual correcto
+  const matchesFilters = (area: Area, depth: number = 0): boolean => {
     const areaStatus = getAreaStatus(area as any);
 
-    const backendLevel = area.level ?? 0;
-    const visualLevel = backendLevel + 1; // Nivel 1 = ROOT(level 0)...
+    // Calcular nivel visual basado en depth, no en backend level
+    // Si es ROOT (nodeType='ROOT'), siempre es nivel 1 independientemente del backend level
+    const anyArea: any = area;
+    const isRoot = anyArea.nodeType === 'ROOT';
+    const visualLevel = isRoot ? 1 : depth + 1;
 
     const matchesSearch =
       !search ||
@@ -228,8 +232,10 @@ export function AreasView() {
     const anyArea: any = area;
     const areaStatus = getAreaStatus(area as any);
 
-    const backendLevel = area.level ?? depth;
-    const visualLevel = backendLevel + 1;
+    // Usar depth para calcular el nivel visual (más confiable que backend level)
+    // depth=0 → Nivel 1 (ROOT), depth=1 → Nivel 2 (CHILD), depth=2 → Nivel 3, etc.
+    const visualLevel = depth + 1;
+
 
     // Buscar los hijos COMPLETOS desde el array principal de áreas
     // usando los IDs del array children

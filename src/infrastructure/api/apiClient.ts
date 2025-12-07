@@ -32,6 +32,17 @@ export class ApiClient {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
+      // Detectar sesión expirada (401 Unauthorized)
+      if (response.status === 401) {
+        this.handleSessionExpired();
+        
+        throw {
+          message: "Su sesión ha expirado",
+          statusCode: 401,
+          error: "Unauthorized",
+        } as ApiError;
+      }
+
       const errorData: ApiError = await response.json().catch(() => ({
         message: "Error al procesar la solicitud",
         statusCode: response.status,
@@ -45,6 +56,27 @@ export class ApiClient {
     }
 
     return response.json();
+  }
+
+  private handleSessionExpired(): void {
+    // Solo ejecutar en el cliente
+    if (typeof window === "undefined") return;
+
+    // Limpiar almacenamiento local
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    sessionStorage.clear();
+
+    // Mostrar toast de sesión expirada (si existe el contenedor de toasts)
+    const event = new CustomEvent("session-expired", {
+      detail: { message: "Su sesión ha expirado. Por favor, inicie sesión nuevamente." }
+    });
+    window.dispatchEvent(event);
+
+    // Redirigir al login después de un breve delay
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1500);
   }
 
   async get<T>(endpoint: string, requiresAuth: boolean = false): Promise<T> {

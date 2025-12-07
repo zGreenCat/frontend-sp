@@ -8,13 +8,16 @@ interface BackendArea {
   name: string;
   level: number;
   parentId?: string;
-  status: string;
-  tenantId: string;
+  parentAreaId?: string;
+  status?: string;
+  isActive?: boolean;
+  tenantId?: string;
   description?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
   nodeType?: 'ROOT' | 'CHILD';
   children?: BackendArea[];
+  parent?: any;
 }
 
 type CreateAreaPayload = {
@@ -31,7 +34,7 @@ export class ApiAreaRepository implements IAreaRepository {
       level: backendArea.level,
       parentId: backendArea.parentId,
       status: (backendArea.status || 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
-      tenantId: backendArea.tenantId,
+      tenantId: backendArea.tenantId || '',
       nodeType: backendArea.nodeType,
       description: backendArea.description,
       children: (backendArea.children ?? []).map(child => this.mapBackendArea(child)),
