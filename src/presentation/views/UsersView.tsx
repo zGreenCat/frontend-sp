@@ -749,13 +749,13 @@ export function UsersView() {
                                       size="sm"
                                       onClick={() => openAssignmentsDialog(user)}
                                       className="h-8 w-8 p-0"
-                                      disabled={user.status === 'INACTIVE' || !user.isActive}
+                                      disabled={user.status === 'DESHABILITADO'}
                                     >
                                       <Pencil className="h-4 w-4 text-primary" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{user.status === 'INACTIVE' || !user.isActive ? 'Usuario deshabilitado' : 'Modificar asignaciones'}</p>
+                                    <p>{user.status === 'DESHABILITADO' ? 'Usuario deshabilitado' : 'Modificar asignaciones'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
