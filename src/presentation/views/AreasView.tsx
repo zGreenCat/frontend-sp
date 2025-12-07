@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, ChevronRight, ChevronDown, Search, Filter, X, Edit, Loader2, Eye } from "lucide-react";
+import {
+  Plus,
+  ChevronRight,
+  ChevronDown,
+  Search,
+  Filter,
+  X,
+  Edit,
+  Loader2,
+  Eye,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { Area } from "@/domain/entities/Area";
@@ -28,6 +38,7 @@ export function AreasView() {
   const router = useRouter();
   const { areaRepo } = useRepositories();
   const { toast } = useToast();
+
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -45,55 +56,66 @@ export function AreasView() {
   const loadAreas = async () => {
     setLoading(true);
     const result = await areaRepo.findAll(TENANT_ID);
+    console.log("Loaded areas:", result);
     setAreas(result);
     setLoading(false);
   };
 
-  // Obtener solo áreas ROOT (principales) - aplicar filtros
-  const getRootAreas = () => {
-    return areas.filter(a => {
-      const nodeType = (a as any).nodeType;
-      if (nodeType !== 'ROOT') {
-        return false;
-      }
-      // Aplicar filtros solo a las ROOT
-      const areaStatus = (a as any).isActive ? 'ACTIVO' : 'INACTIVO';
-      const matchesSearch = !search || a.name.toLowerCase().includes(search.toLowerCase());
-      const matchesLevel = filterLevel === "all" || a.level.toString() === filterLevel;
-      const matchesStatus = filterStatus === "all" || areaStatus === filterStatus;
-      return matchesSearch && matchesLevel && matchesStatus;
-    });
+  // Helper para obtener estado string a partir de isActive/status
+  const getAreaStatus = (area: any): "ACTIVO" | "INACTIVO" => {
+    if (typeof area.isActive === "boolean") {
+      return area.isActive ? "ACTIVO" : "INACTIVO";
+    }
+    return area.status === "ACTIVO" ? "ACTIVO" : "INACTIVO";
   };
 
-  // Obtener áreas hijas desde el array children del área ROOT
-  const getChildrenFromArea = (area: Area) => {
-    const children = (area as any).children || [];
-    
-    // Buscar los objetos completos de cada child en el array de áreas
-    return children.map((child: any) => {
-      const fullChild = areas.find(a => a.id === child.id);
-      return fullChild || child;
-    }).filter((child: any) => {
-      // Aplicar filtros también a los hijos
-      const isChildActive =
-        child.isActive !== undefined
-          ? child.isActive
-        : child.status === 'ACTIVO';
-      
-      const matchesSearch = !search || child.name?.toLowerCase().includes(search.toLowerCase());
-      const matchesLevel = filterLevel === "all" || child.level?.toString() === filterLevel;
-      const matchesStatus =
-           filterStatus === "all" ||
-          (filterStatus === "ACTIVO" ? isChildActive : !isChildActive); 
-      return matchesSearch && matchesLevel && matchesStatus;
+  // Helper que aplica TODOS los filtros a un nodo individual
+  const matchesFilters = (area: Area): boolean => {
+    const areaStatus = getAreaStatus(area as any);
+
+    const backendLevel = area.level ?? 0;
+    const visualLevel = backendLevel + 1; // Nivel 1 = ROOT(level 0)...
+
+    const matchesSearch =
+      !search ||
+      area.name.toLowerCase().includes(search.toLowerCase());
+
+    const matchesLevel =
+      filterLevel === "all" ||
+      visualLevel.toString() === filterLevel;
+
+    const matchesStatus =
+      filterStatus === "all" || areaStatus === filterStatus;
+
+    return matchesSearch && matchesLevel && matchesStatus;
+  };
+
+  // Obtener solo las áreas ROOT (nodeType = ROOT) y aplicar filtros
+  const getRootAreas = () => {
+    return areas.filter((a: any) => {
+      const nodeType = a.nodeType;
+      if (nodeType !== "ROOT") {
+        return false;
+      }
+      return matchesFilters(a);
     });
   };
 
   const handleCreateArea = async (data: CreateAreaInput) => {
     setActionLoading(true);
     try {
-      const useCase = new CreateArea(areaRepo);     
-      const result = await useCase.execute(data);
+      const useCase = new CreateArea(areaRepo);
+
+      // Aquí podrías mapear a un DTO más pequeño si quieres (sólo name/parentId)
+      const areaData: Omit<Area, "id"> = {
+        name: data.name,
+        level: data.level,
+        parentId: data.parentId,
+        status: data.status as "ACTIVO" | "INACTIVO",
+        tenantId: data.tenantId,
+      };
+
+      const result = await useCase.execute(areaData);
 
       if (result.ok) {
         toast({
@@ -122,18 +144,19 @@ export function AreasView() {
 
   const handleEditArea = async (data: CreateAreaInput) => {
     if (!selectedArea) return;
-    
+
     setActionLoading(true);
     try {
       const useCase = new UpdateArea(areaRepo);
-      // Convertir data a formato correcto con status tipado
+
       const updates: Partial<Area> = {
         name: data.name,
         level: data.level,
         parentId: data.parentId,
-        status: data.status as 'ACTIVO' | 'INACTIVO',
+        status: data.status as "ACTIVO" | "INACTIVO",
         tenantId: data.tenantId,
       };
+
       const result = await useCase.execute(selectedArea.id, updates, TENANT_ID);
 
       if (result.ok) {
@@ -183,191 +206,161 @@ export function AreasView() {
     setFilterStatus("all");
   };
 
-  const hasActiveFilters = search || filterLevel !== "all" || filterStatus !== "all";
+  const hasActiveFilters =
+    !!search || filterLevel !== "all" || filterStatus !== "all";
 
   const toggleArea = (areaId: string) => {
-    setExpandedAreas(prev => {
+    setExpandedAreas((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(areaId)) {
-        newSet.delete(areaId);
-      } else {
-        newSet.add(areaId);
-      }
+      if (newSet.has(areaId)) newSet.delete(areaId);
+      else newSet.add(areaId);
       return newSet;
     });
   };
 
-  const renderAreaTree = () => {
-    const rootAreas = getRootAreas();
-    return rootAreas.map((area: Area) => {
-      // El backend envía isActive en lugar de status ACTIVO/INACTIVO
-      const areaStatus = (area as any).isActive !== undefined 
-        ? ((area as any).isActive ? 'ACTIVO' : 'INACTIVO')
-        : area.status;
-      
-      // Nivel visual basado en el nivel del backend: ROOT level=0 -> Nivel 1, CHILD level=1 -> Nivel 2
-      const backendLevel = area.level;
-      const visualLevel = backendLevel + 1;
-      
-      // Obtener hijos desde el array children
-      const childAreas = getChildrenFromArea(area);
-      const hasChildren = childAreas.length > 0;
-      const isExpanded = expandedAreas.has(area.id);
-      const isRootArea = true; // Siempre es ROOT en este nivel
-      
-      return (
-        <div key={area.id} className="space-y-1">
-          <div
-            className={`flex items-center gap-3 p-4 rounded-lg transition-all cursor-pointer ${
-              isRootArea
-                ? 'bg-primary/5 border-l-4 border-primary hover:bg-primary/10' 
-                : 'bg-secondary/30 hover:bg-secondary/50 border-l-2 border-muted ml-8'
-            }`}
-          >
-            {/* Botón de expandir/colapsar solo para áreas con hijos */}
-            {hasChildren && isRootArea ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleArea(area.id);
-                }}
-                className="flex-shrink-0 hover:bg-primary/10 rounded p-1 transition-colors"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-5 w-5 text-primary" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-primary" />
-                )}
-              </button>
-            ) : (
-              <div className="w-7" /> 
-            )}
-            
-            <div 
-              className="flex-1 flex items-center gap-3"
-              onClick={() => hasChildren && isRootArea && toggleArea(area.id)}
+  // 🔁 Render recursivo de cualquier nodo (ROOT o CHILD)
+  const renderAreaNode = (area: Area, depth = 0): ReactNode => {
+    // Si este nodo no pasa los filtros, no lo mostramos (ni su subárbol)
+    if (!matchesFilters(area)) {
+      return null;
+    }
+
+    const anyArea: any = area;
+    const areaStatus = getAreaStatus(area as any);
+
+    const backendLevel = area.level ?? depth;
+    const visualLevel = backendLevel + 1;
+
+    // Buscar los hijos COMPLETOS desde el array principal de áreas
+    // usando los IDs del array children
+    const childrenIds = (anyArea.children || []).map((c: any) => c.id);
+    const fullChildAreas = areas.filter((a: any) => childrenIds.includes(a.id));
+
+    // Aplicamos filtros también a los hijos
+    const childAreas = fullChildAreas.filter((child) => matchesFilters(child));
+    const hasChildren = childAreas.length > 0;
+
+    const isExpanded = expandedAreas.has(area.id);
+    const isRootArea = anyArea.nodeType === "ROOT" || depth === 0;
+
+    return (
+      <div key={area.id} className="space-y-1">
+        <div
+          className={`flex items-center gap-3 p-4 rounded-lg transition-all cursor-pointer ${
+            isRootArea
+              ? "bg-primary/5 border-l-4 border-primary hover:bg-primary/10"
+              : "bg-secondary/30 hover:bg-secondary/50 border-l-2 border-muted ml-4"
+          }`}
+        >
+          {/* Chevron si tiene hijos */}
+          {hasChildren ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleArea(area.id);
+              }}
+              className="flex-shrink-0 hover:bg-primary/10 rounded p-1 transition-colors"
             >
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className={`font-medium text-foreground ${
-                    isRootArea ? 'text-base' : 'text-sm'
-                  }`}>
-                    {area.name}
-                  </p>
-                  <EntityBadge status={areaStatus} />
-                  {isRootArea && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                      Área Principal
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    Nivel {visualLevel}
+              {isExpanded ? (
+                <ChevronDown className="h-5 w-5 text-primary" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-primary" />
+              )}
+            </button>
+          ) : (
+            <div className="w-7" />
+          )}
+
+          <div
+            className="flex-1 flex items-center gap-3"
+            onClick={() => hasChildren && toggleArea(area.id)}
+          >
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <p
+                  className={`font-medium text-foreground ${
+                    isRootArea ? "text-base" : "text-sm"
+                  }`}
+                >
+                  {area.name}
+                </p>
+                <EntityBadge status={areaStatus} />
+                {isRootArea && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    Área Principal
                   </span>
-                  {hasChildren && (
-                    <>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">
-                        {childAreas.length} {childAreas.length === 1 ? 'subárea' : 'subáreas'}
-                      </span>
-                    </>
-                  )}
-                </div>
+                )}
               </div>
-              
-              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push(`/areas/${area.id}`)}
-                  className="gap-2 h-9"
-                >
-                  <Eye className="h-4 w-4" />
-                  Ver Detalle
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openEditDialog(area)}
-                  className="gap-2 h-9"
-                >
-                  <Edit className="h-4 w-4" />
-                  Editar
-                </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  Nivel {visualLevel}
+                </span>
+                {hasChildren && (
+                  <>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground">
+                      {childAreas.length}{" "}
+                      {childAreas.length === 1 ? "subárea" : "subáreas"}
+                    </span>
+                  </>
+                )}
               </div>
+            </div>
+
+            <div
+              className="flex gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/areas/${area.id}`)}
+                className="gap-2 h-9"
+              >
+                <Eye className="h-4 w-4" />
+                Ver Detalle
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openEditDialog(area)}
+                className="gap-2 h-9"
+              >
+                <Edit className="h-4 w-4" />
+                Editar
+              </Button>
             </div>
           </div>
-          
-          {/* Renderizar áreas hijas solo si está expandido */}
-          {isExpanded && hasChildren && (
-            <div className="space-y-1 ml-4">
-              {childAreas.map((childArea: any) => {
-                console.log("CHILD area:", childArea);
-                const childStatus = childArea.status ?? (childArea.isActive ? 'ACTIVO' : 'INACTIVO');
-                const childVisualLevel = (childArea.level || 1) + 1;
-                
-                return (
-                  <div 
-                    key={childArea.id}
-                    className="flex items-center gap-3 p-4 rounded-lg transition-all bg-secondary/30 hover:bg-secondary/50 border-l-2 border-muted"
-                  >
-                    <div className="w-7" /> 
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-foreground text-sm">
-                          {childArea.name}
-                        </p>
-                        <EntityBadge status={childStatus} />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          Nivel {childVisualLevel}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/areas/${childArea.id}`)}
-                        className="gap-2 h-9"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver Detalle
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(childArea)}
-                        className="gap-2 h-9"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Editar
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
-      );
-    });
+
+        {/* Hijos recursivos */}
+        {isExpanded && hasChildren && (
+          <div className="space-y-1 ml-4">
+            {childAreas.map((child) => renderAreaNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderAreaTree = () => {
+    const rootAreas = getRootAreas();
+    console.log("Root areas en render:", rootAreas);
+    return rootAreas.map((area) => renderAreaNode(area, 0));
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Áreas</h1>
           <p className="text-muted-foreground">
-            Gestiona la estructura jerárquica de áreas • {areas.length} {areas.length === 1 ? 'área' : 'áreas'}
+            Gestiona la estructura jerárquica de áreas • {areas.length}{" "}
+            {areas.length === 1 ? "área" : "áreas"}
           </p>
         </div>
-        <Button 
+        <Button
           onClick={openCreateDialog}
           className="bg-primary text-primary-foreground h-10 gap-2"
         >
@@ -418,7 +411,7 @@ export function AreasView() {
               </SelectContent>
             </Select>
 
-            {/* Botón limpiar filtros */}
+            {/* Limpiar filtros */}
             {hasActiveFilters && (
               <Button
                 variant="outline"
@@ -433,25 +426,30 @@ export function AreasView() {
         </CardContent>
       </Card>
 
+      {/* Árbol de áreas */}
       <Card className="shadow-sm">
         <CardHeader>
-          <h3 className="text-lg font-semibold text-foreground">Jerarquía de Áreas</h3>
+          <h3 className="text-lg font-semibold text-foreground">
+            Jerarquía de Áreas
+          </h3>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-3">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Cargando áreas...</p>
+                <p className="text-sm text-muted-foreground">
+                  Cargando áreas...
+                </p>
               </div>
             </div>
           ) : getRootAreas().length === 0 ? (
-            <EmptyState 
+            <EmptyState
               message={
-                hasActiveFilters 
-                  ? "No se encontraron áreas con los filtros aplicados" 
+                hasActiveFilters
+                  ? "No se encontraron áreas con los filtros aplicados"
                   : "No se encontraron áreas"
-              } 
+              }
             />
           ) : (
             <div className="space-y-2">{renderAreaTree()}</div>
@@ -459,7 +457,7 @@ export function AreasView() {
         </CardContent>
       </Card>
 
-      {/* Dialog para crear/editar área */}
+      {/* Dialog crear/editar */}
       <AreaDialog
         open={dialogOpen}
         onOpenChange={handleDialogClose}
