@@ -283,12 +283,12 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Nivel Jerárquico</p>
-              <p className="font-medium">Nivel {area.level}</p>
+              <p className="font-medium">Nivel {area.level + 1}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Tipo de Área</p>
               <p className="font-medium">
-                {area.level === 1 ? "📍 Principal" : "📎 Dependiente"}
+                {area.level === 0 ? "📍 Principal" : "📎 Dependiente"}
               </p>
             </div>
             <div>

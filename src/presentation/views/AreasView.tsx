@@ -78,11 +78,16 @@ export function AreasView() {
       return fullChild || child;
     }).filter((child: any) => {
       // Aplicar filtros también a los hijos
+      const isChildActive =
+        child.isActive !== undefined
+          ? child.isActive
+        : child.status === 'ACTIVO';
+      
       const matchesSearch = !search || child.name?.toLowerCase().includes(search.toLowerCase());
       const matchesLevel = filterLevel === "all" || child.level?.toString() === filterLevel;
-      const matchesStatus = filterStatus === "all" || 
-        (filterStatus === "ACTIVO" ? child.isActive === true : child.isActive === false);
-      
+      const matchesStatus =
+           filterStatus === "all" ||
+          (filterStatus === "ACTIVO" ? isChildActive : !isChildActive); 
       return matchesSearch && matchesLevel && matchesStatus;
     });
   };
@@ -96,7 +101,7 @@ export function AreasView() {
         name: data.name,
         level: data.level,
         parentId: data.parentId,
-        status: data.status as 'ACTIVO' | 'INACTIVO',
+        status: data.status as 'ACTIVO' || 'INACTIVO',
         tenantId: data.tenantId,
       };
       const result = await useCase.execute(areaData);
@@ -312,7 +317,8 @@ export function AreasView() {
           {isExpanded && hasChildren && (
             <div className="space-y-1 ml-4">
               {childAreas.map((childArea: any) => {
-                const childStatus = childArea.isActive ? 'ACTIVO' : 'INACTIVO';
+                console.log("CHILD area:", childArea);
+                const childStatus = childArea.status ?? (childArea.isActive ? 'ACTIVO' : 'INACTIVO');
                 const childVisualLevel = (childArea.level || 1) + 1;
                 
                 return (
