@@ -1,6 +1,7 @@
 import { IAreaRepository } from '@/domain/repositories/IAreaRepository';
 import { Area } from '@/domain/entities/Area';
 import { apiClient } from '@/infrastructure/api/apiClient';
+import { CreateAreaDTO } from '@/application/usecases/area/CreateArea';
 
 interface BackendArea {
   id: string;
@@ -15,6 +16,12 @@ interface BackendArea {
   nodeType?: 'ROOT' | 'CHILD';
   children?: BackendArea[];
 }
+
+type CreateAreaPayload = {
+  name: string;
+  nodeType: 'ROOT' | 'CHILD';
+  parentAreaId: string | null;
+};
 
 export class ApiAreaRepository implements IAreaRepository {
   private mapBackendArea(backendArea: BackendArea): Area {
@@ -124,21 +131,26 @@ export class ApiAreaRepository implements IAreaRepository {
       return null;
     }
   }
+async create(data: CreateAreaDTO): Promise<Area> {
+  try {
+    console.log("📤 Creating area (domain):", data);
 
-  async create(area: Omit<Area, 'id'>): Promise<Area> {
-    try {
-      console.log('📤 Creating area with data:', area);
-      const response = await apiClient.post<any, Omit<Area, 'id'>>('/areas', area, true);
-      console.log('📥 Create area response:', response);
-      
-      // Manejar posibles estructuras de respuesta
-      const backendArea = response.data || response;
-      return this.mapBackendArea(backendArea);
-    } catch (error) {
-      console.error('Error creating area:', error);
-      throw error;
-    }
+    const payload = {
+      name: data.name,
+      nodeType: data.parentId ? "CHILD" : "ROOT",
+      parentAreaId: data.parentId, // o null
+    };
+
+    const response = await apiClient.post<any, typeof payload>("/areas", payload, true);
+    const backendArea = response.data || response;
+
+    return this.mapBackendArea(backendArea);
+  } catch (error) {
+    console.error("Error creating area:", error);
+    throw error;
   }
+}
+
 
   async update(id: string, updates: Partial<Area>, tenantId: string): Promise<Area> {
     try {

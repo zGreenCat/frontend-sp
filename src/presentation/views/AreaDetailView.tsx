@@ -72,15 +72,12 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
       const { area: areaData, managers, warehouses } = result.value;
       setArea(areaData);
 
-      console.log('👥 Managers from API:', managers);
-      console.log('🏢 Warehouses from API:', warehouses);
 
       // Convertir managers del API a entidades User
       const managersAsUsers: User[] = managers.map((m: any) => {
         // El API envía { id, name, email } donde name es el nombre completo
         let firstName = '';
         let lastName = '';
-        console.log('Processing manager:', m);
         
         // El API envía 'name' como nombre completo
         if (m.name) {

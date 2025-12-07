@@ -45,7 +45,6 @@ export function AreasView() {
   const loadAreas = async () => {
     setLoading(true);
     const result = await areaRepo.findAll(TENANT_ID);
-    console.log('Loaded areas:', result);
     setAreas(result);
     setLoading(false);
   };
@@ -55,7 +54,6 @@ export function AreasView() {
     return areas.filter(a => {
       const nodeType = (a as any).nodeType;
       if (nodeType !== 'ROOT') {
-        console.log(`Omitiendo área ${a.name} de tipo ${nodeType}`);
         return false;
       }
       // Aplicar filtros solo a las ROOT
@@ -63,7 +61,6 @@ export function AreasView() {
       const matchesSearch = !search || a.name.toLowerCase().includes(search.toLowerCase());
       const matchesLevel = filterLevel === "all" || a.level.toString() === filterLevel;
       const matchesStatus = filterStatus === "all" || areaStatus === filterStatus;
-      console.log(`Área ${a.name}: matchesSearch=${matchesSearch}, matchesLevel=${matchesLevel}, matchesStatus=${matchesStatus}`);
       return matchesSearch && matchesLevel && matchesStatus;
     });
   };
@@ -95,16 +92,8 @@ export function AreasView() {
   const handleCreateArea = async (data: CreateAreaInput) => {
     setActionLoading(true);
     try {
-      const useCase = new CreateArea(areaRepo);
-      // Convertir data a formato correcto con status tipado
-      const areaData: Omit<Area, 'id'> = {
-        name: data.name,
-        level: data.level,
-        parentId: data.parentId,
-        status: data.status as 'ACTIVO' || 'INACTIVO',
-        tenantId: data.tenantId,
-      };
-      const result = await useCase.execute(areaData);
+      const useCase = new CreateArea(areaRepo);     
+      const result = await useCase.execute(data);
 
       if (result.ok) {
         toast({
@@ -210,9 +199,7 @@ export function AreasView() {
 
   const renderAreaTree = () => {
     const rootAreas = getRootAreas();
-    console.log("Root areas en render:", rootAreas);
     return rootAreas.map((area: Area) => {
-      console.log("ROOT area:", area.name, "children raw:", (area as any).children);
       // El backend envía isActive en lugar de status ACTIVO/INACTIVO
       const areaStatus = (area as any).isActive !== undefined 
         ? ((area as any).isActive ? 'ACTIVO' : 'INACTIVO')
@@ -224,7 +211,6 @@ export function AreasView() {
       
       // Obtener hijos desde el array children
       const childAreas = getChildrenFromArea(area);
-      console.log("Child areas ya filtradas:", childAreas);
       const hasChildren = childAreas.length > 0;
       const isExpanded = expandedAreas.has(area.id);
       const isRootArea = true; // Siempre es ROOT en este nivel
