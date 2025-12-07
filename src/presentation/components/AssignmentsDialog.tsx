@@ -203,8 +203,9 @@ export function AssignmentsDialog({
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
             <Badge variant="outline" className="text-sm">
-              {userRoleName === 'JEFE' || userRoleName === 'JEFE_AREA' || userRoleName === USER_ROLES.JEFE ? 'JEFE_AREA' : 
-               userRoleName === 'SUPERVISOR' || userRoleName === USER_ROLES.SUPERVISOR ? 'SUPERVISOR' : userRoleName}
+              {userRoleName === 'JEFE' || userRoleName === 'JEFE_AREA' || userRoleName === USER_ROLES.JEFE ? 'Jefe de Área' : 
+               userRoleName === 'SUPERVISOR' || userRoleName === USER_ROLES.SUPERVISOR ? 'Supervisor' : 
+               userRoleName === 'ADMIN' || userRoleName === USER_ROLES.ADMIN ? 'Administrador' : userRoleName}
             </Badge>
           </div>
         </div>

@@ -456,7 +456,8 @@ export function UsersView() {
 
   // Los filtros locales están deshabilitados mientras se usa paginación del servidor
   // TODO: Enviar filtros al backend como query params para filtrado en servidor
-  const filteredUsers = usersByHierarchy;
+  // Excluir al usuario autenticado de la lista
+  const filteredUsers = usersByHierarchy.filter(u => u.id !== currentUserId);
   
   // VERSIÓN ANTERIOR CON FILTROS LOCALES (causa problemas con paginación del servidor):
   // const filteredUsers = usersByHierarchy.filter(u => {
@@ -610,7 +611,8 @@ export function UsersView() {
                             <p className="font-medium text-foreground">{user.name} {user.lastName}</p>
                             <p className="text-sm text-muted-foreground">{formatRUT(user.rut)}</p>
                           </div>
-                          {user.areas.length === 0 && user.warehouses.length === 0 && (
+                          {user.areas.length === 0 && user.warehouses.length === 0 && 
+                           user.role !== 'ADMIN' && user.role !== USER_ROLES.ADMIN && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -711,8 +713,9 @@ export function UsersView() {
                             </div>
                           )}
 
-                          {/* Sin asignaciones */}
-                          {user.areas.length === 0 && user.warehouses.length === 0 && (
+                          {/* Sin asignaciones - No mostrar para ADMIN */}
+                          {user.areas.length === 0 && user.warehouses.length === 0 && 
+                           user.role !== 'ADMIN' && user.role !== USER_ROLES.ADMIN && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -746,12 +749,13 @@ export function UsersView() {
                                       size="sm"
                                       onClick={() => openAssignmentsDialog(user)}
                                       className="h-8 w-8 p-0"
+                                      disabled={user.status === 'INACTIVE' || !user.isActive}
                                     >
                                       <Pencil className="h-4 w-4 text-primary" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Modificar asignaciones</p>
+                                    <p>{user.status === 'INACTIVE' || !user.isActive ? 'Usuario deshabilitado' : 'Modificar asignaciones'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
