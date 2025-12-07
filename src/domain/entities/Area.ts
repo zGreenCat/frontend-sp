@@ -7,4 +7,7 @@ export interface Area {
   parentId?: string;
   status: AreaStatus;
   tenantId: string;
+  nodeType?: 'ROOT' | 'CHILD';
+  description?: string;
+  children?: Area[];
 }

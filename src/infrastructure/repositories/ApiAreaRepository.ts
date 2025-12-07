@@ -12,6 +12,8 @@ interface BackendArea {
   description?: string;
   createdAt: string;
   updatedAt: string;
+  nodeType?: 'ROOT' | 'CHILD';
+  children?: BackendArea[];
 }
 
 export class ApiAreaRepository implements IAreaRepository {
@@ -19,17 +21,19 @@ export class ApiAreaRepository implements IAreaRepository {
     return {
       id: backendArea.id,
       name: backendArea.name,
-      level: backendArea.level || 1,
+      level: backendArea.level,
       parentId: backendArea.parentId,
       status: (backendArea.status || 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
       tenantId: backendArea.tenantId,
+      nodeType: backendArea.nodeType,
+      description: backendArea.description,
+      children: (backendArea.children ?? []).map(child => this.mapBackendArea(child)),
     };
   }
 
   async findAll(tenantId: string): Promise<Area[]> {
     try {
       const response = await apiClient.get<any>('/areas', true);
-      console.log('📥 GET /areas response:', response);
       
       // El backend puede devolver array directo o { data: [...] }
       let backendAreas: BackendArea[];
@@ -46,7 +50,11 @@ export class ApiAreaRepository implements IAreaRepository {
       }
       
       console.log('✅ Extracted', backendAreas.length, 'areas');
-      return backendAreas.map(a => this.mapBackendArea(a));
+      console.log("🔍 Before map:", backendAreas[0]);
+      const mapped = backendAreas.map(a => this.mapBackendArea(a));
+      console.log("🧩 After map:", mapped[0]);
+      return mapped;
+
     } catch (error) {
       console.error('Error fetching areas:', error);
       return [];
