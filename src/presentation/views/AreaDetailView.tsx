@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
-  Edit,
   Warehouse,
   UserCog,
   Building2,
@@ -22,10 +21,7 @@ import { TENANT_ID } from "@/shared/constants";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { AssignWarehousesDialog } from "@/presentation/components/AssignWarehousesDialog";
 import { AssignManagersDialog } from "@/presentation/components/AssignManagersDialog";
-import { AreaDialog } from "@/presentation/components/AreaDialog";
-import { UpdateArea } from "@/application/usecases/area/UpdateArea";
 import { GetAreaDetail } from "@/application/usecases/area/GetAreaDetail";
-import { CreateAreaInput } from "@/shared/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/presentation/components/EmptyState";
 
@@ -45,8 +41,6 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const [loading, setLoading] = useState(true);
   const [warehousesDialogOpen, setWarehousesDialogOpen] = useState(false);
   const [managersDialogOpen, setManagersDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     loadAreaDetails();
@@ -143,64 +137,62 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
   const loadWarehouses = async (areaId: string) => {
     try {
-      const warehouseIds = await (areaRepo as any).getAssignedWarehouses(areaId);
-      const allWarehouses = await warehouseRepo.findAll(TENANT_ID);
-      const filtered = allWarehouses.filter(w => warehouseIds.includes(w.id));
-      setAssignedWarehouses(filtered);
+      const result = await areaRepo.findByIdWithDetails(areaId);
+      if (result) {
+        const warehousesAsEntities: WarehouseEntity[] = result.warehouses.map((w: any) => ({
+          id: w.id,
+          name: w.name || 'Sin nombre',
+          capacityKg: w.capacityKg || w.capacity || 0,
+          status: 'ACTIVO' as const,
+          areaId: areaId,
+          tenantId: TENANT_ID,
+        }));
+        setAssignedWarehouses(warehousesAsEntities);
+      }
     } catch (error) {
-      console.error("Error al cargar bodegas:", error);
+      console.error("Error fetching assigned warehouses:", error);
     }
   };
 
   const loadManagers = async (areaId: string) => {
     try {
-      const managerIds = await (areaRepo as any).getAssignedManagers(areaId);
-      const allUsers = await userRepo.findAll(TENANT_ID);
-      const filtered = allUsers.data.filter((u: User) => managerIds.includes(u.id));
-      setAssignedManagers(filtered);
-    } catch (error) {
-      console.error("Error al cargar jefes:", error);
-    }
-  };
+      const result = await areaRepo.findByIdWithDetails(areaId);
+      if (result) {
+        const managersAsUsers: User[] = result.managers.map((m: any) => {
+          let firstName = '';
+          let lastName = '';
+          
+          if (m.name) {
+            const nameParts = m.name.trim().split(' ');
+            firstName = nameParts[0] || '';
+            lastName = nameParts.slice(1).join(' ') || '';
+          } else if (m.fullName) {
+            const nameParts = m.fullName.trim().split(' ');
+            firstName = nameParts[0] || '';
+            lastName = nameParts.slice(1).join(' ') || '';
+          } else if (m.firstName || m.lastName) {
+            firstName = m.firstName || '';
+            lastName = m.lastName || '';
+          }
 
-  const handleEditArea = async (data: CreateAreaInput) => {
-    if (!area) return;
-
-    setActionLoading(true);
-    try {
-      const useCase = new UpdateArea(areaRepo);
-      // Convertir CreateAreaInput a Partial<Area> con el tipo correcto
-      const updates: Partial<Area> = {
-        name: data.name,
-        level: data.level,
-        parentId: data.parentId,
-        status: data.status as 'ACTIVO' | 'INACTIVO',
-        tenantId: data.tenantId,
-      };
-      const result = await useCase.execute(area.id, updates, TENANT_ID);
-
-      if (result.ok) {
-        toast({
-          title: "✅ Área actualizada",
-          description: `El área "${data.name}" se actualizó correctamente.`,
+          return {
+            id: m.id,
+            name: firstName,
+            lastName: lastName,
+            email: m.email || '',
+            rut: '',
+            phone: '',
+            role: 'JEFE' as const,
+            status: 'HABILITADO' as const,
+            areas: [areaId],
+            warehouses: [],
+            tenantId: TENANT_ID,
+          };
         });
-        setEditDialogOpen(false);
-        await loadAreaDetails();
-      } else {
-        toast({
-          title: "❌ Error al actualizar área",
-          description: result.error || "Ocurrió un error inesperado",
-          variant: "destructive",
-        });
+        setAssignedManagers(managersAsUsers);
       }
     } catch (error) {
-      toast({
-        title: "❌ Error",
-        description: "No se pudo actualizar el área",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
+      console.error("Error al cargar jefes:", error);
     }
   };
 
@@ -258,10 +250,6 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
             {parentArea && ` • Área Dependiente de ${parentArea.name}`}
           </p>
         </div>
-        <Button onClick={() => setEditDialogOpen(true)} className="gap-2">
-          <Edit className="h-4 w-4" />
-          Editar Área
-        </Button>
       </div>
 
       {/* Card de información general */}
@@ -420,15 +408,6 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
         areaName={area.name}
         currentManagerIds={assignedManagers.map(m => m.id)}
         onSuccess={handleManagersSuccess}
-      />
-
-      <AreaDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onSubmit={handleEditArea}
-        defaultValues={area}
-        isLoading={actionLoading}
-        mode="edit"
       />
     </div>
   );

@@ -4,6 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export class ApiClient {
   private baseURL: string;
+  private static isRedirecting = false;
 
   constructor() {
     this.baseURL = API_URL;
@@ -62,6 +63,17 @@ export class ApiClient {
     // Solo ejecutar en el cliente
     if (typeof window === "undefined") return;
 
+    // Evitar múltiples redirects simultáneos
+    if (ApiClient.isRedirecting) return;
+
+    // Si ya estamos en login o register, no hacer nada
+    const currentPath = window.location.pathname;
+    if (currentPath === "/login" || currentPath === "/register" || currentPath.startsWith("/auth/")) {
+      return;
+    }
+
+    ApiClient.isRedirecting = true;
+
     // Limpiar almacenamiento local
     localStorage.removeItem("user");
     localStorage.removeItem("token");
@@ -76,6 +88,10 @@ export class ApiClient {
     // Redirigir al login después de un breve delay
     setTimeout(() => {
       window.location.href = "/login";
+      // Resetear la bandera después del redirect para permitir futuros logins
+      setTimeout(() => {
+        ApiClient.isRedirecting = false;
+      }, 2000);
     }, 1500);
   }
 

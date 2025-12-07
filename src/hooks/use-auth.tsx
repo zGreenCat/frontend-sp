@@ -47,6 +47,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         console.log('⚠️ No hay usuario en localStorage');
+
+        // PASO 1.5: Si estamos en páginas públicas (login/register), no intentar verificar cookie
+        const isPublicPage = typeof window !== 'undefined' && 
+          (window.location.pathname === '/login' || 
+           window.location.pathname === '/register' ||
+           window.location.pathname.startsWith('/auth/'));
+        
+        if (isPublicPage) {
+          console.log('ℹ️ Página pública detectada, saltando verificación de cookie');
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
         console.log('📡 Intentando obtener perfil con cookie httpOnly...');
 
         // PASO 2: Intentar obtener perfil usando cookie httpOnly

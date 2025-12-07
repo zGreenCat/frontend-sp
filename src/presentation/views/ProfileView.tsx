@@ -21,6 +21,19 @@ import { formatPhone } from "@/shared/utils/formatters";
 import { useRouter } from "next/navigation";
 import { EditProfileDialog } from "@/presentation/components/EditProfileDialog";
 
+const getRoleLabel = (roleName?: string): string => {
+  if (!roleName) return 'Usuario';
+  
+  const roleMap: Record<string, string> = {
+    'ADMIN': 'Administrador',
+    'JEFE': 'Jefe de Área',
+    'SUPERVISOR': 'Supervisor',
+    'BODEGUERO': 'Bodeguero',
+  };
+  
+  return roleMap[roleName] || roleName;
+};
+
 export function ProfileView() {
   const { user, logout, hasPermission } = useAuth();
   const router = useRouter();
@@ -62,7 +75,7 @@ export function ProfileView() {
               <div>
                 <CardTitle className="text-2xl">{user.firstName || ''} {user.lastName || ''}</CardTitle>
                 <CardDescription className="text-base mt-1">
-                  {user.role?.name || 'Usuario'}
+                  {getRoleLabel(user.role?.name)}
                 </CardDescription>
                 <div className="mt-2">
                   <EntityBadge status={user.status || 'HABILITADO'} />
@@ -132,7 +145,7 @@ export function ProfileView() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Rol</p>
-                <p className="font-medium">{user.role?.name || 'Usuario'}</p>
+                <p className="font-medium">{getRoleLabel(user.role?.name)}</p>
               </div>
             </div>
           </div>
@@ -148,9 +161,9 @@ export function ProfileView() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {user.areas && user.areas.length > 0 ? (
-                  user.areas.map((areaId) => (
-                    <Badge key={areaId} variant="secondary">
-                      {areaId}
+                  user.areas.map((area) => (
+                    <Badge key={area.id} variant="secondary">
+                      {area.name}
                     </Badge>
                   ))
                 ) : (
@@ -166,9 +179,9 @@ export function ProfileView() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {user.warehouses && user.warehouses.length > 0 ? (
-                  user.warehouses.map((warehouseId) => (
-                    <Badge key={warehouseId} variant="secondary">
-                      {warehouseId}
+                  user.warehouses.map((warehouse) => (
+                    <Badge key={warehouse.id} variant="secondary">
+                      {warehouse.name}
                     </Badge>
                   ))
                 ) : (

@@ -31,10 +31,20 @@ export class AuthService {
     }
 
     // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
+    // Preservar el objeto role del backend
+    const roleObject = backendUser.role 
+      ? {
+          id: backendUser.role.id || backendUser.roleId,
+          name: mapBackendRoleToFrontend(backendUser.role.name || backendUser.role),
+          description: backendUser.role.description || null
+        }
+      : undefined;
+    
     const user: User = {
       ...backendUser,
       name: backendUser.firstName || backendUser.name || null,
       lastName: backendUser.lastName || '',
+      role: roleObject,
       areas: this.normalizeAreas(backendUser.areas),
       warehouses: this.normalizeWarehouses(backendUser.warehouses),
     };
@@ -79,10 +89,20 @@ export class AuthService {
     }
 
     // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
+    // Preservar el objeto role del backend
+    const roleObject = backendUser.role 
+      ? {
+          id: backendUser.role.id || backendUser.roleId,
+          name: mapBackendRoleToFrontend(backendUser.role.name || backendUser.role),
+          description: backendUser.role.description || null
+        }
+      : undefined;
+    
     const user: User = {
       ...backendUser,
       name: backendUser.firstName || backendUser.name || null,
       lastName: backendUser.lastName || '',
+      role: roleObject,
       areas: this.normalizeAreas(backendUser.areaAssignments),
       warehouses: this.normalizeWarehouses(backendUser.warehouses),
     };
@@ -115,16 +135,20 @@ export class AuthService {
       const response = await apiClient.get<any>("/users/me", true);
       
       // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
-      // El rol puede venir como objeto { id, name } o como string
-      const roleName = typeof response.role === 'string' 
-        ? response.role 
-        : response.role?.name || 'SUPERVISOR';
+      // El rol viene como objeto { id, name } del backend, preservarlo para el frontend
+      const roleObject = response.role 
+        ? {
+            id: response.role.id || response.roleId,
+            name: mapBackendRoleToFrontend(response.role.name || response.role),
+            description: response.role.description || null
+          }
+        : undefined;
       
       const user: User = {
         ...response,
         name: response.firstName || response.name || null,
         lastName: response.lastName || '',
-        role: mapBackendRoleToFrontend(roleName) as any,
+        role: roleObject,
         areas: this.normalizeAreas(response.areaAssignments || response.areas),
         warehouses: this.normalizeWarehouses(response.warehouseAssignments || response.warehouses),
       };

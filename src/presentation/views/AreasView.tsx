@@ -18,9 +18,10 @@ import {
   Search,
   Filter,
   X,
-  Edit,
   Loader2,
   Eye,
+  Users,
+  Warehouse,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
@@ -31,7 +32,6 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { AreaDialog } from "@/presentation/components/AreaDialog";
 import { CreateAreaInput } from "@/shared/schemas";
 import { CreateArea } from "@/application/usecases/area/CreateArea";
-import { UpdateArea } from "@/application/usecases/area/UpdateArea";
 import { useToast } from "@/hooks/use-toast";
 
 export function AreasView() {
@@ -44,10 +44,9 @@ export function AreasView() {
   const [search, setSearch] = useState("");
   const [filterLevel, setFilterLevel] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedArea, setSelectedArea] = useState<Area | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     loadAreas();
@@ -70,15 +69,11 @@ export function AreasView() {
   };
 
   // Helper que aplica TODOS los filtros a un nodo individual
-  // Recibe el depth calculado para determinar el nivel visual correcto
-  const matchesFilters = (area: Area, depth: number = 0): boolean => {
+  const matchesFilters = (area: Area): boolean => {
     const areaStatus = getAreaStatus(area as any);
 
-    // Calcular nivel visual basado en depth, no en backend level
-    // Si es ROOT (nodeType='ROOT'), siempre es nivel 1 independientemente del backend level
-    const anyArea: any = area;
-    const isRoot = anyArea.nodeType === 'ROOT';
-    const visualLevel = isRoot ? 1 : depth + 1;
+    const backendLevel = area.level ?? 0;
+    const visualLevel = backendLevel + 1; // Nivel 1 = ROOT(level 0)...
 
     const matchesSearch =
       !search ||
@@ -105,12 +100,19 @@ export function AreasView() {
     });
   };
 
+  const openCreateDialog = () => {
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+  };
+
   const handleCreateArea = async (data: CreateAreaInput) => {
     setActionLoading(true);
     try {
       const useCase = new CreateArea(areaRepo);
 
-      // Aquí podrías mapear a un DTO más pequeño si quieres (sólo name/parentId)
       const areaData: Omit<Area, "id"> = {
         name: data.name,
         level: data.level,
@@ -146,64 +148,6 @@ export function AreasView() {
     }
   };
 
-  const handleEditArea = async (data: CreateAreaInput) => {
-    if (!selectedArea) return;
-
-    setActionLoading(true);
-    try {
-      const useCase = new UpdateArea(areaRepo);
-
-      const updates: Partial<Area> = {
-        name: data.name,
-        level: data.level,
-        parentId: data.parentId,
-        status: data.status as "ACTIVO" | "INACTIVO",
-        tenantId: data.tenantId,
-      };
-
-      const result = await useCase.execute(selectedArea.id, updates, TENANT_ID);
-
-      if (result.ok) {
-        toast({
-          title: "✅ Área actualizada",
-          description: `El área "${data.name}" se actualizó correctamente.`,
-        });
-        setDialogOpen(false);
-        setSelectedArea(null);
-        await loadAreas();
-      } else {
-        toast({
-          title: "❌ Error al actualizar área",
-          description: result.error || "Ocurrió un error inesperado",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "❌ Error",
-        description: "No se pudo actualizar el área",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openCreateDialog = () => {
-    setSelectedArea(null);
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (area: Area) => {
-    setSelectedArea(area);
-    setDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setSelectedArea(null);
-  };
-
   const clearFilters = () => {
     setSearch("");
     setFilterLevel("all");
@@ -232,9 +176,8 @@ export function AreasView() {
     const anyArea: any = area;
     const areaStatus = getAreaStatus(area as any);
 
-    // Usar depth para calcular el nivel visual (más confiable que backend level)
-    // depth=0 → Nivel 1 (ROOT), depth=1 → Nivel 2 (CHILD), depth=2 → Nivel 3, etc.
-    const visualLevel = depth + 1;
+    const backendLevel = area.level ?? depth;
+    const visualLevel = backendLevel + 1;
 
 
     // Buscar los hijos COMPLETOS desde el array principal de áreas
@@ -297,7 +240,7 @@ export function AreasView() {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs text-muted-foreground">
                   Nivel {visualLevel}
                 </span>
@@ -310,6 +253,18 @@ export function AreasView() {
                     </span>
                   </>
                 )}
+                {/* Contador de bodegas */}
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Warehouse className="h-3 w-3" />
+                  {(anyArea.warehouseCount || anyArea.warehouses?.length || 0)} {(anyArea.warehouseCount || anyArea.warehouses?.length || 0) === 1 ? "bodega" : "bodegas"}
+                </span>
+                {/* Contador de jefes */}
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users className="h-3 w-3" />
+                  {(anyArea.managerCount || anyArea.managers?.length || 0)} {(anyArea.managerCount || anyArea.managers?.length || 0) === 1 ? "jefe" : "jefes"}
+                </span>
               </div>
             </div>
 
@@ -325,15 +280,6 @@ export function AreasView() {
               >
                 <Eye className="h-4 w-4" />
                 Ver Detalle
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openEditDialog(area)}
-                className="gap-2 h-9"
-              >
-                <Edit className="h-4 w-4" />
-                Editar
               </Button>
             </div>
           </div>
@@ -463,14 +409,13 @@ export function AreasView() {
         </CardContent>
       </Card>
 
-      {/* Dialog crear/editar */}
+      {/* Dialog para crear área */}
       <AreaDialog
         open={dialogOpen}
         onOpenChange={handleDialogClose}
-        onSubmit={selectedArea ? handleEditArea : handleCreateArea}
-        defaultValues={selectedArea || undefined}
+        onSubmit={handleCreateArea}
         isLoading={actionLoading}
-        mode={selectedArea ? "edit" : "create"}
+        mode="create"
       />
     </div>
   );

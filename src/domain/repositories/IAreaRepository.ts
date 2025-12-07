@@ -4,6 +4,11 @@ import { Area } from '../entities/Area';
 export interface IAreaRepository {
   findAll(tenantId: string): Promise<Area[]>;
   findById(id: string, tenantId: string): Promise<Area | null>;
+  findByIdWithDetails(id: string): Promise<{
+    area: Area;
+    managers: Array<{ id: string; name: string; email: string }>;
+    warehouses: Array<{ id: string; name: string }>;
+  } | null>;
   create(data: CreateAreaDTO): Promise<Area>;
   update(id: string, area: Partial<Area>, tenantId: string): Promise<Area>;
   
