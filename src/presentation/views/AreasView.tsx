@@ -253,17 +253,23 @@ export function AreasView() {
                     </span>
                   </>
                 )}
-                {/* Contador de bodegas */}
+                {/* Contador de bodegas - usar contadores reales del backend */}
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Warehouse className="h-3 w-3" />
-                  {(anyArea.warehouseCount || anyArea.warehouses?.length || 0)} {(anyArea.warehouseCount || anyArea.warehouses?.length || 0) === 1 ? "bodega" : "bodegas"}
+                  {(() => {
+                    const count = anyArea.warehouseCount ?? anyArea.warehouses?.length ?? 0;
+                    return `${count} ${count === 1 ? "bodega" : "bodegas"}`;
+                  })()}
                 </span>
-                {/* Contador de jefes */}
+                {/* Contador de jefes - usar contadores reales del backend */}
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Users className="h-3 w-3" />
-                  {(anyArea.managerCount || anyArea.managers?.length || 0)} {(anyArea.managerCount || anyArea.managers?.length || 0) === 1 ? "jefe" : "jefes"}
+                  {(() => {
+                    const count = anyArea.managerCount ?? anyArea.managers?.length ?? 0;
+                    return `${count} ${count === 1 ? "jefe" : "jefes"}`;
+                  })()}
                 </span>
               </div>
             </div>

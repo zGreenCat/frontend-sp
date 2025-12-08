@@ -297,6 +297,30 @@ export class ApiUserRepository implements IUserRepository {
         name: w.warehouse!.name
       })) || [];
     
+    // Preservar areaAssignments completo con toda la información
+    const areaAssignments = backendUser.areaAssignments?.map(a => ({
+      id: a.id,
+      userId: backendUser.id,
+      areaId: a.areaId,
+      assignedBy: a.assignedBy || '',
+      assignedAt: a.assignedAt,
+      revokedAt: a.revokedAt || null,
+      isActive: a.isActive,
+      area: a.area ? {
+        id: a.area.id,
+        name: a.area.name,
+        nodeType: a.area.nodeType,
+        level: a.area.level,
+        isActive: a.area.isActive ?? true,
+      } : {
+        id: a.areaId,
+        name: 'Sin nombre',
+        nodeType: 'ROOT',
+        level: 0,
+        isActive: true,
+      }
+    })) || [];
+    
     // Log para debugging (solo si hay asignaciones)
     if (areas.length > 0 || warehouses.length > 0) {
       console.log(`✅ User ${backendUser.firstName} ${backendUser.lastName}:`, {
@@ -320,6 +344,7 @@ export class ApiUserRepository implements IUserRepository {
       warehouses,
       areaDetails,
       warehouseDetails,
+      areaAssignments, // Agregar areaAssignments completo
       tenantId: backendUser.tenantId,
     };
   }
@@ -416,6 +441,80 @@ export class ApiUserRepository implements IUserRepository {
     } catch (error) {
       console.error('Error fetching user:', error);
       return null;
+    }
+  }
+
+  async findByRole(roleName: string, tenantId: string): Promise<{ data: User[]; page: number; limit: number | null; totalPages: number; total: number; hasNext: boolean; hasPrev: boolean }> {
+    try {
+      console.log(`🔍 Fetching users with role: ${roleName}`);
+      
+      // Cargar roles si no están en caché
+      await roleService.loadRoles();
+      
+      // Obtener el ID del rol por nombre
+      const roleId = roleService.getRoleIdByName(roleName);
+      
+      if (!roleId) {
+        console.error(`❌ Role ID not found for role name: ${roleName}`);
+        return {
+          data: [],
+          page: 1,
+          limit: null,
+          totalPages: 0,
+          total: 0,
+          hasNext: false,
+          hasPrev: false,
+        };
+      }
+      
+      console.log(`✅ Using roleId: ${roleId} for role: ${roleName}`);
+      
+      // Llamar al endpoint con filtro de roleId
+      const response = await apiClient.get<any>(`/users?roleId=${roleId}`, true);
+      console.log('📦 Users by role response:', response);
+      
+      // El backend devuelve estructura paginada
+      let backendUsers: BackendUser[];
+      
+      if (response && Array.isArray(response.data)) {
+        backendUsers = response.data;
+      } else if (Array.isArray(response)) {
+        backendUsers = response;
+      } else {
+        console.error('❌ Unexpected response structure from /users?roleId:', response);
+        return {
+          data: [],
+          page: 1,
+          limit: null,
+          totalPages: 0,
+          total: 0,
+          hasNext: false,
+          hasPrev: false,
+        };
+      }
+      
+      console.log(`✅ Found ${backendUsers.length} users with role ${roleName} (roleId: ${roleId})`);
+      
+      return {
+        data: backendUsers.map(u => this.mapBackendUser(u)),
+        page: response.page || 1,
+        limit: response.limit || null,
+        totalPages: response.totalPages || 1,
+        total: response.total || backendUsers.length,
+        hasNext: response.hasNext || false,
+        hasPrev: response.hasPrev || false,
+      };
+    } catch (error) {
+      console.error('Error fetching users by role:', error);
+      return {
+        data: [],
+        page: 1,
+        limit: null,
+        totalPages: 0,
+        total: 0,
+        hasNext: false,
+        hasPrev: false,
+      };
     }
   }
 
@@ -543,8 +642,8 @@ export class ApiUserRepository implements IUserRepository {
     try {
       // TODO: Backend debe implementar este endpoint
       // Por ahora, hacemos un workaround obteniendo todos los usuarios
-      const users = await this.findAll(tenantId);
-      return users.some(u => 
+      const response = await this.findAll(tenantId);
+      return response.data.some((u: User) => 
         u.email.toLowerCase() === email.toLowerCase() && 
         u.id !== excludeUserId
       );

@@ -13,6 +13,24 @@ export interface WarehouseAssignment {
   name: string;
 }
 
+// Información completa de asignación de área (del backend)
+export interface AreaAssignmentDetail {
+  id: string; // ID de la asignación
+  userId: string;
+  areaId: string;
+  assignedBy: string;
+  assignedAt: string;
+  revokedAt: string | null;
+  isActive: boolean;
+  area: {
+    id: string;
+    name: string;
+    nodeType: string;
+    level: number;
+    isActive: boolean;
+  };
+}
+
 export interface User {
   id: string;
   name: string;
@@ -26,6 +44,7 @@ export interface User {
   warehouses: string[];
   areaDetails?: AreaAssignment[];
   warehouseDetails?: WarehouseAssignment[];
+  areaAssignments?: AreaAssignmentDetail[]; // Info completa de asignaciones
   assignmentHistory?: AssignmentHistoryEntry[];
   tenantId: string;
 }

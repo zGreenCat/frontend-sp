@@ -57,7 +57,7 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 const areaBaseSchema = z.object({
   name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
-  level: z.number().min(1).max(10),
+  level: z.number().min(0).max(10), // Backend usa 0 para principal
   parentId: z.string().optional(),
   status: z.enum(['ACTIVO', 'INACTIVO']).default('ACTIVO'),
   tenantId: z.string().min(1),
@@ -65,18 +65,19 @@ const areaBaseSchema = z.object({
 
 export const createAreaSchema = areaBaseSchema.refine(
   (data) => {
-    // Si level es 1 (Principal), NO debe tener parentId
-    if (data.level === 1) {
-      return !data.parentId;
+    // Backend: nivel 0 = principal, nivel > 0 = dependiente
+    // Si tiene parentId, debe tener level > 0 (es dependiente)
+    if (data.parentId) {
+      return data.level > 0;
     }
-    // Si level > 1 (Dependiente), DEBE tener parentId
-    if (data.level > 1) {
-      return !!data.parentId;
+    // Si NO tiene parentId, debe tener level === 0 (es principal)
+    if (!data.parentId) {
+      return data.level === 0;
     }
     return true;
   },
   {
-    message: 'Las áreas principales no deben tener padre, las dependientes sí',
+    message: 'Las áreas principales (nivel 0 en BD) no deben tener padre. Las áreas dependientes (nivel > 0) deben tener un área padre.',
     path: ['parentId'],
   }
 );

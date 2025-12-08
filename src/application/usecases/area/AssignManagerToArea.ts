@@ -1,5 +1,5 @@
 import { IAreaRepository } from '@/domain/repositories/IAreaRepository';
-import { Result } from '@/shared/types';
+import { Result } from '@/shared/types/Result';
 
 export class AssignManagerToArea {
   constructor(private areaRepo: IAreaRepository) {}

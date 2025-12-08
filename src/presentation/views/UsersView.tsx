@@ -617,7 +617,7 @@ export function UsersView() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="flex-shrink-0">
-                                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -720,8 +720,8 @@ export function UsersView() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Badge 
-                                    variant="destructive" 
-                                    className="text-xs gap-1 cursor-help"
+                                    variant="outline" 
+                                    className="text-xs gap-1 cursor-help border-yellow-600 text-yellow-700 bg-yellow-50"
                                   >
                                     <AlertTriangle className="h-3 w-3" />
                                     Sin asignar

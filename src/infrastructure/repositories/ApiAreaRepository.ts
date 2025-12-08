@@ -18,7 +18,17 @@ interface BackendArea {
   nodeType?: 'ROOT' | 'CHILD';
   children?: BackendArea[];
   parent?: any;
+  warehouses?: Array<{id: string; name: string}>;
+  managers?: Array<{id: string; name: string; email: string}>;
+  warehouseCount?: number;
+  managerCount?: number;
 }
+
+type BackendUpdateAreaPayload = {
+  name?: string;
+  parentAreaId?: string | null;
+  isActive?: boolean;
+};
 
 type CreateAreaPayload = {
   name: string;
@@ -28,17 +38,30 @@ type CreateAreaPayload = {
 
 export class ApiAreaRepository implements IAreaRepository {
   private mapBackendArea(backendArea: BackendArea): Area {
+    // Determinar el status correcto: priorizar isActive sobre status
+    let status: 'ACTIVO' | 'INACTIVO' = 'ACTIVO';
+    if (typeof backendArea.isActive === 'boolean') {
+      status = backendArea.isActive ? 'ACTIVO' : 'INACTIVO';
+    } else if (backendArea.status) {
+      status = backendArea.status as 'ACTIVO' | 'INACTIVO';
+    }
+
     return {
       id: backendArea.id,
       name: backendArea.name,
       level: backendArea.level,
-      parentId: backendArea.parentId,
-      status: (backendArea.status || 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
+      parentId: backendArea.parentId || backendArea.parentAreaId,
+      status: status,
       tenantId: backendArea.tenantId || '',
       nodeType: backendArea.nodeType,
       description: backendArea.description,
       children: (backendArea.children ?? []).map(child => this.mapBackendArea(child)),
-    };
+      // Preservar información de asignaciones desde el backend
+      warehouses: backendArea.warehouses,
+      managers: backendArea.managers,
+      warehouseCount: backendArea.warehouseCount,
+      managerCount: backendArea.managerCount,
+    } as any; // Cast para permitir campos adicionales
   }
 
   async findAll(tenantId: string): Promise<Area[]> {
@@ -99,7 +122,7 @@ export class ApiAreaRepository implements IAreaRepository {
   // Método para obtener detalle completo de área con asignaciones
   async findByIdWithDetails(id: string): Promise<{
     area: Area;
-    managers: Array<{ id: string; name: string; email: string }>;
+    managers: Array<{ id: string; name: string; email: string; assignmentId?: string }>;
     warehouses: Array<{ id: string; name: string }>;
   } | null> {
     try {
@@ -108,11 +131,12 @@ export class ApiAreaRepository implements IAreaRepository {
       
       console.log('📥 Area detail response:', backendArea);
       
-      // Mapear managers con manejo seguro
+      // Mapear managers con manejo seguro, incluyendo assignmentId
       const managers = (backendArea.managers || []).map((m: any) => ({
         id: m.id || m.userId || '',
         name: m.name ||  m.fullName || 'Sin nombre',
         email: m.email || '',
+        assignmentId: m.assignmentId || '', // ID de la asignación para poder eliminarla
       }));
       
       // Mapear warehouses con manejo seguro
@@ -157,8 +181,21 @@ async create(data: CreateAreaDTO): Promise<Area> {
 
   async update(id: string, updates: Partial<Area>, tenantId: string): Promise<Area> {
     try {
-      console.log('📤 Updating area', id, 'with data:', updates);
-      const response = await apiClient.put<any, Partial<Area>>(`/areas/${id}`, updates, true);
+      const payload: BackendUpdateAreaPayload = {};
+
+      if (updates.name !== undefined) {
+        payload.name = updates.name;
+      }
+
+      if (updates.parentId !== undefined) {
+        payload.parentAreaId = updates.parentId ?? null;
+      }
+
+      if (updates.status !== undefined) {
+        payload.isActive = updates.status === "ACTIVO";
+      }
+      console.log('📤 Updating area', id, 'with data:', payload);
+      const response = await apiClient.put<any, BackendUpdateAreaPayload>(`/areas/${id}`, payload, true);
       console.log('📥 Update area response:', response);
       
       // Manejar posibles estructuras de respuesta

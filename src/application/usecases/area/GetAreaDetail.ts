@@ -4,7 +4,7 @@ import { Result } from '@/shared/types';
 
 export interface AreaDetail {
   area: Area;
-  managers: Array<{ id: string; name: string; email: string }>;
+  managers: Array<{ id: string; name: string; email: string; assignmentId?: string }>;
   warehouses: Array<{ id: string; name: string }>;
 }
 

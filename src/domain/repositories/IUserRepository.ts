@@ -13,6 +13,7 @@ export interface PaginatedResponse<T> {
 export interface IUserRepository {
   findAll(tenantId: string, page?: number, limit?: number): Promise<PaginatedResponse<User>>;
   findById(id: string, tenantId: string): Promise<User | null>;
+  findByRole(roleName: string, tenantId: string): Promise<PaginatedResponse<User>>;
   create(user: Omit<User, 'id'>): Promise<User>;
   update(id: string, user: Partial<User>, tenantId: string): Promise<User>;
   disable(id: string, tenantId: string): Promise<void>;

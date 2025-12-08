@@ -1,11 +1,12 @@
 import { AreaDetailView } from "@/presentation/views/AreaDetailView";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function AreaDetailPage({ params }: PageProps) {
-  return <AreaDetailView areaId={params.id} />;
+export default async function AreaDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  return <AreaDetailView areaId={id} />;
 }

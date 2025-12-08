@@ -51,9 +51,9 @@ export function AreaForm({
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [selectedNodeType, setSelectedNodeType] = useState<string>(
-    defaultValues?.level === 1 
+    defaultValues?.level === 0 
       ? "principal" 
-      : defaultValues?.level && defaultValues.level > 1 
+      : defaultValues?.level !== undefined && defaultValues.level > 0 
         ? "dependiente" 
         : ""
   );
@@ -62,7 +62,7 @@ export function AreaForm({
     resolver: zodResolver(createAreaSchema),
     defaultValues: {
       name: defaultValues?.name || "",
-      level: defaultValues?.level || 1,
+      level: defaultValues?.level ?? 0, // Backend usa 0 para principal
       parentId: defaultValues?.parentId || undefined,
       status: defaultValues?.status || "ACTIVO",
       tenantId: defaultValues?.tenantId || TENANT_ID,
@@ -76,9 +76,9 @@ export function AreaForm({
   // Actualizar formulario cuando cambien los defaultValues (modo edición)
   useEffect(() => {
     if (defaultValues) {
-      const nodeType = defaultValues.level === 1 
+      const nodeType = defaultValues.level === 0 
         ? "principal" 
-        : defaultValues.level && defaultValues.level > 1 
+        : defaultValues.level !== undefined && defaultValues.level > 0 
           ? "dependiente" 
           : "";
       
@@ -86,7 +86,7 @@ export function AreaForm({
       
       form.reset({
         name: defaultValues.name || "",
-        level: defaultValues.level || 1,
+        level: defaultValues.level ?? 0, // Backend usa 0 para principal
         parentId: defaultValues.parentId || undefined,
         status: defaultValues.status || "ACTIVO",
         tenantId: defaultValues.tenantId || TENANT_ID,
@@ -108,7 +108,7 @@ export function AreaForm({
 
       setParentAreasOptions(
         filteredAreas.map(a => ({ 
-          label: `${a.name} (Nivel ${a.level})`, 
+          label: `${a.name} (Nivel ${a.level + 1})`, // Mostrar nivel visual: backend + 1
           value: a.id 
         }))
       );
@@ -123,11 +123,18 @@ export function AreaForm({
     setSelectedNodeType(value);
     
     if (value === "principal") {
-      form.setValue("level", 1);
+      form.setValue("level", 0); // Backend: nivel 0 = principal
       form.setValue("parentId", undefined);
     } else if (value === "dependiente") {
-      // El nivel se calculará cuando se seleccione el padre
-      form.setValue("level", 2); // Por defecto nivel 2
+      // No establecer level aquí, esperar a que se seleccione el padre
+      // Si ya hay un parentId seleccionado, mantenerlo
+      const currentParentId = form.getValues("parentId");
+      if (currentParentId) {
+        handleParentChange(currentParentId);
+      } else {
+        // Limpiar parentId si estaba establecido
+        form.setValue("parentId", undefined);
+      }
     }
   };
 
