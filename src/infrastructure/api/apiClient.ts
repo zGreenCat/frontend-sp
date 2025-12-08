@@ -72,6 +72,19 @@ export class ApiClient {
       return;
     }
 
+    // Si acabamos de llegar (menos de 3 segundos en la página), puede ser un OAuth redirect
+    // Dar tiempo para que la cookie se verifique antes de redirigir
+    if (typeof window !== "undefined" && window.performance) {
+      const navigationStart = window.performance.timing.navigationStart;
+      const now = Date.now();
+      const timeSinceLoad = now - navigationStart;
+      
+      if (timeSinceLoad < 3000) {
+        console.log('⏱️ Página recién cargada, dando tiempo para verificar cookie OAuth...');
+        return;
+      }
+    }
+
     ApiClient.isRedirecting = true;
 
     // Limpiar almacenamiento local

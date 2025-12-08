@@ -65,9 +65,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // PASO 2: Intentar obtener perfil usando cookie httpOnly
         // Si el backend estableció la cookie (login con Google), esto funcionará
-        const currentUser = await authService.getProfile();
-        setUser(currentUser);
-        console.log('✅ Autenticación exitosa con cookie httpOnly');
+        // Agregar pequeño delay para dar tiempo a que la cookie se establezca correctamente
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        try {
+          const currentUser = await authService.getProfile();
+          setUser(currentUser);
+          console.log('✅ Autenticación exitosa con cookie httpOnly');
+        } catch (profileError) {
+          console.log('⚠️ Error al obtener perfil con cookie:', profileError);
+          // Solo redirigir si NO estamos ya en login
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            console.log('🔄 Redirigiendo a login debido a error de autenticación');
+          }
+          setUser(null);
+          throw profileError;
+        }
         
       } catch (error) {
         console.log('ℹ️ Sin autenticación válida (normal en primera carga)');
