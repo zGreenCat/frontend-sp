@@ -16,6 +16,13 @@ export default function GoogleCallbackPage() {
       console.log('🔄 GOOGLE CALLBACK - INICIANDO FLUJO');
       console.log('═══════════════════════════════════════════════');
       
+      // ✅ CRÍTICO: Limpiar localStorage ANTES de obtener el nuevo perfil
+      // Esto previene conflictos entre datos antiguos y la nueva sesión OAuth
+      if (typeof window !== 'undefined') {
+        authService.clearUser();
+        console.log('🧹 localStorage limpiado antes de procesar callback');
+      }
+      
       try {
         // Verificar si hay un error en los parámetros
         const errorParam = searchParams.get("error");
@@ -47,9 +54,6 @@ export default function GoogleCallbackPage() {
         console.log(`   Nombre: ${user.firstName} ${user.lastName}`);
         
         console.log('📍 Paso 3: Redirigiendo a dashboard...');
-        
-        // Pequeña pausa para que el usuario vea el mensaje de éxito
-        await new Promise(resolve => setTimeout(resolve, 500));
         
         router.push("/dashboard");
         

@@ -28,70 +28,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   // Cargar usuario al iniciar
-  useEffect(() => {
-    const initAuth = async () => {
-      console.log('═══════════════════════════════════════════════');
-      console.log('🔐 useAuth - INICIALIZANDO AUTENTICACIÓN');
-      console.log('═══════════════════════════════════════════════');
-      
-      try {
-        // PASO 1: Verificar si hay usuario guardado en localStorage
-        const savedUser = authService.getUser();
-        
-        if (savedUser) {
-          console.log('✅ Usuario encontrado en localStorage');
-          console.log(`👤 Email: ${savedUser.email}`);
-          setUser(savedUser);
-          setIsLoading(false);
-          return;
-        }
+useEffect(() => {
+  const initAuth = async () => {
+    console.log('═══════════════════════════════════════════════');
+    console.log('🔐 useAuth - INICIALIZANDO AUTENTICACIÓN');
+    console.log('═══════════════════════════════════════════════');
 
-        console.log('⚠️ No hay usuario en localStorage');
-
-        // PASO 1.5: Si estamos en páginas públicas (login/register), no intentar verificar cookie
-        const isPublicPage = typeof window !== 'undefined' && 
-          (window.location.pathname === '/login' || 
-           window.location.pathname === '/register' ||
-           window.location.pathname.startsWith('/auth/'));
-        
-        if (isPublicPage) {
-          console.log('ℹ️ Página pública detectada, saltando verificación de cookie');
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
-
-        console.log('📡 Intentando obtener perfil con cookie httpOnly...');
-
-        // PASO 2: Intentar obtener perfil usando cookie httpOnly
-        // Si el backend estableció la cookie (login con Google), esto funcionará
-        // Agregar pequeño delay para dar tiempo a que la cookie se establezca correctamente
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        try {
-          const currentUser = await authService.getProfile();
-          setUser(currentUser);
-          console.log('✅ Autenticación exitosa con cookie httpOnly');
-        } catch (profileError) {
-          console.log('⚠️ Error al obtener perfil con cookie:', profileError);
-          // Solo redirigir si NO estamos ya en login
-          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-            console.log('🔄 Redirigiendo a login debido a error de autenticación');
-          }
-          setUser(null);
-          throw profileError;
-        }
-        
-      } catch (error) {
-        console.log('ℹ️ Sin autenticación válida (normal en primera carga)');
-        setUser(null);
-      } finally {
-        setIsLoading(false);
+    try {
+      // 1) Ver si hay usuario cacheado en localStorage (solo para evitar parpadeos de UI)
+      const cachedUser = authService.getUser();
+      if (cachedUser) {
+        console.log('✅ Usuario encontrado en localStorage (cache visual)');
+        setUser(cachedUser);
       }
-    };
 
-    initAuth();
-  }, []);
+      // 2) Si estoy en página pública, limpiar cualquier sesión anterior
+      // IMPORTANTE: Excluir /auth/google/callback porque es donde se GUARDA la sesión
+      const isPublicPage =
+        typeof window !== 'undefined' &&
+        (window.location.pathname === '/login' ||
+          window.location.pathname === '/register' ||
+          window.location.pathname === '/auth/error');
+
+      if (isPublicPage) {
+        console.log('ℹ️ Página pública, limpiando localStorage previo');
+        // ✅ Limpiar localStorage para evitar conflictos con cookies viejas
+        authService.clearUser();
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // 3) /users/me es la fuente de verdad -> si funciona, hay sesión válida
+      console.log('📡 Verificando perfil con backend usando cookie/token...');
+      const currentUser = await authService.getProfile();
+      setUser(currentUser);
+      console.log('✅ Sesión válida, usuario cargado desde backend');
+    } catch (error) {
+      console.log('⚠️ No hay sesión válida o error al obtener perfil:', error);
+      setUser(null);
+      authService.clearUser(); // limpia localStorage
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  initAuth();
+}, []);
+
+
+
 
   const login = async (data: LoginRequest) => {
     try {

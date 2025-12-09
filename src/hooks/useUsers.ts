@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { User } from '@/domain/entities/User';
 import { TENANT_ID } from '@/shared/constants';
+import { useAuth } from '@/hooks/use-auth'; // 👈 importante
 
 // Query Keys
 export const userKeys = {
@@ -16,11 +17,16 @@ export const userKeys = {
  */
 export const useUsers = () => {
   const { userRepo } = useRepositories();
+  const { isAuthenticated, isLoading } = useAuth();
 
   return useQuery({
     queryKey: userKeys.all,
     queryFn: () => userRepo.findAll(TENANT_ID),
     staleTime: 5 * 60 * 1000, // 5 minutos
+    // 👇 Solo ejecuta la query cuando:
+    // - ya terminó la carga de auth
+    // - y el usuario está autenticado
+    enabled: !isLoading && isAuthenticated,
   });
 };
 
@@ -30,18 +36,19 @@ export const useUsers = () => {
  */
 export const useUsersByRole = (roleName: string) => {
   const { userRepo } = useRepositories();
+  const { isAuthenticated, isLoading } = useAuth();
 
   return useQuery({
     queryKey: userKeys.byRole(roleName),
     queryFn: () => userRepo.findByRole(roleName, TENANT_ID),
-    enabled: !!roleName, // Solo ejecutar si hay roleName
+    // Solo ejecuta si hay rol, terminó auth, y está logueado
+    enabled: !!roleName && !isLoading && isAuthenticated,
     staleTime: 5 * 60 * 1000,
   });
 };
 
 /**
  * Hook especializado para obtener jefes de área
- * Simplifica el uso común de useUsersByRole
  */
 export const useJefes = () => {
   return useUsersByRole('JEFE_AREA');
@@ -53,17 +60,17 @@ export const useJefes = () => {
  */
 export const useUserById = (userId: string) => {
   const { userRepo } = useRepositories();
+  const { isAuthenticated, isLoading } = useAuth();
 
   return useQuery({
     queryKey: userKeys.detail(userId),
     queryFn: () => userRepo.findById(userId, TENANT_ID),
-    enabled: !!userId,
+    enabled: !!userId && !isLoading && isAuthenticated,
   });
 };
 
 /**
  * Mutation para crear un nuevo usuario
- * Invalida automáticamente la caché de usuarios
  */
 export const useCreateUser = () => {
   const { userRepo } = useRepositories();
@@ -74,15 +81,13 @@ export const useCreateUser = () => {
       userRepo.create({ ...data, tenantId: TENANT_ID }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
-      // También invalidar todas las queries por rol
       queryClient.invalidateQueries({ queryKey: ['users', TENANT_ID, 'role'] });
     },
   });
 };
 
 /**
- * Mutation para actualizar un usuario existente
- * Invalida caché del usuario específico y lista completa
+ * Mutation para actualizar un usuario
  */
 export const useUpdateUser = () => {
   const { userRepo } = useRepositories();
@@ -98,5 +103,3 @@ export const useUpdateUser = () => {
     },
   });
 };
-
-

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -85,6 +86,28 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarContent className="pt-4">
+        {/* Logo header */}
+        <div className="px-4 py-3 mb-2">
+          {open ? (
+            <Image
+              src="/images/logotipo1.png"
+              alt="Smart Packaging"
+              width={140}
+              height={48}
+              priority
+              className="w-auto h-10 object-contain"
+            />
+          ) : (
+            <Image
+              src="/images/logotipo2.png"
+              alt="SP"
+              width={40}
+              height={40}
+              priority
+              className="w-8 h-8 object-contain mx-auto"
+            />
+          )}
+        </div>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sm font-semibold mb-2">
             {open && "Módulos"}

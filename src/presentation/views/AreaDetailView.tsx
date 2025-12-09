@@ -32,7 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { apiClient } from "@/infrastructure/api/apiClient";
 import { useAreas, useAssignManager, useRemoveManager } from "@/hooks/useAreas";
-import { useWarehousesByArea } from "@/hooks/useWarehouses";
+import { TENANT_ID } from "@/shared/constants";
 
 interface AreaDetailViewProps {
   areaId: string;
@@ -45,18 +45,19 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
   // React Query hooks - caché compartido
   const { data: allAreas = [] } = useAreas();
-  const { data: areaWarehouses = [] } = useWarehousesByArea(areaId);
   const assignManagerMutation = useAssignManager();
   const removeManagerMutation = useRemoveManager();
 
   const [area, setArea] = useState<Area | null>(null);
   const [assignedManagers, setAssignedManagers] = useState<User[]>([]);
+  const [assignedWarehouses, setAssignedWarehouses] = useState<WarehouseEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [warehousesDialogOpen, setWarehousesDialogOpen] = useState(false);
   const [managersDialogOpen, setManagersDialogOpen] = useState(false);
   const [assignJefeDialogOpen, setAssignJefeDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [removingJefeId, setRemovingJefeId] = useState<string | null>(null);
 
   // Calcular parent y children usando caché de React Query
   const parentArea = useMemo(() => {
@@ -69,15 +70,6 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
       a.parentId === areaId || (a as any).parentAreaId === areaId
     );
   }, [allAreas, areaId]);
-
-  // Transformar warehouses de React Query al formato esperado
-  const assignedWarehouses = useMemo<WarehouseEntity[]>(() => {
-    return areaWarehouses.map(w => ({
-      ...w,
-      capacityKg: w.capacityKg || 0,
-      status: (w.status || 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
-    }));
-  }, [areaWarehouses]);
 
   useEffect(() => {
     loadAreaDetails();
@@ -164,7 +156,18 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
         });
       setAssignedManagers(managersAsUsers);
       
-      // ✅ warehouses, parent y children ya vienen de React Query (useMemo)
+      // ✅ Guardar bodegas que vienen del backend
+      const warehousesAsEntities: WarehouseEntity[] = warehouses.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        location: w.location || '',
+        capacityKg: w.capacityKg || 0,
+        status: (w.status || 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
+        tenantId: TENANT_ID,
+      }));
+      setAssignedWarehouses(warehousesAsEntities);
+      
+      // ✅ parent y children ya vienen de React Query (useMemo)
     } catch (error) {
       console.error("Error al cargar detalles del área:", error);
       toast({

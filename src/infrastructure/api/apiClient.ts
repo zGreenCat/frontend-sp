@@ -31,33 +31,48 @@ export class ApiClient {
     return headers;
   }
 
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      // Detectar sesión expirada (401 Unauthorized)
-      if (response.status === 401) {
-        this.handleSessionExpired();
-        
-        throw {
-          message: "Su sesión ha expirado",
-          statusCode: 401,
-          error: "Unauthorized",
-        } as ApiError;
+private async handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    if (response.status === 401) {
+      // 👇 Revisar a qué endpoint se le hizo el fetch
+      let pathname = '';
+      try {
+        const url = new URL(response.url);
+        pathname = url.pathname;
+      } catch {
+        // Si falla el parse, asumimos normal
       }
 
-      const errorData: ApiError = await response.json().catch(() => ({
-        message: "Error al procesar la solicitud",
-        statusCode: response.status,
-      }));
+      // 🚫 NO dispares cierre de sesión para el endpoint de perfil
+      if (!pathname.startsWith('/auth/profile')) {
+        this.handleSessionExpired();
+      } else {
+        console.warn('[ApiClient] 401 en /auth/profile – NO redirijo, solo informo al caller');
+      }
 
       throw {
-        message: errorData.message || "Error en la solicitud",
-        statusCode: response.status,
-        error: errorData.error,
+        message: "Su sesión ha expirado o no está autenticado",
+        statusCode: 401,
+        error: "Unauthorized",
       } as ApiError;
     }
 
-    return response.json();
+    const errorData: ApiError = await response.json().catch(() => ({
+      message: "Error al procesar la solicitud",
+      statusCode: response.status,
+    }));
+
+    throw {
+      message: errorData.message || "Error en la solicitud",
+      statusCode: response.status,
+      error: errorData.error,
+    } as ApiError;
   }
+
+  return response.json();
+}
+
+
 private handleSessionExpired(): void {
   // Solo ejecutar en el cliente
   if (typeof window === "undefined") return;

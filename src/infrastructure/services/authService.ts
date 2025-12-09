@@ -7,13 +7,143 @@ import {
 } from "@/shared/types/auth.types";
 import { mapBackendRoleToFrontend } from "@/shared/constants";
 
-const USER_KEY = "user";
+const USER_KEY = "auth_user"; // 🔑 usa una sola key consistente
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export class AuthService {
+  // ---------- Helpers de storage ----------
+
+   private saveUser(user: User) {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  clearUser() {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem("token"); // por si en algún flujo lo usas
+  }
+
+  getUser(): User | null {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      return null;
+    }
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getUser();
+  }
+
   /**
-   * Registrar un nuevo usuario
+   * Guardar auth localmente.
+   * Para login tradicional puedes guardar token,
+   * para Google OAuth puedes pasar `null` en token y solo guardas el user.
    */
+  private saveAuth(user: User, token?: string | null) {
+    this.saveUser(user);
+    if (typeof window === "undefined") return;
+
+    if (token) {
+      localStorage.setItem("token", token);
+    } else {
+      localStorage.removeItem("token");
+    }
+  }
+
+  // ---------- Normalizadores de backend -> frontend ----------
+
+  private normalizeAreas(areas: any): Array<{ id: string; name: string }> {
+    if (!areas || !Array.isArray(areas)) return [];
+
+    return areas
+      .map((item) => {
+        // Asignación con `area`
+        if (item.area && typeof item.area === "object") {
+          return {
+            id: item.area.id || item.areaId,
+            name: item.area.name || item.area.id,
+          };
+        }
+        // Objeto { id, name }
+        if (typeof item === "object" && item.id && item.name) {
+          return { id: item.id, name: item.name };
+        }
+        // String (solo id)
+        if (typeof item === "string") {
+          return { id: item, name: item };
+        }
+        // Objeto con areaId
+        if (item.areaId) {
+          return { id: item.areaId, name: item.name || item.areaId };
+        }
+        return null;
+      })
+      .filter(Boolean) as Array<{ id: string; name: string }>;
+  }
+
+  private normalizeWarehouses(
+    warehouses: any
+  ): Array<{ id: string; name: string }> {
+    if (!warehouses || !Array.isArray(warehouses)) return [];
+
+    return warehouses
+      .map((item) => {
+        // Asignación con `warehouse`
+        if (item.warehouse && typeof item.warehouse === "object") {
+          return {
+            id: item.warehouse.id || item.warehouseId,
+            name: item.warehouse.name || item.warehouse.id,
+          };
+        }
+        // Objeto { id, name }
+        if (typeof item === "object" && item.id && item.name) {
+          return { id: item.id, name: item.name };
+        }
+        // String (solo id)
+        if (typeof item === "string") {
+          return { id: item, name: item };
+        }
+        // Objeto con warehouseId
+        if (item.warehouseId) {
+          return { id: item.warehouseId, name: item.name || item.warehouseId };
+        }
+        return null;
+      })
+      .filter(Boolean) as Array<{ id: string; name: string }>;
+  }
+
+  private mapBackendUserToFrontend(backendUser: any): User {
+    const roleObject = backendUser.role
+      ? {
+          id: backendUser.role.id || backendUser.roleId,
+          name: mapBackendRoleToFrontend(
+            backendUser.role.name || backendUser.role
+          ),
+          description: backendUser.role.description || null,
+        }
+      : undefined;
+
+    return {
+      ...backendUser,
+      name: backendUser.firstName || backendUser.name || null,
+      lastName: backendUser.lastName || "",
+      role: roleObject,
+      areas: this.normalizeAreas(
+        backendUser.areaAssignments || backendUser.areas
+      ),
+      warehouses: this.normalizeWarehouses(
+        backendUser.warehouseAssignments || backendUser.warehouses
+      ),
+    };
+  }
+
+  // ---------- Flujo de registro ----------
+
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const response = await apiClient.post<any, RegisterRequest>(
       "/auth/register",
@@ -21,43 +151,25 @@ export class AuthService {
       false
     );
 
-    // El backend puede devolver diferentes estructuras
-    const token = response.token || response.access_token || response.accessToken;
+    const token =
+      response.token || response.access_token || response.accessToken;
     const backendUser = response.user;
 
     if (!token || !backendUser) {
-      console.error('❌ Invalid register response:', Object.keys(response));
-      throw new Error('Respuesta de registro inválida');
+      console.error("❌ Invalid register response:", Object.keys(response));
+      throw new Error("Respuesta de registro inválida");
     }
 
-    // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
-    // Preservar el objeto role del backend
-    const roleObject = backendUser.role 
-      ? {
-          id: backendUser.role.id || backendUser.roleId,
-          name: mapBackendRoleToFrontend(backendUser.role.name || backendUser.role),
-          description: backendUser.role.description || null
-        }
-      : undefined;
-    
-    const user: User = {
-      ...backendUser,
-      name: backendUser.firstName || backendUser.name || null,
-      lastName: backendUser.lastName || '',
-      role: roleObject,
-      areas: this.normalizeAreas(backendUser.areas),
-      warehouses: this.normalizeWarehouses(backendUser.warehouses),
-    };
+    const user = this.mapBackendUserToFrontend(backendUser);
 
-    // Guardar token y usuario en localStorage
-    this.saveAuth(token, user);
+    // Guardar user + token (si lo usas para login tradicional)
+    this.saveAuth(user, token);
 
     return { token, user };
   }
 
-  /**
-   * Iniciar sesión
-   */
+  // ---------- Flujo de login (email/password) ----------
+
   async login(data: LoginRequest): Promise<AuthResponse> {
     const response = await apiClient.post<any, LoginRequest>(
       "/auth/login",
@@ -65,254 +177,96 @@ export class AuthService {
       false
     );
 
-    // El backend puede devolver diferentes estructuras:
-    // Opción 1: { user, token }
-    // Opción 2: { access_token, user }
-    // Opción 3: { accessToken, user }
     const token = response.accessToken;
     const backendUser = response.user;
 
     if (!token) {
-      console.error('❌ No token found in response:', Object.keys(response));
-      throw new Error('No se recibió token de autenticación');
+      console.error("❌ No token found in response:", Object.keys(response));
+      throw new Error("No se recibió token de autenticación");
     }
 
     if (!backendUser) {
-      console.error('❌ No user found in response:', Object.keys(response));
-      throw new Error('No se recibió información del usuario');
+      console.error("❌ No user found in response:", Object.keys(response));
+      throw new Error("No se recibió información del usuario");
     }
 
-    // Validar que la cuenta esté habilitada
     if (backendUser.isEnabled === false) {
-      console.warn('⚠️ User account is disabled:', backendUser.email);
-      throw new Error('Tu cuenta se encuentra deshabilitada. Contacta con el Administrador o Jefatura');
+      console.warn("⚠️ User account is disabled:", backendUser.email);
+      throw new Error(
+        "Tu cuenta se encuentra deshabilitada. Contacta con el Administrador o Jefatura"
+      );
     }
 
-    // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
-    // Preservar el objeto role del backend
-    const roleObject = backendUser.role 
-      ? {
-          id: backendUser.role.id || backendUser.roleId,
-          name: mapBackendRoleToFrontend(backendUser.role.name || backendUser.role),
-          description: backendUser.role.description || null
-        }
-      : undefined;
-    
-    const user: User = {
-      ...backendUser,
-      name: backendUser.firstName || backendUser.name || null,
-      lastName: backendUser.lastName || '',
-      role: roleObject,
-      areas: this.normalizeAreas(backendUser.areaAssignments),
-      warehouses: this.normalizeWarehouses(backendUser.warehouses),
-    };
-    console.log('✅ User response:', response); // DEBUG
-    console.log('🔍 Mapped user areas:', user.areas);
+    const user = this.mapBackendUserToFrontend(backendUser);
+    console.log("✅ User response:", response);
+    console.log("🔍 Mapped user areas:", user.areas);
 
-    // Guardar token y usuario en localStorage
-    this.saveAuth(token, user);
+    // Guardar user + token
+    this.saveAuth(user, token);
 
     return { token, user };
   }
 
-  /**
-   * 🔐 MÉTODO PRINCIPAL: Obtener perfil del usuario actual
-   * 
-   * Para login tradicional (email/password):
-   * - Usa el token de localStorage con Authorization header
-   * 
-   * Para login con Google OAuth:
-   * - Usa la cookie httpOnly que el backend estableció
-   * - El navegador envía la cookie automáticamente con credentials: 'include'
-   */
+  // ---------- Perfil actual (fuente de verdad) ----------
+
   async getProfile(): Promise<User> {
-    console.log('═══════════════════════════════════════════════');
-    console.log('🔐 GET PROFILE - Obteniendo usuario');
-    console.log('═══════════════════════════════════════════════');
-    
+    console.log("═══════════════════════════════════════════════");
+    console.log("🔐 GET PROFILE - Obteniendo usuario");
+    console.log("═══════════════════════════════════════════════");
+
     try {
-      // Llamar a /users/me - Si hay token usa Authorization header, si no usa cookie
+      // Usa cookie httpOnly (credentials: 'include' ya lo maneja apiClient)
       const response = await apiClient.get<any>("/users/me", true);
-      
-      // Mapear firstName del backend a name del frontend y normalizar areas/warehouses
-      // El rol viene como objeto { id, name } del backend, preservarlo para el frontend
-      const roleObject = response.role 
-        ? {
-            id: response.role.id || response.roleId,
-            name: mapBackendRoleToFrontend(response.role.name || response.role),
-            description: response.role.description || null
-          }
-        : undefined;
-      
-      const user: User = {
-        ...response,
-        name: response.firstName || response.name || null,
-        lastName: response.lastName || '',
-        role: roleObject,
-        areas: this.normalizeAreas(response.areaAssignments || response.areas),
-        warehouses: this.normalizeWarehouses(response.warehouseAssignments || response.warehouses),
-      };
-      
-      console.log('✅ Usuario autenticado correctamente');
+
+      const user = this.mapBackendUserToFrontend(response);
+
+      console.log("✅ Usuario autenticado correctamente");
       console.log(`👤 Email: ${user.email}`);
-      console.log(`🔰 Rol: ${user.role}`);
+      console.log(`🔰 Rol: ${user.role && (user.role as any).name}`);
       console.log(`📋 Áreas: ${user.areas?.length || 0}`);
       console.log(`🏪 Bodegas: ${user.warehouses?.length || 0}`);
-      
-      // Guardar usuario en localStorage (NO el token)
-      if (typeof window !== "undefined") {
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
-        console.log('💾 Usuario guardado en localStorage');
-      }
-      
+
+      // Guardar solo usuario; el token ya viene por cookie
+      this.saveUser(user);
+
       return user;
-      
     } catch (error) {
-      console.error('❌ Error obteniendo perfil:', error);
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(USER_KEY);
-      }
+      console.error("❌ Error obteniendo perfil:", error);
+      this.clearUser();
       throw error;
     }
   }
 
-  /**
-   * 🔑 Iniciar sesión con Google OAuth
-   * Redirige al backend que maneja el flujo completo de OAuth
-   */
+  // ---------- Google OAuth ----------
+
   loginWithGoogle(): void {
-    console.log('🔑 Iniciando flujo de Google OAuth...');
+    console.log("🔑 Iniciando flujo de Google OAuth...");
     console.log(`📍 Redirigiendo a: ${API_URL}/auth/google`);
     window.location.href = `${API_URL}/auth/google`;
   }
 
-  /**
-   * 🚪 Cerrar sesión
-   * Llama al backend para limpiar la cookie httpOnly y limpia localStorage
-   */
+  // ---------- Logout ----------
+
   async logout(): Promise<void> {
-    console.log('🚪 LOGOUT - Limpiando sesión');
-    
+    console.log("🚪 LOGOUT - Limpiando sesión");
+
     try {
-      // Llamar al endpoint de logout para limpiar la cookie httpOnly
+      // Primero llamar al backend para limpiar cookie httpOnly
       await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include', // Envía la cookie para que el backend la limpie
+        method: "POST",
+        credentials: "include",
       });
-      console.log('✅ Cookie httpOnly limpiada en el backend');
+      console.log("✅ Cookie httpOnly limpiada en el backend");
     } catch (error) {
-      console.error('⚠️ Error al limpiar cookie en backend:', error);
+      console.error("⚠️ Error al limpiar cookie en backend:", error);
     } finally {
-      // Limpiar completamente localStorage y sessionStorage
+      // Siempre limpiar storage local, incluso si el backend falla
       if (typeof window !== "undefined") {
-        // Limpiar usuario
-        localStorage.removeItem(USER_KEY);
-        localStorage.removeItem('token'); // Por si hay token de login tradicional
-        
-        // Limpiar sessionStorage también
+        this.clearUser(); // Limpia USER_KEY y token
         sessionStorage.clear();
-        
-        console.log('✅ localStorage y sessionStorage completamente limpiados');
-        console.log('🍪 Cookie será limpiada por el navegador al cerrar sesión en el backend');
+        console.log("✅ localStorage y sessionStorage completamente limpiados");
       }
     }
-  }
-
-  /**
-   * 💾 Guardar autenticación en localStorage (solo para login tradicional)
-   * Para OAuth con cookie httpOnly, solo se guarda el usuario, no el token
-   */
-  private saveAuth(token: string, user: User): void {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-      // Para login tradicional, también guardamos el token
-      // (el apiClient lo leerá para el header Authorization)
-    }
-  }
-
-  /**
-   * 📖 Obtener usuario guardado en localStorage
-   */
-  getUser(): User | null {
-    if (typeof window !== "undefined") {
-      const userStr = localStorage.getItem(USER_KEY);
-      if (userStr) {
-        try {
-          return JSON.parse(userStr);
-        } catch {
-          return null;
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
-   * ✅ Verificar si el usuario está autenticado
-   * Comprueba si hay un usuario guardado en localStorage
-   */
-  isAuthenticated(): boolean {
-    return !!this.getUser();
-  }
-
-  /**
-   * Normalizar áreas del backend a formato uniforme
-   */
-  private normalizeAreas(areas: any): Array<{ id: string; name: string }> {
-    if (!areas || !Array.isArray(areas)) return [];
-    
-    return areas.map(item => {
-      // Si es un objeto de asignación con propiedad 'area' (areaAssignments)
-      if (item.area && typeof item.area === 'object') {
-        return { 
-          id: item.area.id || item.areaId, 
-          name: item.area.name || item.area.id 
-        };
-      }
-      // Si ya es un objeto con id y name directamente
-      if (typeof item === 'object' && item.id && item.name) {
-        return { id: item.id, name: item.name };
-      }
-      // Si es un string (solo ID)
-      if (typeof item === 'string') {
-        return { id: item, name: item };
-      }
-      // Si tiene areaId en lugar de id
-      if (item.areaId) {
-        return { id: item.areaId, name: item.name || item.areaId };
-      }
-      return null;
-    }).filter(Boolean) as Array<{ id: string; name: string }>;
-  }
-
-  /**
-   * Normalizar bodegas del backend a formato uniforme
-   */
-  private normalizeWarehouses(warehouses: any): Array<{ id: string; name: string }> {
-    if (!warehouses || !Array.isArray(warehouses)) return [];
-    
-    return warehouses.map(item => {
-      // Si es un objeto de asignación con propiedad 'warehouse' (warehouseAssignments)
-      if (item.warehouse && typeof item.warehouse === 'object') {
-        return { 
-          id: item.warehouse.id || item.warehouseId, 
-          name: item.warehouse.name || item.warehouse.id 
-        };
-      }
-      // Si ya es un objeto con id y name directamente
-      if (typeof item === 'object' && item.id && item.name) {
-        return { id: item.id, name: item.name };
-      }
-      // Si es un string (solo ID)
-      if (typeof item === 'string') {
-        return { id: item, name: item };
-      }
-      // Si tiene warehouseId en lugar de id
-      if (item.warehouseId) {
-        return { id: item.warehouseId, name: item.name || item.warehouseId };
-      }
-      return null;
-    }).filter(Boolean) as Array<{ id: string; name: string }>;
   }
 }
 

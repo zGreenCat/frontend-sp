@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Smart Packaging - Kreatech",
   description: "Sistema de gestión de packaging inteligente",
+  icons: {
+    icon: "/images/logotipo1.png",
+  },
 };
 
 export default function RootLayout({
