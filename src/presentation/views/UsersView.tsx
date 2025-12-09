@@ -39,12 +39,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { CreateUserInput } from "@/shared/schemas";
 import { PERMISSIONS } from "@/shared/permissions";
 import { USER_ROLES } from "@/shared/constants";
+import { useAreas } from "@/hooks/useAreas";
+import { useWarehouses } from "@/hooks/useWarehouses";
 
 export function UsersView() {
-  const { userRepo, assignmentHistoryRepo, areaRepo, warehouseRepo } = useRepositories();
+  const { userRepo, assignmentHistoryRepo } = useRepositories();
   const { toast } = useToast();
   const { can } = usePermissions();
   const { user: currentUser } = useAuth();
+  
+  // React Query hooks - caché compartido con AreasView
+  const { data: areasData = [], isLoading: areasLoading } = useAreas();
+  const { data: warehousesData = [], isLoading: warehousesLoading } = useWarehouses();
   
   // Extraer valores primitivos para evitar loops en useEffect
   const currentUserId = currentUser?.id;
@@ -62,9 +68,17 @@ export function UsersView() {
     return areas.map(a => typeof a === 'string' ? a : a.id);
   }, [currentUser?.areas]);
   
+  // Transformar datos de React Query al formato esperado
+  const areas = useMemo(() => 
+    areasData.map(a => ({ id: a.id, name: a.name })),
+    [areasData]
+  );
+  const warehouses = useMemo(() => 
+    warehousesData.map(w => ({ id: w.id, name: w.name })),
+    [warehousesData]
+  );
+  
   const [users, setUsers] = useState<User[]>([]);
-  const [areas, setAreas] = useState<Array<{ id: string; name: string }>>([]);
-  const [warehouses, setWarehouses] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -110,11 +124,7 @@ export function UsersView() {
           (userRepo as any).findByArea(areaId)
         );
         
-        const [usersByArea, areasData, warehousesData] = await Promise.all([
-          Promise.all(usersByAreaPromises),
-          areaRepo.findAll(TENANT_ID),
-          warehouseRepo.findAll(TENANT_ID),
-        ]);
+        const usersByArea = await Promise.all(usersByAreaPromises);
         
         // Combinar usuarios de todas las áreas y eliminar duplicados
         const allUsers = usersByArea.flat();
@@ -133,23 +143,17 @@ export function UsersView() {
         setUsers(supervisors);
         setTotalPages(1); // Sin paginación para esta vista
         setTotalUsers(supervisors.length);
-        setAreas(areasData.map(a => ({ id: a.id, name: a.name })));
-        setWarehouses(warehousesData.map(w => ({ id: w.id, name: w.name })));
+        // ✅ areas y warehouses ya vienen de React Query (caché compartido)
       } else {
         // Para ADMIN o cualquier otro rol, cargar normalmente
-        const [usersResult, areasData, warehousesData] = await Promise.all([
-          new ListUsers(userRepo).execute(TENANT_ID, currentPage, pageSize),
-          areaRepo.findAll(TENANT_ID),
-          warehouseRepo.findAll(TENANT_ID),
-        ]);
+        const usersResult = await new ListUsers(userRepo).execute(TENANT_ID, currentPage, pageSize);
         
         if (usersResult.ok) {
           console.log('✅ Users loaded:', usersResult.value);
           setUsers(usersResult.value.data);
           setTotalPages(usersResult.value.totalPages);
           setTotalUsers(usersResult.value.total);
-          setAreas(areasData.map(a => ({ id: a.id, name: a.name })));
-          setWarehouses(warehousesData.map(w => ({ id: w.id, name: w.name })));
+          // ✅ areas y warehouses ya vienen de React Query (caché compartido)
         } else {
           toast({
             title: "Error al cargar usuarios",

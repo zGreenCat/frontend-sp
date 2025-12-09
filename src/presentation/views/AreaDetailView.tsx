@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { Area } from "@/domain/entities/Area";
 import { Warehouse as WarehouseEntity } from "@/domain/entities/Warehouse";
 import { User } from "@/domain/entities/User";
-import { TENANT_ID } from "@/shared/constants";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { AssignWarehousesDialog } from "@/presentation/components/AssignWarehousesDialog";
 import { AssignManagersDialog } from "@/presentation/components/AssignManagersDialog";
@@ -32,6 +31,8 @@ import { UpdateArea } from "@/application/usecases/area/UpdateArea";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { apiClient } from "@/infrastructure/api/apiClient";
+import { useAreas, useAssignManager, useRemoveManager } from "@/hooks/useAreas";
+import { useWarehousesByArea } from "@/hooks/useWarehouses";
 
 interface AreaDetailViewProps {
   areaId: string;
@@ -39,13 +40,16 @@ interface AreaDetailViewProps {
 
 export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const router = useRouter();
-  const { areaRepo, warehouseRepo, userRepo } = useRepositories();
+  const { areaRepo, userRepo } = useRepositories();
   const { toast } = useToast();
 
+  // React Query hooks - caché compartido
+  const { data: allAreas = [] } = useAreas();
+  const { data: areaWarehouses = [] } = useWarehousesByArea(areaId);
+  const assignManagerMutation = useAssignManager();
+  const removeManagerMutation = useRemoveManager();
+
   const [area, setArea] = useState<Area | null>(null);
-  const [parentArea, setParentArea] = useState<Area | null>(null);
-  const [childAreas, setChildAreas] = useState<Area[]>([]);
-  const [assignedWarehouses, setAssignedWarehouses] = useState<WarehouseEntity[]>([]);
   const [assignedManagers, setAssignedManagers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [warehousesDialogOpen, setWarehousesDialogOpen] = useState(false);
@@ -53,7 +57,27 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const [assignJefeDialogOpen, setAssignJefeDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
-  const [removingJefeId, setRemovingJefeId] = useState<string | null>(null);
+
+  // Calcular parent y children usando caché de React Query
+  const parentArea = useMemo(() => {
+    if (!area?.parentId) return null;
+    return allAreas.find(a => a.id === area.parentId) ?? null;
+  }, [area, allAreas]);
+
+  const childAreas = useMemo(() => {
+    return allAreas.filter(a => 
+      a.parentId === areaId || (a as any).parentAreaId === areaId
+    );
+  }, [allAreas, areaId]);
+
+  // Transformar warehouses de React Query al formato esperado
+  const assignedWarehouses = useMemo<WarehouseEntity[]>(() => {
+    return areaWarehouses.map(w => ({
+      ...w,
+      capacityKg: w.capacityKg || 0,
+      status: (w.status || 'ACTIVO') as 'ACTIVO' | 'INACTIVO',
+    }));
+  }, [areaWarehouses]);
 
   useEffect(() => {
     loadAreaDetails();
@@ -78,7 +102,6 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
       const { area: areaData, managers, warehouses } = result.value;
       setArea(areaData);
-
 
       // Convertir managers del API a entidades User
       // Filtrar solo usuarios con rol JEFE (excluir supervisores si el backend los envía)
@@ -140,28 +163,8 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
           };
         });
       setAssignedManagers(managersAsUsers);
-
-      // Convertir warehouses del API a entidades Warehouse
-      const warehousesAsEntities: WarehouseEntity[] = warehouses.map((w: any) => ({
-        id: w.id,
-        name: w.name || 'Sin nombre',
-        capacityKg: w.capacityKg || w.capacity || 0,
-        status: 'ACTIVO' as const,
-        areaId: areaId,
-        tenantId: TENANT_ID,
-      }));
-      setAssignedWarehouses(warehousesAsEntities);
-
-      // Cargar área padre si existe
-      if (areaData.parentId) {
-        const parent = await areaRepo.findById(areaData.parentId, TENANT_ID);
-        setParentArea(parent);
-      }
-
-      // Cargar sub-áreas (children)
-      const allAreas = await areaRepo.findAll(TENANT_ID);
-      const children = allAreas.filter((a: any) => a.parentId === areaId || a.parentAreaId === areaId);
-      setChildAreas(children);
+      
+      // ✅ warehouses, parent y children ya vienen de React Query (useMemo)
     } catch (error) {
       console.error("Error al cargar detalles del área:", error);
       toast({
@@ -174,85 +177,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
     }
   };
 
-  const loadWarehouses = async (areaId: string) => {
-    try {
-      const result = await areaRepo.findByIdWithDetails(areaId);
-      if (result) {
-        const warehousesAsEntities: WarehouseEntity[] = result.warehouses.map((w: any) => ({
-          id: w.id,
-          name: w.name || 'Sin nombre',
-          capacityKg: w.capacityKg || w.capacity || 0,
-          status: 'ACTIVO' as const,
-          areaId: areaId,
-          tenantId: TENANT_ID,
-        }));
-        setAssignedWarehouses(warehousesAsEntities);
-      }
-    } catch (error) {
-      console.error("Error fetching assigned warehouses:", error);
-    }
-  };
 
-  const loadManagers = async (areaId: string) => {
-    try {
-      const result = await areaRepo.findByIdWithDetails(areaId);
-      if (result) {
-        const managersAsUsers: User[] = result.managers
-          .filter((m: any) => {
-            // Filtrar solo JEFE
-            if (m.role) {
-              const roleName = typeof m.role === 'string' ? m.role : m.role.name;
-              return roleName === 'JEFE' || roleName === 'JEFE_AREA' || roleName === 'AREA_MANAGER';
-            }
-            return true;
-          })
-          .map((m: any) => {
-            let firstName = '';
-            let lastName = '';
-            
-            if (m.name) {
-              const nameParts = m.name.trim().split(' ');
-              firstName = nameParts[0] || '';
-              lastName = nameParts.slice(1).join(' ') || '';
-            } else if (m.fullName) {
-              const nameParts = m.fullName.trim().split(' ');
-              firstName = nameParts[0] || '';
-              lastName = nameParts.slice(1).join(' ') || '';
-            } else if (m.firstName || m.lastName) {
-              firstName = m.firstName || '';
-              lastName = m.lastName || '';
-            }
-
-            return {
-              id: m.id,
-              name: firstName,
-              lastName: lastName,
-              email: m.email || '',
-              rut: '',
-              phone: '',
-              role: 'JEFE' as const,
-              status: 'HABILITADO' as const,
-              areas: [areaId],
-              warehouses: [],
-              tenantId: TENANT_ID,
-              areaAssignments: m.assignmentId ? [{
-                id: m.assignmentId,
-                userId: m.id,
-                areaId: areaId,
-                assignedBy: '',
-                assignedAt: '',
-                revokedAt: null,
-                isActive: true,
-                area: { id: areaId, name: '', nodeType: 'ROOT', level: 0, isActive: true }
-              }] : [],
-            };
-          });
-        setAssignedManagers(managersAsUsers);
-      }
-    } catch (error) {
-      console.error("Error al cargar jefes:", error);
-    }
-  };
 
   const handleRemoveJefe = async (manager: User, jefeName: string) => {
     if (!area) return;
@@ -328,20 +253,21 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
     }
   };
 
-  const handleWarehousesSuccess = async () => {
+  const handleWarehousesSuccess = () => {
     toast({
       title: "✅ Bodegas actualizadas",
       description: "Las asignaciones de bodegas se guardaron correctamente",
     });
-    await loadWarehouses(areaId);
+    // ✅ React Query invalida automáticamente la caché
   };
 
-  const handleManagersSuccess = async () => {
+  const handleManagersSuccess = () => {
     toast({
       title: "✅ Jefes actualizados",
       description: "Las asignaciones de jefes se guardaron correctamente",
     });
-    await loadManagers(areaId);
+    // Recargar detalles para actualizar managers
+    loadAreaDetails();
   };
 
   if (loading) {

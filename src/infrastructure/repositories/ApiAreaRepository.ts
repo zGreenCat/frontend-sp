@@ -17,7 +17,16 @@ interface BackendArea {
   updatedAt?: string;
   nodeType?: 'ROOT' | 'CHILD';
   children?: BackendArea[];
-  parent?: any;
+  parent?: {
+    id: string;
+    name: string;
+    level: number;
+  };
+  // Campos de contadores (paginación)
+  managersCount?: number;
+  warehousesCount?: number;
+  subAreasCount?: number;
+  // Campos legacy de detalle
   warehouses?: Array<{id: string; name: string}>;
   managers?: Array<{id: string; name: string; email: string}>;
   warehouseCount?: number;
@@ -56,12 +65,12 @@ export class ApiAreaRepository implements IAreaRepository {
       nodeType: backendArea.nodeType,
       description: backendArea.description,
       children: (backendArea.children ?? []).map(child => this.mapBackendArea(child)),
-      // Preservar información de asignaciones desde el backend
-      warehouses: backendArea.warehouses,
-      managers: backendArea.managers,
-      warehouseCount: backendArea.warehouseCount,
-      managerCount: backendArea.managerCount,
-    } as any; // Cast para permitir campos adicionales
+      // Contadores del backend (paginación) - fuente única de verdad
+      managersCount: backendArea.managersCount,
+      warehousesCount: backendArea.warehousesCount,
+      subAreasCount: backendArea.subAreasCount,
+      parent: backendArea.parent,
+    };
   }
 
   async findAll(tenantId: string): Promise<Area[]> {
@@ -192,7 +201,7 @@ async create(data: CreateAreaDTO): Promise<Area> {
       }
 
       if (updates.status !== undefined) {
-        payload.isActive = updates.status === "ACTIVO";
+        payload.isActive = updates.status === "ACTIVO";1
       }
       console.log('📤 Updating area', id, 'with data:', payload);
       const response = await apiClient.put<any, BackendUpdateAreaPayload>(`/areas/${id}`, payload, true);

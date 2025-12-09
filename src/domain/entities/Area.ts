@@ -10,4 +10,13 @@ export interface Area {
   nodeType?: 'ROOT' | 'CHILD';
   description?: string;
   children?: Area[];
+  // Contadores del backend (paginación)
+  managersCount?: number;
+  warehousesCount?: number;
+  subAreasCount?: number;
+  parent?: {
+    id: string;
+    name: string;
+    level: number;
+  };
 }

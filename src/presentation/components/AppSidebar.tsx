@@ -106,11 +106,7 @@ export function AppSidebar() {
                       {open && (
                         <div className="flex items-center justify-between flex-1">
                           <span>{item.title}</span>
-                          {item.badge && (
-                            <Badge variant="secondary" className="ml-auto text-xs h-5 px-1.5">
-                              {item.badge}
-                            </Badge>
-                          )}
+                         
                         </div>
                       )}
                     </Link>

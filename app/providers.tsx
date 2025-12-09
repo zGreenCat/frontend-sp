@@ -10,7 +10,22 @@ import { SessionExpiredHandler } from "@/components/SessionExpiredHandler";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 5 * 60 * 1000, // 5 minutos - datos considerados frescos
+            gcTime: 10 * 60 * 1000, // 10 minutos - tiempo en caché antes de limpiar
+            refetchOnWindowFocus: false, // Evitar refetch al cambiar de pestaña
+            retry: 1, // Solo reintentar una vez en caso de error
+          },
+          mutations: {
+            retry: 0, // No reintentar mutations automáticamente
+          },
+        },
+      })
+  );
 
   return (
     <QueryClientProvider client={queryClient}>

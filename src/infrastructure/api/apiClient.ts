@@ -58,55 +58,72 @@ export class ApiClient {
 
     return response.json();
   }
+private handleSessionExpired(): void {
+  // Solo ejecutar en el cliente
+  if (typeof window === "undefined") return;
 
-  private handleSessionExpired(): void {
-    // Solo ejecutar en el cliente
-    if (typeof window === "undefined") return;
+  // Evitar múltiples redirects simultáneos
+  if (ApiClient.isRedirecting) return;
 
-    // Evitar múltiples redirects simultáneos
-    if (ApiClient.isRedirecting) return;
+  const currentPath = window.location.pathname;
 
-    // Si ya estamos en login o register, no hacer nada
-    const currentPath = window.location.pathname;
-    if (currentPath === "/login" || currentPath === "/register" || currentPath.startsWith("/auth/")) {
+  // Si estamos en páginas públicas, no hacer nada
+  if (
+    currentPath === "/login" ||
+    currentPath === "/register" ||
+    currentPath.startsWith("/auth/")
+  ) {
+    return;
+  }
+
+  // ⚠️ Nuevo: si no había usuario almacenado, NO es una sesión expirada,
+  // probablemente es simplemente que no está logueado (o primera carga post OAuth).
+  const hasStoredUser =
+    localStorage.getItem("user") || localStorage.getItem("kreatech_user");
+  if (!hasStoredUser) {
+    console.log(
+      "⚠️ 401 sin usuario previo en storage → no se redirige como sesión expirada"
+    );
+    return;
+  }
+
+  // Si acabamos de llegar (menos de 3 segundos en la página), puede ser un OAuth redirect
+  if (typeof window !== "undefined" && window.performance) {
+    const navigationStart = window.performance.timing.navigationStart;
+    const now = Date.now();
+    const timeSinceLoad = now - navigationStart;
+
+    if (timeSinceLoad < 3000) {
+      console.log(
+        "⏱️ Página recién cargada, dando tiempo para verificar cookie OAuth..."
+      );
       return;
     }
-
-    // Si acabamos de llegar (menos de 3 segundos en la página), puede ser un OAuth redirect
-    // Dar tiempo para que la cookie se verifique antes de redirigir
-    if (typeof window !== "undefined" && window.performance) {
-      const navigationStart = window.performance.timing.navigationStart;
-      const now = Date.now();
-      const timeSinceLoad = now - navigationStart;
-      
-      if (timeSinceLoad < 3000) {
-        console.log('⏱️ Página recién cargada, dando tiempo para verificar cookie OAuth...');
-        return;
-      }
-    }
-
-    ApiClient.isRedirecting = true;
-
-    // Limpiar almacenamiento local
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    sessionStorage.clear();
-
-    // Mostrar toast de sesión expirada (si existe el contenedor de toasts)
-    const event = new CustomEvent("session-expired", {
-      detail: { message: "Su sesión ha expirado. Por favor, inicie sesión nuevamente." }
-    });
-    window.dispatchEvent(event);
-
-    // Redirigir al login después de un breve delay
-    setTimeout(() => {
-      window.location.href = "/login";
-      // Resetear la bandera después del redirect para permitir futuros logins
-      setTimeout(() => {
-        ApiClient.isRedirecting = false;
-      }, 2000);
-    }, 1500);
   }
+
+  ApiClient.isRedirecting = true;
+
+  // Limpiar almacenamiento local
+  localStorage.removeItem("user");
+  localStorage.removeItem("kreatech_user");
+  localStorage.removeItem("token");
+  sessionStorage.clear();
+
+  const event = new CustomEvent("session-expired", {
+    detail: {
+      message: "Su sesión ha expirado. Por favor, inicie sesión nuevamente.",
+    },
+  });
+  window.dispatchEvent(event);
+
+  setTimeout(() => {
+    window.location.href = "/login";
+    setTimeout(() => {
+      ApiClient.isRedirecting = false;
+    }, 2000);
+  }, 1500);
+}
+
 
   async get<T>(endpoint: string, requiresAuth: boolean = false): Promise<T> {
     const response = await fetch(`${this.baseURL}${endpoint}`, {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,41 +24,31 @@ import {
   Warehouse,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { Area } from "@/domain/entities/Area";
-import { TENANT_ID } from "@/shared/constants";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { AreaDialog } from "@/presentation/components/AreaDialog";
 import { CreateAreaInput } from "@/shared/schemas";
-import { CreateArea } from "@/application/usecases/area/CreateArea";
 import { useToast } from "@/hooks/use-toast";
+import { useAreas, useCreateArea } from "@/hooks/useAreas";
 
 export function AreasView() {
   const router = useRouter();
-  const { areaRepo } = useRepositories();
   const { toast } = useToast();
 
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [loading, setLoading] = useState(true);
+  // React Query hooks - data fetching con caché automático
+  const { data: areas = [], isLoading: areasLoading } = useAreas();
+  const createAreaMutation = useCreateArea();
+
+  // UI state
   const [search, setSearch] = useState("");
   const [filterLevel, setFilterLevel] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    loadAreas();
-  }, []);
-
-  const loadAreas = async () => {
-    setLoading(true);
-    const result = await areaRepo.findAll(TENANT_ID);
-    console.log("Loaded areas:", result);
-    setAreas(result);
-    setLoading(false);
-  };
+  const loading = areasLoading;
+  // ✅ Los contadores ahora vienen directamente del backend en cada área
 
   // Helper para obtener estado string a partir de isActive/status
   const getAreaStatus = (area: any): "ACTIVO" | "INACTIVO" => {
@@ -109,42 +99,24 @@ export function AreasView() {
   };
 
   const handleCreateArea = async (data: CreateAreaInput) => {
-    setActionLoading(true);
     try {
-      const useCase = new CreateArea(areaRepo);
-
-      const areaData: Omit<Area, "id"> = {
+      await createAreaMutation.mutateAsync({
         name: data.name,
-        level: data.level,
-        parentId: data.parentId,
-        status: data.status as "ACTIVO" | "INACTIVO",
-        tenantId: data.tenantId,
-      };
+        parentId: data.parentId ?? null,
+      });
 
-      const result = await useCase.execute(areaData);
-
-      if (result.ok) {
-        toast({
-          title: "✅ Área creada",
-          description: `El área "${data.name}" se creó correctamente.`,
-        });
-        setDialogOpen(false);
-        await loadAreas();
-      } else {
-        toast({
-          title: "❌ Error al crear área",
-          description: result.error || "Ocurrió un error inesperado",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "✅ Área creada",
+        description: `El área "${data.name}" se creó correctamente.`,
+      });
+      setDialogOpen(false);
+      // ✅ React Query invalida automáticamente la caché en useCreateArea
     } catch (error) {
       toast({
         title: "❌ Error",
         description: "No se pudo crear el área",
         variant: "destructive",
       });
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -244,32 +216,25 @@ export function AreasView() {
                 <span className="text-xs text-muted-foreground">
                   Nivel {visualLevel}
                 </span>
-                {hasChildren && (
-                  <>
-                    <span className="text-xs text-muted-foreground">•</span>
-                    <span className="text-xs text-muted-foreground">
-                      {childAreas.length}{" "}
-                      {childAreas.length === 1 ? "subárea" : "subáreas"}
-                    </span>
-                  </>
-                )}
-                {/* Contador de bodegas - usar contadores reales del backend */}
+                {/* Contador de sub-áreas - desde backend */}
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">
+                  {area.subAreasCount ?? 0}{" "}
+                  {(area.subAreasCount ?? 0) === 1 ? "subárea" : "subáreas"}
+                </span>
+                {/* Contador de bodegas - desde backend */}
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Warehouse className="h-3 w-3" />
-                  {(() => {
-                    const count = anyArea.warehouseCount ?? anyArea.warehouses?.length ?? 0;
-                    return `${count} ${count === 1 ? "bodega" : "bodegas"}`;
-                  })()}
+                  {area.warehousesCount ?? 0}{" "}
+                  {(area.warehousesCount ?? 0) === 1 ? "bodega" : "bodegas"}
                 </span>
-                {/* Contador de jefes - usar contadores reales del backend */}
+                {/* Contador de jefes - desde backend */}
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Users className="h-3 w-3" />
-                  {(() => {
-                    const count = anyArea.managerCount ?? anyArea.managers?.length ?? 0;
-                    return `${count} ${count === 1 ? "jefe" : "jefes"}`;
-                  })()}
+                  {area.managersCount ?? 0}{" "}
+                  {(area.managersCount ?? 0) === 1 ? "jefe" : "jefes"}
                 </span>
               </div>
             </div>
@@ -420,7 +385,7 @@ export function AreasView() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         onSubmit={handleCreateArea}
-        isLoading={actionLoading}
+        isLoading={createAreaMutation.isPending}
         mode="create"
       />
     </div>
