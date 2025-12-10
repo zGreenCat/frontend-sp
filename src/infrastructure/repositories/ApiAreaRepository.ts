@@ -91,10 +91,7 @@ export class ApiAreaRepository implements IAreaRepository {
         return [];
       }
       
-      console.log('✅ Extracted', backendAreas.length, 'areas');
-      console.log("🔍 Before map:", backendAreas[0]);
       const mapped = backendAreas.map(a => this.mapBackendArea(a));
-      console.log("🧩 After map:", mapped[0]);
       return mapped;
 
     } catch (error) {
@@ -114,13 +111,7 @@ export class ApiAreaRepository implements IAreaRepository {
       const area = this.mapBackendArea(backendArea);
       
       // Agregar información adicional si está disponible en la respuesta
-      if (backendArea.managers) {
-        console.log('📋 Area has managers:', backendArea.managers);
-      }
-      if (backendArea.warehouses) {
-        console.log('📦 Area has warehouses:', backendArea.warehouses);
-      }
-      
+     
       return area;
     } catch (error) {
       console.error('Error fetching area:', error);
@@ -138,13 +129,13 @@ export class ApiAreaRepository implements IAreaRepository {
       const response = await apiClient.get<any>(`/areas/${id}`, true);
       const backendArea = response.data || response;
       
-      console.log('📥 Area detail response:', backendArea);
       
-      // Mapear managers con manejo seguro, incluyendo assignmentId
+      // Mapear managers con manejo seguro, incluyendo assignmentId y role
       const managers = (backendArea.managers || []).map((m: any) => ({
         id: m.id || m.userId || '',
         name: m.name ||  m.fullName || 'Sin nombre',
         email: m.email || '',
+        role: m.role || '', // Rol del usuario (JEFE_AREA, SUPERVISOR, etc)
         assignmentId: m.assignmentId || '', // ID de la asignación para poder eliminarla
       }));
       
@@ -154,8 +145,6 @@ export class ApiAreaRepository implements IAreaRepository {
         name: w.name || 'Sin nombre',
       }));
       
-      console.log('✅ Mapped managers:', managers);
-      console.log('✅ Mapped warehouses:', warehouses);
       
       return {
         area: this.mapBackendArea(backendArea),
@@ -169,7 +158,6 @@ export class ApiAreaRepository implements IAreaRepository {
   }
 async create(data: CreateAreaDTO): Promise<Area> {
   try {
-    console.log("📤 Creating area (domain):", data);
 
     const payload = {
       name: data.name,
@@ -203,9 +191,7 @@ async create(data: CreateAreaDTO): Promise<Area> {
       if (updates.status !== undefined) {
         payload.isActive = updates.status === "ACTIVO";1
       }
-      console.log('📤 Updating area', id, 'with data:', payload);
       const response = await apiClient.put<any, BackendUpdateAreaPayload>(`/areas/${id}`, payload, true);
-      console.log('📥 Update area response:', response);
       
       // Manejar posibles estructuras de respuesta
       const backendArea = response.data || response;
@@ -222,7 +208,6 @@ async create(data: CreateAreaDTO): Promise<Area> {
 
   async assignWarehouse(areaId: string, warehouseId: string): Promise<void> {
     try {
-      console.log(`📤 Assigning warehouse ${warehouseId} to area ${areaId}`);
       await apiClient.post(`/areas/${areaId}/warehouses`, { warehouseId }, true);
       console.log(`✅ Warehouse assigned successfully`);
     } catch (error) {
@@ -233,7 +218,6 @@ async create(data: CreateAreaDTO): Promise<Area> {
 
   async removeWarehouse(areaId: string, warehouseId: string): Promise<void> {
     try {
-      console.log(`📤 Removing warehouse ${warehouseId} from area ${areaId}`);
       await apiClient.delete(`/areas/${areaId}/warehouses/${warehouseId}`, true);
       console.log(`✅ Warehouse removed successfully`);
     } catch (error) {
@@ -272,7 +256,6 @@ async create(data: CreateAreaDTO): Promise<Area> {
 
   async assignManager(areaId: string, managerId: string): Promise<void> {
     try {
-      console.log(`📤 Assigning manager ${managerId} to area ${areaId}`);
       await apiClient.post(`/areas/${areaId}/managers`, { managerId }, true);
       console.log(`✅ Manager assigned successfully`);
     } catch (error) {
@@ -283,7 +266,6 @@ async create(data: CreateAreaDTO): Promise<Area> {
 
   async removeManager(areaId: string, managerId: string): Promise<void> {
     try {
-      console.log(`📤 Removing manager ${managerId} from area ${areaId}`);
       await apiClient.delete(`/areas/${areaId}/managers/${managerId}`, true);
       console.log(`✅ Manager removed successfully`);
     } catch (error) {

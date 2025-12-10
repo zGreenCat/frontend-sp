@@ -108,15 +108,7 @@ export class ApiUserRepository implements IUserRepository {
       },
     })) || [];
     
-    // Log para debugging (solo si hay asignaciones)
-    if (areas.length > 0 || warehouses.length > 0) {
-      console.log(`✅ User ${backendUser.firstName} ${backendUser.lastName}:`, {
-        areas: areas.length,
-        warehouses: warehouses.length,
-        areaDetails: areaDetails.map(a => a.name),
-        warehouseDetails: warehouseDetails.map(w => w.name),
-      });
-    }
+    
     
     return {
       id: backendUser.id,
@@ -193,9 +185,7 @@ export class ApiUserRepository implements IUserRepository {
 
   async findByArea(areaId: string): Promise<User[]> {
     try {
-      console.log(`🔍 Fetching users for area: ${areaId}`);
       const response = await apiClient.get<any>(`/users/area/${areaId}`, true);
-      console.log('📦 Users by area response:', response);
       
       let backendUsers: BackendUser[];
       
@@ -241,7 +231,6 @@ export class ApiUserRepository implements IUserRepository {
     hasPrev: boolean;
   }> {
     try {
-      console.log(`🔍 Fetching users with role: ${roleName}`);
       
       await roleService.loadRoles();
       const roleId = roleService.getRoleIdByName(roleName);
@@ -259,10 +248,8 @@ export class ApiUserRepository implements IUserRepository {
         };
       }
       
-      console.log(`✅ Using roleId: ${roleId} for role: ${roleName}`);
       
       const response = await apiClient.get<any>(`/users?roleId=${roleId}`, true);
-      console.log('📦 Users by role response:', response);
       
       let backendUsers: BackendUser[];
       
@@ -310,15 +297,11 @@ export class ApiUserRepository implements IUserRepository {
 
   async create(user: Omit<User, 'id'>): Promise<User> {
     try {
-      console.log('📝 Creating user with role:', user.role);
       const backendRole = mapFrontendRoleToBackend(user.role);
-      console.log('🔄 Backend role:', backendRole);
       
-      console.log('🔄 Loading roles...');
       await roleService.loadRoles();
       
       const roleId = roleService.getRoleIdByName(backendRole);
-      console.log('🔑 Role ID found:', roleId);
       
       if (!roleId) {
         const allRoles = roleService.getAllRoles();

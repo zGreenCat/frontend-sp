@@ -14,22 +14,14 @@ export default function AuthSuccessPage() {
   }, []);
 
   const handleAuthSuccess = async () => {
-    console.log('═══════════════════════════════════════════════');
-    console.log('🔄 AUTH SUCCESS - INICIANDO FLUJO');
-    console.log('═══════════════════════════════════════════════');
     
     try {
-      console.log('📡 Paso 1: Obteniendo perfil con cookie httpOnly...');
       
       // El backend ya estableció la cookie httpOnly con el JWT
       // getProfile() enviará la cookie automáticamente y guardará el usuario
       const user = await authService.getProfile();
       
-      console.log('✅ Paso 2: Usuario autenticado correctamente');
-      console.log(`   Email: ${user.email}`);
-      console.log(`   Nombre: ${user.firstName} ${user.lastName}`);
-      
-      console.log('📍 Paso 3: Redirigiendo a dashboard...');
+
       
       // Pequeña pausa para que el usuario vea el mensaje de éxito
       await new Promise(resolve => setTimeout(resolve, 500));

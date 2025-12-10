@@ -38,12 +38,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-green-50">
-      {/* Blobs de color sutiles en el fondo */}
-      <div className="pointer-events-none absolute -top-40 -left-32 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-32 h-80 w-80 rounded-full bg-success/10 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-100/30 blur-3xl" />
+    <div className="relative min-h-screen w-full overflow-hidden bg-slate-50">
+      {/* Banda diagonal más vertical, sin sombra */}
+      <div className="pointer-events-none absolute top-1/2 left-1/2 h-[65%] w-[130%] -translate-x-1/2 -translate-y-1/2 rotate-[-3deg] rounded-[3rem] bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400" />
 
+      {/* Capa suave opcional para darle un pelín de suavizado, sin sombra */}
+      <div className="pointer-events-none absolute top-1/2 left-1/2 h-[60%] w-[125%] -translate-x-1/2 -translate-y-1/2 rotate-[-3deg] rounded-[3rem] bg-white/10" />
+
+      {/* Contenido principal */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-6">
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -52,7 +54,7 @@ export default function LoginPage() {
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="w-full max-w-5xl"
         >
-          <Card className="w-full shadow-2xl border-0 overflow-hidden bg-white dark:bg-slate-900">
+          <Card className="w-full shadow-2xl border-0 overflow-hidden bg-white/95 backdrop-blur">
             <div className="grid grid-cols-1 md:grid-cols-2">
               {/* Columna izquierda: formulario */}
               <div className="flex flex-col">

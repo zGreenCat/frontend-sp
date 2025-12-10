@@ -220,11 +220,6 @@ export class AuthService {
 
       const user = this.mapBackendUserToFrontend(response);
 
-      console.log("✅ Usuario autenticado correctamente");
-      console.log(`👤 Email: ${user.email}`);
-      console.log(`🔰 Rol: ${user.role && (user.role as any).name}`);
-      console.log(`📋 Áreas: ${user.areas?.length || 0}`);
-      console.log(`🏪 Bodegas: ${user.warehouses?.length || 0}`);
 
       // Guardar solo usuario; el token ya viene por cookie
       this.saveUser(user);
@@ -240,15 +235,13 @@ export class AuthService {
   // ---------- Google OAuth ----------
 
   loginWithGoogle(): void {
-    console.log("🔑 Iniciando flujo de Google OAuth...");
-    console.log(`📍 Redirigiendo a: ${API_URL}/auth/google`);
+    
     window.location.href = `${API_URL}/auth/google`;
   }
 
   // ---------- Logout ----------
 
   async logout(): Promise<void> {
-    console.log("🚪 LOGOUT - Limpiando sesión");
 
     try {
       // Primero llamar al backend para limpiar cookie httpOnly

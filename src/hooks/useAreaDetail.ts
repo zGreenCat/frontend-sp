@@ -29,34 +29,31 @@ export function useAreaDetail(areaId: string) {
 
       const { area: areaData, managers, warehouses } = result.value;
 
-      // --- MAP MANAGERS -> User[] (mismo mapping que tenías) ---
+      // --- MAP MANAGERS -> User[] (solo JEFE_AREA) ---
       const managersAsUsers: User[] = managers
         .filter((m: any) => {
-          // Si el backend envía rol, verificar que sea JEFE/JEFE_AREA/AREA_MANAGER
+          // Filtrar SOLO usuarios con rol JEFE_AREA
           if (m.role) {
             const roleName = typeof m.role === "string" ? m.role : m.role.name;
-            return (
-              roleName === "JEFE" ||
-              roleName === "JEFE_AREA" ||
-              roleName === "AREA_MANAGER"
-            );
+            // Solo aceptar JEFE_AREA (el nombre que viene del backend)
+            return roleName === "JEFE_AREA" || roleName === "AREA_MANAGER";
           }
-          // Si no envía rol, asumir que todos los managers son jefes
-          return true;
+          // Si no envía rol, no incluir (ser más estricto)
+          return false;
         })
         .map((m: any) => {
           let firstName = "";
           let lastName = "";
 
-          // El API envía 'name' como nombre completo
-          if (m.name) {
-            const nameParts = m.name.trim().split(" ");
+          // El backend ahora envía 'fullName' directamente
+          if (m.fullName) {
+            const nameParts = m.fullName.trim().split(" ");
             firstName = nameParts[0] || "";
             lastName = nameParts.slice(1).join(" ") || "";
           }
-          // Fallback por si viene fullName
-          else if (m.fullName) {
-            const nameParts = m.fullName.trim().split(" ");
+          // Fallback: el API envía 'name' como nombre completo
+          else if (m.name) {
+            const nameParts = m.name.trim().split(" ");
             firstName = nameParts[0] || "";
             lastName = nameParts.slice(1).join(" ") || "";
           }
@@ -85,9 +82,9 @@ export function useAreaDetail(areaId: string) {
                     userId: m.id,
                     areaId: areaId,
                     assignedBy: "",
-                    assignedAt: "",
+                    assignedAt: m.assignedAt || "",
                     revokedAt: null,
-                    isActive: true,
+                    isActive: m.isActive ?? true,
                     area: {
                       id: areaId,
                       name: areaData?.name || "",

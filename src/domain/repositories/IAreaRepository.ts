@@ -6,7 +6,7 @@ export interface IAreaRepository {
   findById(id: string, tenantId: string): Promise<Area | null>;
   findByIdWithDetails(id: string): Promise<{
     area: Area;
-    managers: Array<{ id: string; name: string; email: string }>;
+    managers: Array<{ id: string; name: string; email: string; role?: string; assignmentId?: string }>;
     warehouses: Array<{ id: string; name: string }>;
   } | null>;
   create(data: CreateAreaDTO): Promise<Area>;

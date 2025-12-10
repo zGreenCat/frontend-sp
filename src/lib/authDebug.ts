@@ -4,25 +4,19 @@
 // Ver token actual
 export function debugToken() {
   const token = localStorage.getItem('token');
-  console.log('🔐 Token stored:', token);
   
   if (token) {
-    console.log('📏 Token length:', token.length);
-    console.log('🔍 Token preview:', token.substring(0, 50) + '...');
     
     // Intentar decodificar JWT (solo la parte payload, sin verificar)
     try {
       const parts = token.split('.');
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1]));
-        console.log('📦 Token payload:', payload);
         
         if (payload.exp) {
           const expDate = new Date(payload.exp * 1000);
           const now = new Date();
           const isExpired = expDate < now;
-          console.log(`⏰ Expiration: ${expDate.toLocaleString()}`);
-          console.log(`⏱️ Status: ${isExpired ? '❌ EXPIRED' : '✅ VALID'}`);
         }
       }
     } catch (e) {
@@ -36,12 +30,10 @@ export function debugToken() {
 // Ver usuario actual
 export function debugUser() {
   const userStr = localStorage.getItem('user');
-  console.log('👤 User stored:', userStr);
   
   if (userStr) {
     try {
       const user = JSON.parse(userStr);
-      console.log('📋 User data:', user);
     } catch (e) {
       console.log('❌ Invalid user JSON:', e);
     }
@@ -55,11 +47,9 @@ export async function testAuthRequest() {
   const token = localStorage.getItem('token');
   
   if (!token) {
-    console.log('❌ No token found');
     return;
   }
   
-  console.log('🧪 Testing GET /users with token...');
   
   try {
     const response = await fetch('http://localhost:3000/users', {
@@ -70,15 +60,12 @@ export async function testAuthRequest() {
       }
     });
     
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (response.ok) {
       const data = await response.json();
       console.log('✅ Request successful:', data);
     } else {
       const errorText = await response.text();
-      console.log('❌ Request failed:', errorText);
     }
   } catch (error) {
     console.log('❌ Network error:', error);
@@ -89,12 +76,10 @@ export async function testAuthRequest() {
 export function clearAuth() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  console.log('🗑️ Auth cleared. Please refresh the page.');
 }
 
 // Información completa
 export function debugAll() {
-  console.log('=== 🔍 AUTH DEBUG INFO ===');
   debugToken();
   console.log('');
   debugUser();

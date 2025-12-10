@@ -20,7 +20,6 @@ export default function GoogleCallbackPage() {
       // Esto previene conflictos entre datos antiguos y la nueva sesión OAuth
       if (typeof window !== 'undefined') {
         authService.clearUser();
-        console.log('🧹 localStorage limpiado antes de procesar callback');
       }
       
       try {
@@ -42,18 +41,15 @@ export default function GoogleCallbackPage() {
           return;
         }
 
-        console.log('✅ Callback exitoso');
-        console.log('📡 Paso 1: Obteniendo perfil con cookie httpOnly...');
         
         // El backend ya estableció la cookie httpOnly con el JWT
         // getProfile() enviará la cookie automáticamente y guardará el usuario
         const user = await authService.getProfile();
         
-        console.log('✅ Paso 2: Usuario autenticado correctamente');
+        console.log('Usuario autenticado correctamente');
         console.log(`   Email: ${user.email}`);
         console.log(`   Nombre: ${user.firstName} ${user.lastName}`);
         
-        console.log('📍 Paso 3: Redirigiendo a dashboard...');
         
         router.push("/dashboard");
         

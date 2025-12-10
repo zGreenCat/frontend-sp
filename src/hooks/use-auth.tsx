@@ -38,7 +38,6 @@ useEffect(() => {
       // 1) Ver si hay usuario cacheado en localStorage (solo para evitar parpadeos de UI)
       const cachedUser = authService.getUser();
       if (cachedUser) {
-        console.log('✅ Usuario encontrado en localStorage (cache visual)');
         setUser(cachedUser);
       }
 
@@ -51,7 +50,6 @@ useEffect(() => {
           window.location.pathname === '/auth/error');
 
       if (isPublicPage) {
-        console.log('ℹ️ Página pública, limpiando localStorage previo');
         // ✅ Limpiar localStorage para evitar conflictos con cookies viejas
         authService.clearUser();
         setUser(null);
@@ -60,12 +58,9 @@ useEffect(() => {
       }
 
       // 3) /users/me es la fuente de verdad -> si funciona, hay sesión válida
-      console.log('📡 Verificando perfil con backend usando cookie/token...');
       const currentUser = await authService.getProfile();
       setUser(currentUser);
-      console.log('✅ Sesión válida, usuario cargado desde backend');
     } catch (error) {
-      console.log('⚠️ No hay sesión válida o error al obtener perfil:', error);
       setUser(null);
       authService.clearUser(); // limpia localStorage
     } finally {
@@ -84,7 +79,6 @@ useEffect(() => {
       setIsLoading(true);
       const response = await authService.login(data);
       setUser(response.user);
-      console.log('✅ User set in context:', response.user.areas); // DEBUG
       toast({
         title: "¡Bienvenido!",
         description: `Hola ${response.user.firstName || response.user.email}`,

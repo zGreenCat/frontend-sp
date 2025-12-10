@@ -78,7 +78,6 @@ export function AppSidebar() {
     
     const hasAccess = hasPermission(mappedRole, item.permission);
     
-    console.log(`🔐 Checking ${item.title}: originalRole=${userRole}, mappedRole=${mappedRole}, permission=${item.permission}, hasAccess=${hasAccess}`);
     
     return hasAccess;
   });
