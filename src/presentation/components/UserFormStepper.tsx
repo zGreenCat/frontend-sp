@@ -1,20 +1,35 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateUserInput, createUserSchema } from "@/shared/schemas";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormMessage, FormDescription } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { MultiSelect, Option } from "@/components/ui/multi-select";
 import { USER_ROLES, TENANT_ID } from "@/shared/constants";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { useAuth } from "@/hooks/use-auth";
+import { useAreas } from "@/hooks/useAreas";
+import { useValidateUserUnique } from "@/hooks/useUsers";
+import { useWarehouses } from "@/hooks/useWarehouses";
 
 interface UserFormStepperProps {
   onSubmit: (data: CreateUserInput) => Promise<void>;
@@ -32,9 +47,9 @@ const STEPS = [
 // Función para formatear RUT progresivamente mientras escribe
 function formatRut(raw: string): string {
   // Dejar solo números y K/k
-  let clean = raw.replace(/[^\dkK]/g, '').toUpperCase();
+  let clean = raw.replace(/[^\dkK]/g, "").toUpperCase();
 
-  if (clean.length === 0) return '';
+  if (clean.length === 0) return "";
 
   // Si solo hay 1–3 caracteres: no formateamos aún
   if (clean.length <= 3) {
@@ -52,10 +67,10 @@ function formatRut(raw: string): string {
   const body = clean.slice(0, -1);
   const dv = clean.slice(-1);
 
-  const reversed = body.split('').reverse().join('');
+  const reversed = body.split("").reverse().join("");
   const chunks = reversed.match(/.{1,3}/g) || [];
-  const bodyWithDotsReversed = chunks.join('.');
-  const bodyWithDots = bodyWithDotsReversed.split('').reverse().join('');
+  const bodyWithDotsReversed = chunks.join(".");
+  const bodyWithDots = bodyWithDotsReversed.split("").reverse().join("");
 
   return `${bodyWithDots}-${dv}`;
 }
@@ -68,22 +83,92 @@ export function UserFormStepper({
 }: UserFormStepperProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isShaking, setIsShaking] = useState(false);
-  const [areaOptions, setAreaOptions] = useState<Option[]>([]);
-  const [warehouseOptions, setWarehouseOptions] = useState<Option[]>([]);
-  const { areaRepo, warehouseRepo } = useRepositories();
   const { user: currentUser } = useAuth();
 
+  // Cargar datos vía React Query
+  const { data: areasData = [], isLoading: areasLoading } = useAreas();
+  const {
+    data: warehousesData = [],
+    isLoading: warehousesLoading,
+  } = useWarehouses();
+  const {
+  mutateAsync: validateUserUnique,
+  isPending: isValidatingUnique,
+} = useValidateUserUnique();
   // Detectar si el usuario actual es JEFE
   const isJefeArea = useMemo(() => {
     if (!currentUser) return false;
-    const userRole = typeof currentUser.role === 'string' ? currentUser.role : (currentUser.role as any)?.name || '';
+    const role =
+      typeof currentUser.role === "string"
+        ? currentUser.role
+        : (currentUser.role as any)?.name || "";
     const ROLE_MAP: Record<string, string> = {
-      'JEFE_AREA': 'JEFE',
-      'BODEGUERO': 'SUPERVISOR',
+      JEFE_AREA: "JEFE",
+      BODEGUERO: "SUPERVISOR",
     };
-    const mappedRole = ROLE_MAP[userRole] || userRole;
-    return mappedRole === 'JEFE';
+    const mappedRole = ROLE_MAP[role] || role;
+    return mappedRole === "JEFE";
   }, [currentUser]);
+
+  // Opciones de áreas según rol (Admin ve todo; Jefe solo sus áreas)
+  const areaOptions: Option[] = useMemo(() => {
+    if (!currentUser) {
+      return areasData.map((a) => ({ label: a.name, value: a.id }));
+    }
+
+    const role =
+      typeof currentUser.role === "string"
+        ? currentUser.role
+        : (currentUser.role as any)?.name || "";
+    const ROLE_MAP: Record<string, string> = {
+      JEFE_AREA: "JEFE",
+      BODEGUERO: "SUPERVISOR",
+    };
+    const mappedRole = ROLE_MAP[role] || role;
+
+    if (mappedRole === "JEFE") {
+      const userAreaIds = (currentUser.areas || []).map((a: any) =>
+        typeof a === "string" ? a : a.id
+      );
+      const filtered = areasData.filter((a) => userAreaIds.includes(a.id));
+      return filtered.map((a) => ({ label: a.name, value: a.id }));
+    }
+
+    // Admin u otros
+    return areasData.map((a) => ({ label: a.name, value: a.id }));
+  }, [areasData, currentUser]);
+
+  // Opciones de bodegas según rol (Admin ve todo; Jefe solo bodegas de sus áreas)
+  const warehouseOptions: Option[] = useMemo(() => {
+    if (!currentUser) {
+      return warehousesData.map((w) => ({ label: w.name, value: w.id }));
+    }
+
+    const role =
+      typeof currentUser.role === "string"
+        ? currentUser.role
+        : (currentUser.role as any)?.name || "";
+    const ROLE_MAP: Record<string, string> = {
+      JEFE_AREA: "JEFE",
+      BODEGUERO: "SUPERVISOR",
+    };
+    const mappedRole = ROLE_MAP[role] || role;
+
+    if (mappedRole === "JEFE") {
+      const userAreaIds = (currentUser.areas || []).map((a: any) =>
+        typeof a === "string" ? a : a.id
+      );
+
+      // Asumo que Warehouse tiene un campo areaId
+      const filtered = warehousesData.filter((w: any) =>
+        userAreaIds.includes(w.areaId)
+      );
+      return filtered.map((w) => ({ label: w.name, value: w.id }));
+    }
+
+    // Admin u otros
+    return warehousesData.map((w) => ({ label: w.name, value: w.id }));
+  }, [warehousesData, currentUser]);
 
   const form = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -94,7 +179,9 @@ export function UserFormStepper({
       rut: formatRut(defaultValues?.rut || ""),
       phone: defaultValues?.phone || "",
       // Si es JEFE, el rol por defecto debe ser SUPERVISOR
-      role: isJefeArea ? USER_ROLES.SUPERVISOR : (defaultValues?.role || USER_ROLES.SUPERVISOR),
+      role: isJefeArea
+        ? USER_ROLES.SUPERVISOR
+        : defaultValues?.role || USER_ROLES.SUPERVISOR,
       status: defaultValues?.status || "HABILITADO",
       areas: defaultValues?.areas || [],
       warehouses: defaultValues?.warehouses || [],
@@ -102,104 +189,82 @@ export function UserFormStepper({
     },
   });
 
-  // Cargar áreas y bodegas según el rol del usuario
-  useEffect(() => {
-    const loadOptions = async () => {
-      try {
-        if (!currentUser) return;
-        
-        // Detectar si es JEFE
-        const userRole = typeof currentUser.role === 'string' ? currentUser.role : (currentUser.role as any)?.name || '';
-        const ROLE_MAP: Record<string, string> = {
-          'JEFE_AREA': 'JEFE',
-          'BODEGUERO': 'SUPERVISOR',
-        };
-        const mappedRole = ROLE_MAP[userRole] || userRole;
-        
-        console.log('🔍 Loading options - User role:', userRole, '-> Mapped:', mappedRole);
-        
-        // Si es JEFE, cargar solo sus áreas y bodegas
-        if (mappedRole === 'JEFE') {
-          // Obtener IDs de áreas del usuario
-          const userAreaIds = (currentUser.areas || []).map(a => 
-            typeof a === 'string' ? a : (a as any).id
-          );
-          
-          console.log('📍 JEFE area IDs:', userAreaIds);
-          
-          // Cargar todas las áreas primero
-          const allAreas = await areaRepo.findAll(TENANT_ID);
-          const filteredAreas = allAreas.filter(a => userAreaIds.includes(a.id));
-          
-          console.log('🏢 Loading warehouses from area details...');
-          
-          // Cargar detalles de cada área para obtener sus bodegas
-          const areaDetailsPromises = userAreaIds.map(async (areaId) => {
-            try {
-              const areaDetail = await (areaRepo as any).findByIdWithDetails(areaId);
-              console.log(`📦 Area "${areaDetail?.area?.name}":`, areaDetail?.warehouses?.length || 0, 'warehouses');
-              return areaDetail?.warehouses || [];
-            } catch (error) {
-              console.error(`Error loading warehouses for area ${areaId}:`, error);
-              return [];
-            }
-          });
-          
-          const warehousesByArea = await Promise.all(areaDetailsPromises);
-          
-          // Combinar todas las bodegas y eliminar duplicados
-          const allWarehouses = warehousesByArea.flat();
-          const uniqueWarehouses = Array.from(
-            new Map(allWarehouses.map(w => [w.id, w])).values()
-          );
-          
-          console.log('✅ Total warehouses for JEFE:', uniqueWarehouses.length);
-          
-          setAreaOptions(filteredAreas.map(a => ({ label: a.name, value: a.id })));
-          setWarehouseOptions(uniqueWarehouses.map(w => ({ label: w.name, value: w.id })));
-        } else {
-          // Admin ve todo
-          const [areas, warehouses] = await Promise.all([
-            areaRepo.findAll(TENANT_ID),
-            warehouseRepo.findAll(TENANT_ID),
-          ]);
-          
-          setAreaOptions(areas.map(a => ({ label: a.name, value: a.id })));
-          setWarehouseOptions(warehouses.map(w => ({ label: w.name, value: w.id })));
-        }
-      } catch (error) {
-        console.error('Error loading areas/warehouses:', error);
-      }
-    };
-    loadOptions();
-  }, [currentUser]);
-
   const handleNext = async (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    
-    console.log('🔄 Avanzando del paso', currentStep, 'al paso', currentStep + 1);
-    
-    let fieldsToValidate: (keyof CreateUserInput)[] = [];
-    
+  e?.preventDefault();
+  e?.stopPropagation();
+
+  let fieldsToValidate: (keyof CreateUserInput)[] = [];
+
+  if (currentStep === 1) {
+    fieldsToValidate = ["name", "lastName", "rut"];
+  } else if (currentStep === 2) {
+    fieldsToValidate = ["email", "phone"];
+  }
+
+  // 1) Validación local con zod
+  const isValidLocal = await form.trigger(fieldsToValidate);
+
+  if (!isValidLocal) {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+    return;
+  }
+
+  // 2) Validación remota por paso
+  try {
     if (currentStep === 1) {
-      fieldsToValidate = ["name", "lastName", "rut"];
-    } else if (currentStep === 2) {
-      fieldsToValidate = ["email", "phone"];
+      // Validar RUT único
+      const rawRut = form.getValues("rut") || "";
+      const cleanRut = rawRut.replace(/[^\dkK]/g, "").toUpperCase();
+
+      if (cleanRut) {
+        const result = await validateUserUnique({ rut: cleanRut });
+
+        if (result.isValid === false || result.rutAvailable === false) {
+          form.setError("rut", {
+            type: "server",
+            message: "Este RUT ya está registrado",
+          });
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 500);
+          return; // ❌ no avanzamos de paso
+        }
+      }
     }
 
-    const isValid = await form.trigger(fieldsToValidate);
-    console.log('✅ Validación paso', currentStep, ':', isValid);
-    
-    if (isValid && currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1);
-      console.log('✅ Avanzado al paso:', currentStep + 1);
-    } else if (!isValid) {
-      // Activar animación de shake
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
+    if (currentStep === 2) {
+      // Validar email único
+      const email = form.getValues("email");
+
+      if (email) {
+        const result = await validateUserUnique({ email });
+
+        if (result.isValid === false || result.emailAvailable === false) {
+          form.setError("email", {
+            type: "server",
+            message: "Este email ya está registrado",
+          });
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 500);
+          return; // ❌ no avanzamos de paso
+        }
+      }
     }
-  };
+  } catch (err) {
+    console.error("Error validando datos únicos:", err);
+    // Opcional: toast de error genérico
+    // Pero probablemente *no* quieras avanzar si el backend falló
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+    return;
+  }
+
+  // 3) Si todo ok → avanzar de paso
+  if (currentStep < STEPS.length) {
+    setCurrentStep(currentStep + 1);
+  }
+};
+
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -208,20 +273,14 @@ export function UserFormStepper({
   };
 
   const handleFormSubmit = form.handleSubmit(async (data) => {
-    console.log('📝 Submitting form - Current step:', currentStep);
-    
     // Solo enviar si estamos en el último paso
-    if (currentStep !== STEPS.length) {
-      console.log('⚠️ No estamos en el último paso, cancelando submit');
-      return;
-    }
-    
-    console.log('✅ Creando usuario con datos:', data);
-    // Asegurar que tenantId esté presente
+    if (currentStep !== STEPS.length) return;
+
     const dataWithTenant = {
       ...data,
       tenantId: data.tenantId || TENANT_ID,
     };
+
     await onSubmit(dataWithTenant);
   });
 
@@ -235,9 +294,12 @@ export function UserFormStepper({
               <div
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all",
-                  currentStep === step.id && "border-primary bg-primary text-primary-foreground",
-                  currentStep > step.id && "border-green-500 bg-green-500 text-white",
-                  currentStep < step.id && "border-muted-foreground/30 text-muted-foreground"
+                  currentStep === step.id &&
+                    "border-primary bg-primary text-primary-foreground",
+                  currentStep > step.id &&
+                    "border-green-500 bg-green-500 text-white",
+                  currentStep < step.id &&
+                    "border-muted-foreground/30 text-muted-foreground"
                 )}
               >
                 {currentStep > step.id ? (
@@ -247,10 +309,14 @@ export function UserFormStepper({
                 )}
               </div>
               <div className="mt-2 text-center">
-                <p className={cn(
-                  "text-xs font-medium",
-                  currentStep >= step.id ? "text-foreground" : "text-muted-foreground"
-                )}>
+                <p
+                  className={cn(
+                    "text-xs font-medium",
+                    currentStep >= step.id
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
                   {step.title}
                 </p>
               </div>
@@ -259,7 +325,9 @@ export function UserFormStepper({
               <div
                 className={cn(
                   "h-[2px] flex-1 mx-2 transition-all",
-                  currentStep > step.id ? "bg-green-500" : "bg-muted-foreground/20"
+                  currentStep > step.id
+                    ? "bg-green-500"
+                    : "bg-muted-foreground/20"
                 )}
               />
             )}
@@ -284,7 +352,10 @@ export function UserFormStepper({
                         placeholder="Juan"
                         {...field}
                         disabled={isLoading}
-                        className={cn(fieldState.error && "border-destructive focus-visible:ring-destructive")}
+                        className={cn(
+                          fieldState.error &&
+                            "border-destructive focus-visible:ring-destructive"
+                        )}
                       />
                     </FormControl>
                     <FormMessage />
@@ -303,7 +374,10 @@ export function UserFormStepper({
                         placeholder="Pérez"
                         {...field}
                         disabled={isLoading}
-                        className={cn(fieldState.error && "border-destructive focus-visible:ring-destructive")}
+                        className={cn(
+                          fieldState.error &&
+                            "border-destructive focus-visible:ring-destructive"
+                        )}
                       />
                     </FormControl>
                     <FormMessage />
@@ -326,12 +400,16 @@ export function UserFormStepper({
                           field.onChange(formatted);
                         }}
                         disabled={isLoading}
-                        className={cn(fieldState.error && "border-destructive focus-visible:ring-destructive")}
+                        className={cn(
+                          fieldState.error &&
+                            "border-destructive focus-visible:ring-destructive"
+                        )}
                         maxLength={12}
                       />
                     </FormControl>
                     <FormDescription className="text-xs">
-                      Escribe tu RUT sin puntos ni guión, se formateará automáticamente
+                      Escribe tu RUT sin puntos ni guión, se formateará
+                      automáticamente
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -355,7 +433,10 @@ export function UserFormStepper({
                         placeholder="usuario@empresa.com"
                         {...field}
                         disabled={isLoading}
-                        className={cn(fieldState.error && "border-destructive focus-visible:ring-destructive")}
+                        className={cn(
+                          fieldState.error &&
+                            "border-destructive focus-visible:ring-destructive"
+                        )}
                       />
                     </FormControl>
                     <FormMessage />
@@ -374,7 +455,10 @@ export function UserFormStepper({
                         placeholder="+56912345678"
                         {...field}
                         disabled={isLoading}
-                        className={cn(fieldState.error && "border-destructive focus-visible:ring-destructive")}
+                        className={cn(
+                          fieldState.error &&
+                            "border-destructive focus-visible:ring-destructive"
+                        )}
                       />
                     </FormControl>
                     <FormDescription className="text-xs">
@@ -397,19 +481,20 @@ export function UserFormStepper({
                   <FormItem>
                     <Label>Rol del Usuario</Label>
                     {isJefeArea ? (
-                      /* JEFE solo puede crear SUPERVISOR - Campo de solo lectura */
+                      // JEFE solo puede crear SUPERVISOR - Campo de solo lectura
                       <>
-                        <Input 
-                          value="Supervisor" 
-                          disabled 
+                        <Input
+                          value="Supervisor"
+                          disabled
                           className="bg-muted cursor-not-allowed"
                         />
                         <FormDescription className="text-xs">
-                          Como Jefe de Área, solo puedes crear usuarios Supervisores
+                          Como Jefe de Área, solo puedes crear usuarios
+                          Supervisores
                         </FormDescription>
                       </>
                     ) : (
-                      /* Admin puede seleccionar cualquier rol */
+                      // Admin puede seleccionar cualquier rol
                       <>
                         <Select
                           onValueChange={field.onChange}
@@ -422,9 +507,15 @@ export function UserFormStepper({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value={USER_ROLES.ADMIN}>Administrador</SelectItem>
-                            <SelectItem value={USER_ROLES.JEFE}>Jefe de Área</SelectItem>
-                            <SelectItem value={USER_ROLES.SUPERVISOR}>Supervisor</SelectItem>
+                            <SelectItem value={USER_ROLES.ADMIN}>
+                              Administrador
+                            </SelectItem>
+                            <SelectItem value={USER_ROLES.JEFE}>
+                              Jefe de Área
+                            </SelectItem>
+                            <SelectItem value={USER_ROLES.SUPERVISOR}>
+                              Supervisor
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <FormDescription className="text-xs">
@@ -450,12 +541,17 @@ export function UserFormStepper({
                           options={areaOptions}
                           selected={field.value || []}
                           onChange={field.onChange}
-                          placeholder="Selecciona las áreas..."
-                          disabled={isLoading}
+                          placeholder={
+                            areasLoading
+                              ? "Cargando áreas..."
+                              : "Selecciona las áreas..."
+                          }
+                          disabled={isLoading || areasLoading}
                         />
                       </FormControl>
                       <FormDescription className="text-xs">
-                        El jefe de área podrá gestionar estas áreas y sus bodegas
+                        El jefe de área podrá gestionar estas áreas y sus
+                        bodegas
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -475,8 +571,12 @@ export function UserFormStepper({
                           options={warehouseOptions}
                           selected={field.value || []}
                           onChange={field.onChange}
-                          placeholder="Selecciona las bodegas..."
-                          disabled={isLoading}
+                          placeholder={
+                            warehousesLoading
+                              ? "Cargando bodegas..."
+                              : "Selecciona las bodegas..."
+                          }
+                          disabled={isLoading || warehousesLoading}
                         />
                       </FormControl>
                       <FormDescription className="text-xs">
@@ -490,22 +590,48 @@ export function UserFormStepper({
 
               {/* Resumen de datos */}
               <div className="mt-6 p-4 bg-muted/50 rounded-lg space-y-2">
-                <p className="text-sm font-semibold text-foreground">Resumen del Usuario</p>
+                <p className="text-sm font-semibold text-foreground">
+                  Resumen del Usuario
+                </p>
                 <div className="text-sm space-y-1 text-muted-foreground">
-                  <p><span className="font-medium">Nombre:</span> {form.watch("name")} {form.watch("lastName")}</p>
-                  <p><span className="font-medium">RUT:</span> {form.watch("rut")}</p>
-                  <p><span className="font-medium">Email:</span> {form.watch("email")}</p>
-                  <p><span className="font-medium">Teléfono:</span> {form.watch("phone")}</p>
-                  <p><span className="font-medium">Rol:</span> {
-                    form.watch("role") === USER_ROLES.ADMIN ? "Administrador" :
-                    form.watch("role") === USER_ROLES.JEFE ? "Jefe de Área" : "Supervisor"
-                  }</p>
-                  {form.watch("role") === USER_ROLES.JEFE && form.watch("areas")?.length > 0 && (
-                    <p><span className="font-medium">Áreas:</span> {form.watch("areas").length} asignada(s)</p>
-                  )}
-                  {form.watch("role") === USER_ROLES.SUPERVISOR && form.watch("warehouses")?.length > 0 && (
-                    <p><span className="font-medium">Bodegas:</span> {form.watch("warehouses").length} asignada(s)</p>
-                  )}
+                  <p>
+                    <span className="font-medium">Nombre:</span>{" "}
+                    {form.watch("name")} {form.watch("lastName")}
+                  </p>
+                  <p>
+                    <span className="font-medium">RUT:</span>{" "}
+                    {form.watch("rut")}
+                  </p>
+                  <p>
+                    <span className="font-medium">Email:</span>{" "}
+                    {form.watch("email")}
+                  </p>
+                  <p>
+                    <span className="font-medium">Teléfono:</span>{" "}
+                    {form.watch("phone")}
+                  </p>
+                  <p>
+                    <span className="font-medium">Rol:</span>{" "}
+                    {form.watch("role") === USER_ROLES.ADMIN
+                      ? "Administrador"
+                      : form.watch("role") === USER_ROLES.JEFE
+                      ? "Jefe de Área"
+                      : "Supervisor"}
+                  </p>
+                  {form.watch("role") === USER_ROLES.JEFE &&
+                    form.watch("areas")?.length > 0 && (
+                      <p>
+                        <span className="font-medium">Áreas:</span>{" "}
+                        {form.watch("areas").length} asignada(s)
+                      </p>
+                    )}
+                  {form.watch("role") === USER_ROLES.SUPERVISOR &&
+                    form.watch("warehouses")?.length > 0 && (
+                      <p>
+                        <span className="font-medium">Bodegas:</span>{" "}
+                        {form.watch("warehouses").length} asignada(s)
+                      </p>
+                    )}
                 </div>
               </div>
             </div>
@@ -525,7 +651,7 @@ export function UserFormStepper({
                 Anterior
               </Button>
             )}
-            
+
             <div className="flex-1" />
 
             <Button
@@ -541,7 +667,7 @@ export function UserFormStepper({
               <Button
                 type="button"
                 onClick={handleNext}
-                disabled={isLoading}
+                disabled={isLoading || isValidatingUnique}
                 className={cn(
                   "gap-2 transition-all",
                   isShaking && "animate-[shake_0.5s_ease-in-out]"
@@ -550,12 +676,9 @@ export function UserFormStepper({
                 Siguiente
                 <ChevronRight className="h-4 w-4" />
               </Button>
+
             ) : (
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="gap-2"
-              >
+              <Button type="submit" disabled={isLoading} className="gap-2">
                 <Check className="h-4 w-4" />
                 Crear Usuario
               </Button>

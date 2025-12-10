@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,13 +24,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { Loader2 } from "lucide-react";
+import { useUpdateUserPhone } from "@/hooks/useUsers"; // 👈 importa tu hook de React Query
 
 // Schema de validación para editar teléfono
 const editPhoneSchema = z.object({
-  phone: z.string()
-    .regex(/^(\+?56)?[9]\d{8}$/, 'Teléfono inválido (Ej: +56912345678)')
+  phone: z
+    .string()
+    .regex(/^(\+?56)?[9]\d{8}$/, "Teléfono inválido (Ej: +56912345678)")
     .or(z.string().length(0)),
 });
 
@@ -41,11 +42,12 @@ interface EditProfileDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps) {
+export function EditProfileDialog({
+  open,
+  onOpenChange,
+}: EditProfileDialogProps) {
   const { user, refreshUser } = useAuth();
-  const { userRepo } = useRepositories();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
 
   const form = useForm<EditPhoneInput>({
     resolver: zodResolver(editPhoneSchema),
@@ -54,15 +56,27 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
     },
   });
 
+  // Mutación de React Query para actualizar el teléfono
+  const { mutateAsync: updatePhone, isPending } = useUpdateUserPhone();
+
+  // Mantener el form sincronizado cuando se abre el diálogo o cambia el user
+  useEffect(() => {
+    if (open && user) {
+      form.reset({ phone: user.phone || "" });
+    }
+  }, [open, user, form]);
+
   const onSubmit = async (data: EditPhoneInput) => {
     if (!user) return;
 
-    setLoading(true);
     try {
-      await userRepo.update(user.id, {
-        phone: data.phone,
-      }, user.tenantId);
+      await updatePhone({
+        userId: user.id,
+        phone: data.phone.trim() || null,
+      });
 
+      // Si tu auth usa React Query, podrías confiar en la invalidación;
+      // si no, este refreshUser asegura que el contexto se actualiza.
       await refreshUser();
 
       toast({
@@ -73,15 +87,16 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
       onOpenChange(false);
       form.reset({ phone: data.phone });
     } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
         description: "No se pudo actualizar el perfil. Intenta nuevamente.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
+
+  const loading = isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +138,9 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
                 Cancelar
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {loading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Guardar cambios
               </Button>
             </DialogFooter>

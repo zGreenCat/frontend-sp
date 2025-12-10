@@ -6,6 +6,7 @@ import { ApiUserRepository } from '@/infrastructure/repositories/ApiUserReposito
 import { ApiAreaRepository } from '@/infrastructure/repositories/ApiAreaRepository';
 import { ApiWarehouseRepository } from '@/infrastructure/repositories/ApiWarehouseRepository';
 import { ApiAssignmentHistoryRepository } from '@/infrastructure/repositories/ApiAssignmentHistoryRepository';
+import { ApiAssignmentRepository } from '@/infrastructure/repositories/ApiAssignmentRepository';
 // Mock Repositories (mantener para módulos no conectados)
 import { MockBoxRepository } from '@/infrastructure/repositories/MockBoxRepository';
 import { MockProductRepository } from '@/infrastructure/repositories/MockProductRepository';
@@ -16,6 +17,7 @@ import { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { IAreaRepository } from '@/domain/repositories/IAreaRepository';
 import { IWarehouseRepository } from '@/domain/repositories/IWarehouseRepository';
 import { IAssignmentHistoryRepository } from '@/domain/repositories/IAssignmentHistoryRepository';
+import { IAssignmentRepository } from '@/domain/repositories/IAssignmentRepository';
 
 interface Repositories {
   userRepo: IUserRepository;
@@ -26,6 +28,7 @@ interface Repositories {
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
   assignmentHistoryRepo: IAssignmentHistoryRepository;
+  assignmentRepo: IAssignmentRepository;
 }
 
 const RepositoryContext = createContext<Repositories | null>(null);
@@ -37,6 +40,7 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     areaRepo: new ApiAreaRepository(),
     warehouseRepo: new ApiWarehouseRepository(),
     assignmentHistoryRepo: new ApiAssignmentHistoryRepository(),
+    assignmentRepo: new ApiAssignmentRepository(),
     // Repositorios Mock (pendientes de conectar)
     boxRepo: new MockBoxRepository(),
     productRepo: new MockProductRepository(),

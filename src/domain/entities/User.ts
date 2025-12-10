@@ -48,3 +48,14 @@ export interface User {
   assignmentHistory?: AssignmentHistoryEntry[];
   tenantId: string;
 }
+
+export interface ValidateUserUniqueInput {
+  rut?: string;
+  email?: string;
+}
+
+export interface ValidateUserUniqueResult {
+  rutAvailable?: boolean;
+  emailAvailable?: boolean;
+  isValid: boolean;
+}

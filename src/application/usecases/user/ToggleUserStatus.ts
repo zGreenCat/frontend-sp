@@ -1,0 +1,26 @@
+// application/usecases/user/ToggleUserStatus.ts
+import { IUserRepository } from "@/domain/repositories/IUserRepository";
+import { Result } from "@/shared/types/Result";
+
+export class ToggleUserStatus {
+  constructor(private userRepo: IUserRepository) {}
+
+  async execute(params: {
+    targetUserId: string;
+    newStatus: "HABILITADO" | "DESHABILITADO";
+    tenantId: string;
+  }): Promise<Result<import("@/domain/entities/User").User>> {
+    try {
+      const updated = await this.userRepo.update(params.targetUserId, {
+        status: params.newStatus,
+      }, params.tenantId);
+
+      return { ok: true, value: updated };
+    } catch (error: any) {
+      return {
+        ok: false,
+        error: error.message || "Error al cambiar estado del usuario",
+      };
+    }
+  }
+}

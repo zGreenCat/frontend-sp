@@ -1,17 +1,18 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRepositories } from '@/presentation/providers/RepositoryProvider';
-import { Area } from '@/domain/entities/Area';
-import { TENANT_ID } from '@/shared/constants';
+// src/hooks/useAreas.ts
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRepositories } from "@/presentation/providers/RepositoryProvider";
+import { Area } from "@/domain/entities/Area";
+import { TENANT_ID } from "@/shared/constants";
+import { UpdateArea } from "@/application/usecases/area/UpdateArea";
 
-// Query Keys
+// 🔑 Query Keys centralizados
 export const areaKeys = {
-  all: ['areas', TENANT_ID] as const,
-  detail: (id: string) => ['areas', TENANT_ID, id] as const,
+  all: ["areas", TENANT_ID] as const,
+  detail: (id: string) => ["areas", TENANT_ID, id] as const,
 };
 
 /**
- * Hook para obtener todas las áreas del tenant
- * Caché compartido entre componentes
+ * Obtener TODAS las áreas del tenant
  */
 export const useAreas = () => {
   const { areaRepo } = useRepositories();
@@ -19,13 +20,12 @@ export const useAreas = () => {
   return useQuery({
     queryKey: areaKeys.all,
     queryFn: () => areaRepo.findAll(TENANT_ID),
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000, // 5min
   });
 };
 
 /**
- * Hook para obtener una área específica por ID
- * @param areaId - ID del área a buscar
+ * Obtener una área por ID
  */
 export const useAreaById = (areaId: string) => {
   const { areaRepo } = useRepositories();
@@ -33,19 +33,19 @@ export const useAreaById = (areaId: string) => {
   return useQuery({
     queryKey: areaKeys.detail(areaId),
     queryFn: () => areaRepo.findById(areaId, TENANT_ID),
-    enabled: !!areaId, // Solo ejecutar si hay areaId
+    enabled: !!areaId,
   });
 };
 
 /**
- * Mutation para crear una nueva área
- * Invalida automáticamente la caché de áreas
+ * Crear nueva área
  */
 export const useCreateArea = () => {
   const { areaRepo } = useRepositories();
   const queryClient = useQueryClient();
 
   return useMutation({
+    // si más adelante quieres un use case CreateArea, acá es donde se enchufa
     mutationFn: (data: { name: string; parentId: string | null }) =>
       areaRepo.create(data),
     onSuccess: () => {
@@ -55,55 +55,35 @@ export const useCreateArea = () => {
 };
 
 /**
- * Mutation para actualizar un área existente
- * Invalida caché del área específica y lista completa
+ * Actualizar un área existente (nombre / estado / lo que soporte el repo)
  */
 export const useUpdateArea = () => {
   const { areaRepo } = useRepositories();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Area> }) =>
-      areaRepo.update(id, data, TENANT_ID),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: areaKeys.all });
-      queryClient.invalidateQueries({ queryKey: areaKeys.detail(variables.id) });
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<Area>;
+    }) => {
+      const useCase = new UpdateArea(areaRepo);
+      const result = await useCase.execute(id, data, TENANT_ID);
+
+      if (!result.ok || !result.value) {
+        throw new Error("No se pudo actualizar el área");
+      }
+
+      return result.value; // Area actualizada
     },
-  });
-};
-
-/**
- * Mutation para asignar un manager a un área
- * Invalida la caché del área específica
- */
-export const useAssignManager = () => {
-  const { areaRepo } = useRepositories();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ areaId, managerId }: { areaId: string; managerId: string }) =>
-      areaRepo.assignManager(areaId, managerId),
-    onSuccess: (_, variables) => {
+    onSuccess: (updatedArea) => {
+      // Invalidar lista y detalle
       queryClient.invalidateQueries({ queryKey: areaKeys.all });
-      queryClient.invalidateQueries({ queryKey: areaKeys.detail(variables.areaId) });
-    },
-  });
-};
-
-/**
- * Mutation para remover un manager de un área
- * Invalida la caché del área específica
- */
-export const useRemoveManager = () => {
-  const { areaRepo } = useRepositories();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ areaId, managerId }: { areaId: string; managerId: string }) =>
-      areaRepo.removeManager(areaId, managerId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: areaKeys.all });
-      queryClient.invalidateQueries({ queryKey: areaKeys.detail(variables.areaId) });
+      queryClient.invalidateQueries({
+        queryKey: areaKeys.detail(updatedArea.id),
+      });
     },
   });
 };
