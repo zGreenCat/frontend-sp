@@ -9,12 +9,16 @@ import {
   BOX_TYPES,
   AREA_LEVELS
 } from '../constants';
+import { validateChileanRut } from '../utils/rutValidator';
 
-// Validación personalizada de RUT
+// Validación personalizada de RUT con verificación de dígito verificador
 const rutSchema = z.string()
   .min(9, 'RUT debe tener al menos 9 caracteres')
   .max(15, 'RUT no puede tener más de 15 caracteres')
-  .regex(/^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}[-|‐]{1}[0-9kK]{1}$/, 'Formato de RUT inválido (Ej: 12.345.678-9)');
+  .regex(/^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}[-|‐]{1}[0-9kK]{1}$/, 'Formato de RUT inválido (Ej: 12.345.678-9)')
+  .refine(validateChileanRut, {
+    message: 'RUT chileno no válido (verificar dígito verificador)',
+  });
 
 // Validación de email
 const emailSchema = z.string()

@@ -1,6 +1,6 @@
 import { IAreaRepository } from '@/domain/repositories/IAreaRepository';
 import { Area } from '@/domain/entities/Area';
-import { Result } from '@/shared/types';
+import { Result } from '@/shared/types/Result';
 
 export interface AreaDetail {
   area: Area;

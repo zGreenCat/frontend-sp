@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { MultiSelect, Option } from "@/components/ui/multi-select";
 import { USER_ROLES, TENANT_ID } from "@/shared/constants";
+import { formatRut, validateChileanRut } from "@/shared";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,37 +44,6 @@ const STEPS = [
   { id: 2, title: "Contacto", description: "Email y teléfono" },
   { id: 3, title: "Rol y Permisos", description: "Asignación de rol" },
 ];
-
-// Función para formatear RUT progresivamente mientras escribe
-function formatRut(raw: string): string {
-  // Dejar solo números y K/k
-  let clean = raw.replace(/[^\dkK]/g, "").toUpperCase();
-
-  if (clean.length === 0) return "";
-
-  // Si solo hay 1–3 caracteres: no formateamos aún
-  if (clean.length <= 3) {
-    return clean;
-  }
-
-  // Si hay 4 caracteres: cuerpo + DV, pero sin puntos todavía
-  if (clean.length === 4) {
-    const body = clean.slice(0, -1);
-    const dv = clean.slice(-1);
-    return `${body}-${dv}`;
-  }
-
-  // De 5 en adelante: cuerpo con puntos + DV
-  const body = clean.slice(0, -1);
-  const dv = clean.slice(-1);
-
-  const reversed = body.split("").reverse().join("");
-  const chunks = reversed.match(/.{1,3}/g) || [];
-  const bodyWithDotsReversed = chunks.join(".");
-  const bodyWithDots = bodyWithDotsReversed.split("").reverse().join("");
-
-  return `${bodyWithDots}-${dv}`;
-}
 
 export function UserFormStepper({
   onSubmit,
@@ -213,12 +183,21 @@ export function UserFormStepper({
   // 2) Validación remota por paso
   try {
     if (currentStep === 1) {
-      // Validar RUT único
+      // Validar formato de RUT chileno (dígito verificador)
       const rawRut = form.getValues("rut") || "";
-      const cleanRut = rawRut.replace(/[^\dkK]/g, "").toUpperCase();
+      if (rawRut && !validateChileanRut(rawRut)) {
+        form.setError("rut", {
+          type: "manual",
+          message: "RUT chileno no válido",
+        });
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
+        return;
+      }
 
-      if (cleanRut) {
-        const result = await validateUserUnique({ rut: cleanRut });
+      // Validar RUT único en backend
+      if (rawRut) {
+        const result = await validateUserUnique({ rut: rawRut });
 
         if (result.isValid === false || result.rutAvailable === false) {
           form.setError("rut", {
@@ -398,6 +377,28 @@ export function UserFormStepper({
                         onChange={(e) => {
                           const formatted = formatRut(e.target.value);
                           field.onChange(formatted);
+                          
+                          // Validar el RUT mientras escribe (solo si tiene formato completo)
+                          const cleanRut = formatted.replace(/[.-]/g, "");
+                          if (cleanRut.length >= 7 && !validateChileanRut(formatted)) {
+                            form.setError("rut", {
+                              type: "manual",
+                              message: "RUT chileno no válido (verificar dígito verificador)",
+                            });
+                          } else if (fieldState.error?.type === "manual") {
+                            // Limpiar error de validación manual si ahora es válido
+                            form.clearErrors("rut");
+                          }
+                        }}
+                        onBlur={() => {
+                          // Validación final al salir del campo
+                          const currentRut = field.value || "";
+                          if (currentRut && !validateChileanRut(currentRut)) {
+                            form.setError("rut", {
+                              type: "manual",
+                              message: "RUT chileno no válido",
+                            });
+                          }
                         }}
                         disabled={isLoading}
                         className={cn(
