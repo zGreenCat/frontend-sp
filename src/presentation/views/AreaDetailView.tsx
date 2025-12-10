@@ -16,6 +16,8 @@ import {
   Eye,
   Trash2,
   UserPlus,
+  Star,
+  GitBranch,
 } from "lucide-react";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { Area } from "@/domain/entities/Area";
@@ -30,8 +32,9 @@ import { GetAreaDetail } from "@/application/usecases/area/GetAreaDetail";
 import { UpdateArea } from "@/application/usecases/area/UpdateArea";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
 import { apiClient } from "@/infrastructure/api/apiClient";
-import { useAreas, useAssignManager, useRemoveManager } from "@/hooks/useAreas";
+import { useAreas, useAssignManager, useRemoveManager, useUpdateArea } from "@/hooks/useAreas";
 import { TENANT_ID } from "@/shared/constants";
 
 interface AreaDetailViewProps {
@@ -47,6 +50,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const { data: allAreas = [] } = useAreas();
   const assignManagerMutation = useAssignManager();
   const removeManagerMutation = useRemoveManager();
+  const updateAreaMutation = useUpdateArea();
 
   const [area, setArea] = useState<Area | null>(null);
   const [assignedManagers, setAssignedManagers] = useState<User[]>([]);
@@ -58,6 +62,11 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [removingJefeId, setRemovingJefeId] = useState<string | null>(null);
+  const [removingWarehouseId, setRemovingWarehouseId] = useState<string | null>(null);
+  const [confirmRemoveJefeOpen, setConfirmRemoveJefeOpen] = useState(false);
+  const [confirmRemoveWarehouseOpen, setConfirmRemoveWarehouseOpen] = useState(false);
+  const [selectedJefeToRemove, setSelectedJefeToRemove] = useState<{ manager: User; name: string } | null>(null);
+  const [selectedWarehouseToRemove, setSelectedWarehouseToRemove] = useState<WarehouseEntity | null>(null);
 
   // Calcular parent y children usando caché de React Query
   const parentArea = useMemo(() => {
@@ -182,9 +191,15 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
 
 
-  const handleRemoveJefe = async (manager: User, jefeName: string) => {
-    if (!area) return;
+  const openRemoveJefeConfirm = (manager: User, jefeName: string) => {
+    setSelectedJefeToRemove({ manager, name: jefeName });
+    setConfirmRemoveJefeOpen(true);
+  };
 
+  const handleRemoveJefe = async () => {
+    if (!area || !selectedJefeToRemove) return;
+
+    const { manager, name: jefeName } = selectedJefeToRemove;
     setRemovingJefeId(manager.id);
     try {
       // Buscar el assignmentId en areaAssignments del manager
@@ -206,6 +221,8 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
       
       // Recargar detalles para actualizar la lista
       await loadAreaDetails();
+      setConfirmRemoveJefeOpen(false);
+      setSelectedJefeToRemove(null);
     } catch (error: any) {
       console.error("Error al remover jefe:", error);
       toast({
@@ -218,37 +235,63 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
     }
   };
 
+  const openRemoveWarehouseConfirm = (warehouse: WarehouseEntity) => {
+    setSelectedWarehouseToRemove(warehouse);
+    setConfirmRemoveWarehouseOpen(true);
+  };
+
+  const handleRemoveWarehouse = async () => {
+    if (!area || !selectedWarehouseToRemove) return;
+
+    setRemovingWarehouseId(selectedWarehouseToRemove.id);
+    try {
+      // Llamar al endpoint para desasignar bodega del área
+      await apiClient.delete(`/areas/${area.id}/warehouses/${selectedWarehouseToRemove.id}`, true);
+      
+      toast({
+        title: "✅ Bodega removida",
+        description: `${selectedWarehouseToRemove.name} ha sido removida del área ${area.name}`,
+      });
+      
+      // Recargar detalles para actualizar la lista
+      await loadAreaDetails();
+      setConfirmRemoveWarehouseOpen(false);
+      setSelectedWarehouseToRemove(null);
+    } catch (error: any) {
+      console.error("Error al remover bodega:", error);
+      toast({
+        title: "❌ Error al remover",
+        description: error.message || "No se pudo remover la bodega del área",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingWarehouseId(null);
+    }
+  };
+
   const handleEditArea = async (data: { name: string; isActive: boolean }) => {
     if (!area) return;
 
     setEditLoading(true);
     try {
-      const useCase = new UpdateArea(areaRepo);
       const updates: Partial<Area> = {
         name: data.name,
         status: data.isActive ? "ACTIVO" : "INACTIVO",
       };
 
-      const result = await useCase.execute(area.id, updates, TENANT_ID);
+      // Usar la mutación de React Query para invalidar automáticamente la caché
+      await updateAreaMutation.mutateAsync({ id: area.id, data: updates });
 
-      if (result.ok) {
-        toast({
-          title: "✅ Área actualizada",
-          description: `El área "${data.name}" se actualizó correctamente.`,
-        });
-        setEditDialogOpen(false);
-        await loadAreaDetails();
-      } else {
-        toast({
-          title: "❌ Error al actualizar área",
-          description: result.error || "Ocurrió un error inesperado",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
       toast({
-        title: "❌ Error",
-        description: "No se pudo actualizar el área",
+        title: "✅ Área actualizada",
+        description: `El área "${data.name}" se actualizó correctamente.`,
+      });
+      setEditDialogOpen(false);
+      await loadAreaDetails();
+    } catch (error: any) {
+      toast({
+        title: "❌ Error al actualizar área",
+        description: error?.message || "Ocurrió un error inesperado",
         variant: "destructive",
       });
     } finally {
@@ -287,6 +330,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   if (!area) {
     return <EmptyState message="Área no encontrada" />;
   }
+  const isPrincipal = area.level === 0 || area.nodeType === "ROOT";
 
   return (
     <div className="space-y-6">
@@ -341,11 +385,22 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
               <p className="font-medium">Nivel {area.level + 1}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Tipo de Área</p>
-              <p className="font-medium">
-                {area.level === 0 ? "📍 Principal" : "📎 Dependiente"}
-              </p>
-            </div>
+  <p className="text-sm text-muted-foreground">Tipo de Área</p>
+  <div className="mt-1 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium
+    border bg-muted/60 text-muted-foreground">
+    {isPrincipal ? (
+      <>
+        <Star className="h-3 w-3" />
+        <span>Principal</span>
+      </>
+    ) : (
+      <>
+        <GitBranch className="h-3 w-3" />
+        <span>Dependiente</span>
+      </>
+    )}
+  </div>
+</div>
             <div>
               <p className="text-sm text-muted-foreground">Estado</p>
               <div className="mt-1">
@@ -405,15 +460,33 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
                   {assignedWarehouses.map(warehouse => (
                     <div
                       key={warehouse.id}
-                      className="p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                      className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium">{warehouse.name}</h3>
-                        <EntityBadge status={warehouse.status} />
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="font-medium">{warehouse.name}</h3>
+                            <EntityBadge status={warehouse.status} />
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Capacidad: {warehouse.capacityKg} kg
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openRemoveWarehouseConfirm(warehouse)}
+                          disabled={removingWarehouseId === warehouse.id}
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                          title="Quitar bodega del área"
+                        >
+                          {removingWarehouseId === warehouse.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Capacidad: {warehouse.capacityKg} kg
-                      </p>
                     </div>
                   ))}
                 </div>
@@ -464,7 +537,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleRemoveJefe(manager, `${manager.name} ${manager.lastName}`)}
+                          onClick={() => openRemoveJefeConfirm(manager, `${manager.name} ${manager.lastName}`)}
                           disabled={removingJefeId === manager.id}
                           className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                           title="Quitar jefe de área"
@@ -558,6 +631,32 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
           onSuccess={loadAreaDetails}
         />
       )}
+
+      {/* Dialog de confirmación para eliminar jefe */}
+      <ConfirmDialog
+        open={confirmRemoveJefeOpen}
+        onOpenChange={setConfirmRemoveJefeOpen}
+        onConfirm={handleRemoveJefe}
+        title="¿Quitar jefe del área?"
+        description={
+          selectedJefeToRemove
+            ? `¿Está seguro de remover a ${selectedJefeToRemove.name} del área ${area?.name}? Esta acción no se puede deshacer.`
+            : ""
+        }
+      />
+
+      {/* Dialog de confirmación para eliminar bodega */}
+      <ConfirmDialog
+        open={confirmRemoveWarehouseOpen}
+        onOpenChange={setConfirmRemoveWarehouseOpen}
+        onConfirm={handleRemoveWarehouse}
+        title="¿Quitar bodega del área?"
+        description={
+          selectedWarehouseToRemove
+            ? `¿Está seguro de remover la bodega "${selectedWarehouseToRemove.name}" del área ${area?.name}? Esta acción no se puede deshacer.`
+            : ""
+        }
+      />
 
       {/* Dialog de edición de nombre y estado */}
       {area && (

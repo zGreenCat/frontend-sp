@@ -198,10 +198,10 @@ export function AreaForm({
             </FormControl>
             <SelectContent>
               <SelectItem value="principal">
-                📍 Principal (Área raíz, sin dependencia)
+                 Principal (Área raíz, sin dependencia)
               </SelectItem>
               <SelectItem value="dependiente">
-                📎 Dependiente (Subárea de otra área)
+                 Dependiente (Subárea de otra área)
               </SelectItem>
             </SelectContent>
           </Select>
@@ -281,8 +281,8 @@ export function AreaForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="ACTIVO">✅ Activo</SelectItem>
-                  <SelectItem value="INACTIVO">⛔ Inactivo</SelectItem>
+                  <SelectItem value="ACTIVO">Activo</SelectItem>
+                  <SelectItem value="INACTIVO"> Inactivo</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -292,7 +292,7 @@ export function AreaForm({
 
         {/* Información adicional */}
         <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 text-sm text-blue-900 dark:text-blue-200">
-          <p className="font-medium mb-1">ℹ️ Información:</p>
+          <p className="font-medium mb-1">Información:</p>
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li>El nivel se asignará automáticamente según la jerarquía</li>
             <li>Las áreas principales tienen nivel 1</li>

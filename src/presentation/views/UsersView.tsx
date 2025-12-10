@@ -458,23 +458,32 @@ export function UsersView() {
 
   const usersByHierarchy = filterUsersByHierarchy(users);
 
-  // Los filtros locales están deshabilitados mientras se usa paginación del servidor
-  // TODO: Enviar filtros al backend como query params para filtrado en servidor
-  // Excluir al usuario autenticado de la lista
-  const filteredUsers = usersByHierarchy.filter(u => u.id !== currentUserId);
-  
-  // VERSIÓN ANTERIOR CON FILTROS LOCALES (causa problemas con paginación del servidor):
-  // const filteredUsers = usersByHierarchy.filter(u => {
-  //   const matchesSearch = search === "" || 
-  //     u.name.toLowerCase().includes(search.toLowerCase()) ||
-  //     u.lastName.toLowerCase().includes(search.toLowerCase()) ||
-  //     u.email.toLowerCase().includes(search.toLowerCase());
-  //   const matchesRole = filterRole === "" || u.role === filterRole;
-  //   const matchesStatus = filterStatus === "" || u.status === filterStatus;
-  //   const matchesArea = filterArea === "" || (u.areas && u.areas.includes(filterArea));
-  //   const matchesWarehouse = filterWarehouse === "" || (u.warehouses && u.warehouses.includes(filterWarehouse));
-  //   return matchesSearch && matchesRole && matchesStatus && matchesArea && matchesWarehouse;
-  // });
+  // Aplicar filtros locales a los datos de la página actual
+  const filteredUsers = usersByHierarchy.filter(u => {
+    // Excluir al usuario autenticado
+    if (u.id === currentUserId) return false;
+    
+    // Filtro de búsqueda
+    const matchesSearch = search === "" || 
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.lastName.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase());
+    
+    // Filtro de rol - manejar tanto string como objeto
+    const userRoleStr = typeof u.role === 'string' ? u.role : (u.role as any)?.name || '';
+    const matchesRole = filterRole === "" || userRoleStr === filterRole;
+    
+    // Filtro de estado
+    const matchesStatus = filterStatus === "" || u.status === filterStatus;
+    
+    // Filtro de área
+    const matchesArea = filterArea === "" || (u.areas && u.areas.includes(filterArea));
+    
+    // Filtro de bodega
+    const matchesWarehouse = filterWarehouse === "" || (u.warehouses && u.warehouses.includes(filterWarehouse));
+    
+    return matchesSearch && matchesRole && matchesStatus && matchesArea && matchesWarehouse;
+  });
 
   return (
     <>
@@ -616,7 +625,10 @@ export function UsersView() {
                             <p className="text-sm text-muted-foreground">{formatRUT(user.rut)}</p>
                           </div>
                           {user.areas.length === 0 && user.warehouses.length === 0 && 
-                           user.role !== 'ADMIN' && user.role !== USER_ROLES.ADMIN && (
+                           (() => {
+                             const roleStr = typeof user.role === 'string' ? user.role : (user.role as any)?.name || '';
+                             return roleStr !== 'ADMIN' && roleStr !== USER_ROLES.ADMIN;
+                           })() && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -719,7 +731,10 @@ export function UsersView() {
 
                           {/* Sin asignaciones - No mostrar para ADMIN */}
                           {user.areas.length === 0 && user.warehouses.length === 0 && 
-                           user.role !== 'ADMIN' && user.role !== USER_ROLES.ADMIN && (
+                           (() => {
+                             const roleStr = typeof user.role === 'string' ? user.role : (user.role as any)?.name || '';
+                             return roleStr !== 'ADMIN' && roleStr !== USER_ROLES.ADMIN;
+                           })() && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -872,7 +887,6 @@ export function UsersView() {
         onSubmit={handleCreate}
         defaultValues={undefined}
         isLoading={actionLoading}
-        mode="create"
       />
 
       {/* Dialog para modificar asignaciones */}

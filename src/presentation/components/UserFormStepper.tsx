@@ -29,6 +29,37 @@ const STEPS = [
   { id: 3, title: "Rol y Permisos", description: "Asignación de rol" },
 ];
 
+// Función para formatear RUT progresivamente mientras escribe
+function formatRut(raw: string): string {
+  // Dejar solo números y K/k
+  let clean = raw.replace(/[^\dkK]/g, '').toUpperCase();
+
+  if (clean.length === 0) return '';
+
+  // Si solo hay 1–3 caracteres: no formateamos aún
+  if (clean.length <= 3) {
+    return clean;
+  }
+
+  // Si hay 4 caracteres: cuerpo + DV, pero sin puntos todavía
+  if (clean.length === 4) {
+    const body = clean.slice(0, -1);
+    const dv = clean.slice(-1);
+    return `${body}-${dv}`;
+  }
+
+  // De 5 en adelante: cuerpo con puntos + DV
+  const body = clean.slice(0, -1);
+  const dv = clean.slice(-1);
+
+  const reversed = body.split('').reverse().join('');
+  const chunks = reversed.match(/.{1,3}/g) || [];
+  const bodyWithDotsReversed = chunks.join('.');
+  const bodyWithDots = bodyWithDotsReversed.split('').reverse().join('');
+
+  return `${bodyWithDots}-${dv}`;
+}
+
 export function UserFormStepper({
   onSubmit,
   onCancel,
@@ -60,7 +91,7 @@ export function UserFormStepper({
       name: defaultValues?.name || "",
       lastName: defaultValues?.lastName || "",
       email: defaultValues?.email || "",
-      rut: defaultValues?.rut || "",
+      rut: formatRut(defaultValues?.rut || ""),
       phone: defaultValues?.phone || "",
       // Si es JEFE, el rol por defecto debe ser SUPERVISOR
       role: isJefeArea ? USER_ROLES.SUPERVISOR : (defaultValues?.role || USER_ROLES.SUPERVISOR),
@@ -289,13 +320,18 @@ export function UserFormStepper({
                     <FormControl>
                       <Input
                         placeholder="12.345.678-9"
-                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const formatted = formatRut(e.target.value);
+                          field.onChange(formatted);
+                        }}
                         disabled={isLoading}
                         className={cn(fieldState.error && "border-destructive focus-visible:ring-destructive")}
+                        maxLength={12}
                       />
                     </FormControl>
                     <FormDescription className="text-xs">
-                      Formato: 12.345.678-9 (con puntos y guión)
+                      Escribe tu RUT sin puntos ni guión, se formateará automáticamente
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
