@@ -206,7 +206,6 @@ export function UsersView() {
         variant: "success",
       });
 
-      // La invalidación ya la hace el hook, pero si quieres forzar:
       await refetch();
       setDialogOpen(false);
     } catch (error: any) {
@@ -222,7 +221,6 @@ export function UsersView() {
           : errorMsg,
         variant: "destructive",
       });
-      // No cerramos el diálogo para que pueda corregir
     } finally {
       setActionLoading(false);
     }
@@ -534,7 +532,7 @@ export function UsersView() {
           </div>
           {can(PERMISSIONS.USERS_CREATE) && (
             <Button
-              className="bg-primary text-primary-foreground h-10 gap-2"
+              className="bg-primary text-primary-foreground h-10 gap-2 w-full sm:w-auto"
               onClick={openCreateDialog}
             >
               <Plus className="h-4 w-4" />
@@ -666,284 +664,539 @@ export function UsersView() {
             ) : filteredUsers.length === 0 ? (
               <EmptyState message="No se encontraron usuarios" />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                        Nombre
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                        Email
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                        Rol
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                        Estado
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
-                        Áreas / Bodegas
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr
+              <>
+                {/* 📱 MOBILE: Cards (md:hidden) */}
+                <div className="space-y-3 md:hidden">
+                  {filteredUsers.map((user) => {
+                    const roleStr =
+                      typeof user.role === "string"
+                        ? user.role
+                        : (user.role as any)?.name || "";
+
+                    const isUnassigned =
+                      user.areas.length === 0 &&
+                      user.warehouses.length === 0 &&
+                      roleStr !== "ADMIN" &&
+                      roleStr !== USER_ROLES.ADMIN;
+
+                    return (
+                      <div
                         key={user.id}
-                        className="border-b border-border hover:bg-secondary/20 transition-colors"
+                        className="border border-border rounded-lg p-3 bg-card shadow-sm flex flex-col gap-2"
                       >
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {user.name} {user.lastName}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {formatRUT(user.rut)}
-                              </p>
-                            </div>
-                            {user.areas.length === 0 &&
-                              user.warehouses.length === 0 &&
-                              (() => {
-                                const roleStr =
-                                  typeof user.role === "string"
-                                    ? user.role
-                                    : (user.role as any)?.name || "";
-                                return (
-                                  roleStr !== "ADMIN" &&
-                                  roleStr !== USER_ROLES.ADMIN
-                                );
-                              })() && (
+                        {/* Nombre + RUT + alerta sin asignar */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold text-sm">
+                              {user.name} {user.lastName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatRUT(user.rut)}
+                            </p>
+                          </div>
+
+                          {isUnassigned && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">
+                                    Usuario sin áreas ni bodegas asignadas
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+
+                        {/* Email */}
+                        <p className="text-xs text-muted-foreground break-all">
+                          {user.email}
+                        </p>
+
+                        {/* Rol y Estado */}
+                        <div className="flex flex-wrap gap-2 text-xs items-center">
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">Rol:</span>
+                            <EntityBadge status={user.role} />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">
+                              Estado:
+                            </span>
+                            <EntityBadge status={user.status} />
+                          </div>
+                        </div>
+
+                        {/* Áreas / Bodegas */}
+                        <div className="space-y-1 mt-1">
+                          {user.areaDetails && user.areaDetails.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {user.areaDetails.slice(0, 3).map((area) => (
+                                <Badge
+                                  key={area.id}
+                                  variant="secondary"
+                                  className="text-[10px]"
+                                >
+                                  {area.name}
+                                </Badge>
+                              ))}
+                              {user.areaDetails.length > 3 && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="flex-shrink-0">
-                                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                                      </div>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] cursor-help"
+                                      >
+                                        +{user.areaDetails.length - 3} más
+                                      </Badge>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p className="text-sm font-semibold">
-                                        Usuario sin asignaciones
-                                      </p>
+                                      <div className="space-y-1">
+                                        {user.areaDetails
+                                          .slice(3)
+                                          .map((area) => (
+                                            <p
+                                              key={area.id}
+                                              className="text-sm"
+                                            >
+                                              {area.name}
+                                            </p>
+                                          ))}
+                                      </div>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-sm text-foreground">
-                          {user.email}
-                        </td>
-                        <td className="py-4 px-4">
-                          <EntityBadge status={user.role} />
-                        </td>
-                        <td className="py-4 px-4">
-                          <EntityBadge status={user.status} />
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="space-y-2">
-                            {/* Áreas */}
-                            {user.areaDetails &&
-                              user.areaDetails.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {user.areaDetails.slice(0, 2).map((area) => (
+                            </div>
+                          )}
+
+                          {user.warehouseDetails &&
+                            user.warehouseDetails.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {user.warehouseDetails
+                                  .slice(0, 3)
+                                  .map((warehouse) => (
                                     <Badge
-                                      key={area.id}
-                                      variant="secondary"
-                                      className="text-xs"
+                                      key={warehouse.id}
+                                      variant="outline"
+                                      className="text-[10px]"
                                     >
-                                      {area.name}
+                                      {warehouse.name}
                                     </Badge>
                                   ))}
-                                  {user.areaDetails.length > 2 && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs cursor-help"
-                                          >
-                                            +{user.areaDetails.length - 2} más
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <div className="space-y-1">
-                                            {user.areaDetails
-                                              .slice(2)
-                                              .map((area) => (
-                                                <p
-                                                  key={area.id}
-                                                  className="text-sm"
-                                                >
-                                                  {area.name}
-                                                </p>
-                                              ))}
-                                          </div>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              )}
-
-                            {/* Bodegas */}
-                            {user.warehouseDetails &&
-                              user.warehouseDetails.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {user.warehouseDetails
-                                    .slice(0, 2)
-                                    .map((warehouse) => (
-                                      <Badge
-                                        key={warehouse.id}
-                                        variant="outline"
-                                        className="text-xs"
-                                      >
-                                        {warehouse.name}
-                                      </Badge>
-                                    ))}
-                                  {user.warehouseDetails.length > 2 && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs cursor-help"
-                                          >
-                                            +
-                                            {user.warehouseDetails.length - 2}{" "}
-                                            más
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <div className="space-y-1">
-                                            {user.warehouseDetails
-                                              .slice(2)
-                                              .map((warehouse) => (
-                                                <p
-                                                  key={warehouse.id}
-                                                  className="text-sm"
-                                                >
-                                                  {warehouse.name}
-                                                </p>
-                                              ))}
-                                          </div>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              )}
-
-                            {/* Sin asignaciones - no mostrar para ADMIN */}
-                            {user.areas.length === 0 &&
-                              user.warehouses.length === 0 &&
-                              (() => {
-                                const roleStr =
-                                  typeof user.role === "string"
-                                    ? user.role
-                                    : (user.role as any)?.name || "";
-                                return (
-                                  roleStr !== "ADMIN" &&
-                                  roleStr !== USER_ROLES.ADMIN
-                                );
-                              })() && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs gap-1 cursor-help border-yellow-600 text-yellow-700 bg-yellow-50"
-                                      >
-                                        <AlertTriangle className="h-3 w-3" />
-                                        Sin asignar
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="text-sm">
-                                        Este usuario no tiene áreas ni bodegas
-                                        asignadas
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex gap-2 justify-end">
-                            {can(PERMISSIONS.USERS_EDIT) && (
-                              <>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          openAssignmentsDialog(user)
-                                        }
-                                        className="h-8 w-8 p-0"
-                                        disabled={
-                                          user.status === "DESHABILITADO"
-                                        }
-                                      >
-                                        <Pencil className="h-4 w-4 text-primary" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>
-                                        {user.status === "DESHABILITADO"
-                                          ? "Usuario deshabilitado"
-                                          : "Modificar asignaciones"}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => openDeleteConfirm(user)}
-                                        className="h-8 w-8 p-0"
-                                      >
-                                        {user.status === "HABILITADO" ? (
-                                          <UserX className="h-4 w-4 text-amber-600" />
-                                        ) : (
-                                          <UserCheck className="h-4 w-4 text-success" />
-                                        )}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>
-                                        {user.status === "HABILITADO"
-                                          ? "Deshabilitar usuario"
-                                          : "Habilitar usuario"}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </>
+                                {user.warehouseDetails.length > 3 && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] cursor-help"
+                                        >
+                                          +
+                                          {user.warehouseDetails.length - 3}{" "}
+                                          más
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="space-y-1">
+                                          {user.warehouseDetails
+                                            .slice(3)
+                                            .map((wh) => (
+                                              <p
+                                                key={wh.id}
+                                                className="text-sm"
+                                              >
+                                                {wh.name}
+                                              </p>
+                                            ))}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
                             )}
+
+                          {/* Sin asignaciones - no mostrar para ADMIN */}
+                          {user.areas.length === 0 &&
+                            user.warehouses.length === 0 &&
+                            roleStr !== "ADMIN" &&
+                            roleStr !== USER_ROLES.ADMIN && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] gap-1 cursor-help border-yellow-600 text-yellow-700 bg-yellow-50"
+                                    >
+                                      <AlertTriangle className="h-3 w-3" />
+                                      Sin asignar
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-sm">
+                                      Este usuario no tiene áreas ni bodegas
+                                      asignadas
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                        </div>
+
+                        {/* Acciones */}
+                        {can(PERMISSIONS.USERS_EDIT) && (
+                          <div className="flex justify-end gap-1 pt-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() =>
+                                      openAssignmentsDialog(user)
+                                    }
+                                    disabled={user.status === "DESHABILITADO"}
+                                  >
+                                    <Pencil className="h-4 w-4 text-primary" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    {user.status === "DESHABILITADO"
+                                      ? "Usuario deshabilitado"
+                                      : "Modificar asignaciones"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => openDeleteConfirm(user)}
+                                  >
+                                    {user.status === "HABILITADO" ? (
+                                      <UserX className="h-4 w-4 text-amber-600" />
+                                    ) : (
+                                      <UserCheck className="h-4 w-4 text-success" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    {user.status === "HABILITADO"
+                                      ? "Deshabilitar usuario"
+                                      : "Habilitar usuario"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 🖥️ DESKTOP/TABLET: Tabla (hidden en mobile) */}
+                <div className="hidden md:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                            Nombre
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                            Email
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                            Rol
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                            Estado
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                            Áreas / Bodegas
+                          </th>
+                          <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredUsers.map((user) => (
+                          <tr
+                            key={user.id}
+                            className="border-b border-border hover:bg-secondary/20 transition-colors"
+                          >
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2">
+                                <div>
+                                  <p className="font-medium text-foreground">
+                                    {user.name} {user.lastName}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatRUT(user.rut)}
+                                  </p>
+                                </div>
+                                {user.areas.length === 0 &&
+                                  user.warehouses.length === 0 &&
+                                  (() => {
+                                    const roleStr =
+                                      typeof user.role === "string"
+                                        ? user.role
+                                        : (user.role as any)?.name || "";
+                                    return (
+                                      roleStr !== "ADMIN" &&
+                                      roleStr !== USER_ROLES.ADMIN
+                                    );
+                                  })() && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex-shrink-0">
+                                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-sm font-semibold">
+                                            Usuario sin asignaciones
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-sm text-foreground">
+                              {user.email}
+                            </td>
+                            <td className="py-4 px-4">
+                              <EntityBadge status={user.role} />
+                            </td>
+                            <td className="py-4 px-4">
+                              <EntityBadge status={user.status} />
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="space-y-2">
+                                {/* Áreas */}
+                                {user.areaDetails &&
+                                  user.areaDetails.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {user.areaDetails
+                                        .slice(0, 2)
+                                        .map((area) => (
+                                          <Badge
+                                            key={area.id}
+                                            variant="secondary"
+                                            className="text-xs"
+                                          >
+                                            {area.name}
+                                          </Badge>
+                                        ))}
+                                      {user.areaDetails.length > 2 && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs cursor-help"
+                                              >
+                                                +
+                                                {user.areaDetails.length - 2}{" "}
+                                                más
+                                              </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <div className="space-y-1">
+                                                {user.areaDetails
+                                                  .slice(2)
+                                                  .map((area) => (
+                                                    <p
+                                                      key={area.id}
+                                                      className="text-sm"
+                                                    >
+                                                      {area.name}
+                                                    </p>
+                                                  ))}
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+                                    </div>
+                                  )}
+
+                                {/* Bodegas */}
+                                {user.warehouseDetails &&
+                                  user.warehouseDetails.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {user.warehouseDetails
+                                        .slice(0, 2)
+                                        .map((warehouse) => (
+                                          <Badge
+                                            key={warehouse.id}
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {warehouse.name}
+                                          </Badge>
+                                        ))}
+                                      {user.warehouseDetails.length > 2 && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs cursor-help"
+                                              >
+                                                +
+                                                {user.warehouseDetails.length -
+                                                  2}{" "}
+                                                más
+                                              </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <div className="space-y-1">
+                                                {user.warehouseDetails
+                                                  .slice(2)
+                                                  .map((warehouse) => (
+                                                    <p
+                                                      key={warehouse.id}
+                                                      className="text-sm"
+                                                    >
+                                                      {warehouse.name}
+                                                    </p>
+                                                  ))}
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+                                    </div>
+                                  )}
+
+                                {/* Sin asignaciones - no mostrar para ADMIN */}
+                                {user.areas.length === 0 &&
+                                  user.warehouses.length === 0 &&
+                                  (() => {
+                                    const roleStr =
+                                      typeof user.role === "string"
+                                        ? user.role
+                                        : (user.role as any)?.name || "";
+                                    return (
+                                      roleStr !== "ADMIN" &&
+                                      roleStr !== USER_ROLES.ADMIN
+                                    );
+                                  })() && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs gap-1 cursor-help border-yellow-600 text-yellow-700 bg-yellow-50"
+                                          >
+                                            <AlertTriangle className="h-3 w-3" />
+                                            Sin asignar
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-sm">
+                                            Este usuario no tiene áreas ni
+                                            bodegas asignadas
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex gap-2 justify-end">
+                                {can(PERMISSIONS.USERS_EDIT) && (
+                                  <>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              openAssignmentsDialog(user)
+                                            }
+                                            className="h-8 w-8 p-0"
+                                            disabled={
+                                              user.status === "DESHABILITADO"
+                                            }
+                                          >
+                                            <Pencil className="h-4 w-4 text-primary" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>
+                                            {user.status === "DESHABILITADO"
+                                              ? "Usuario deshabilitado"
+                                              : "Modificar asignaciones"}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              openDeleteConfirm(user)
+                                            }
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            {user.status === "HABILITADO" ? (
+                                              <UserX className="h-4 w-4 text-amber-600" />
+                                            ) : (
+                                              <UserCheck className="h-4 w-4 text-success" />
+                                            )}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>
+                                            {user.status === "HABILITADO"
+                                              ? "Deshabilitar usuario"
+                                              : "Habilitar usuario"}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Paginación */}
             {!usersLoading && totalUsers > 0 && (
-              <div className="flex items-center justify-between px-4 py-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-4 border-t">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>Mostrando</span>
                   <Select
                     value={pageSize.toString()}
@@ -952,7 +1205,7 @@ export function UsersView() {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger className="h-8 w-16">
+                    <SelectTrigger className="h-8 w-20">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -965,7 +1218,7 @@ export function UsersView() {
                   <span>de {totalUsers} usuarios</span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between md:justify-end gap-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -973,7 +1226,7 @@ export function UsersView() {
                       setCurrentPage((prev) => Math.max(1, prev - 1))
                     }
                     disabled={currentPage === 1}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-9 p-0"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -994,7 +1247,7 @@ export function UsersView() {
                       )
                     }
                     disabled={currentPage === totalPages}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-9 p-0"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

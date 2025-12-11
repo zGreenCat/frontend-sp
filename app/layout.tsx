@@ -18,7 +18,13 @@ export const metadata: Metadata = {
   title: "Smart Packaging - Kreatech",
   description: "Sistema de gestión de packaging inteligente",
   icons: {
-    icon: "/images/logotipo1.png",
+    icon: [
+      {
+        url: "/images/logotipo1.png",
+        type: "image/png",
+        sizes: "32x32",
+      },
+    ],
   },
 };
 
