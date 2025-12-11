@@ -232,8 +232,8 @@ export class ApiUserRepository implements IUserRepository {
   }> {
     try {
       
-      await roleService.loadRoles();
-      const roleId = roleService.getRoleIdByName(roleName);
+      await roleService.ensureRoles();
+      const roleId = roleService.findByName(roleName)?.id;
       
       if (!roleId) {
         console.error(`❌ Role ID not found for role name: ${roleName}`);
@@ -299,9 +299,9 @@ export class ApiUserRepository implements IUserRepository {
     try {
       const backendRole = mapFrontendRoleToBackend(user.role);
       
-      await roleService.loadRoles();
+      await roleService.ensureRoles();
       
-      const roleId = roleService.getRoleIdByName(backendRole);
+      const roleId = roleService.findByName(backendRole)?.id;
       
       if (!roleId) {
         const allRoles = roleService.getAllRoles();

@@ -1,4 +1,5 @@
-import { apiClient } from '@/infrastructure/api/apiClient';
+// src/infrastructure/services/roleService.ts
+import { apiClient } from "@/infrastructure/api/apiClient";
 
 interface Role {
   id: string;
@@ -7,90 +8,55 @@ interface Role {
 }
 
 class RoleService {
-  private rolesCache: Role[] | null = null;
-  private roleMapCache: Map<string, string> = new Map(); // name -> id
-  private roleMapIdCache: Map<string, string> = new Map(); // id -> name
+  private roles: Role[] | null = null;
 
-  async loadRoles(): Promise<void> {
-    if (this.rolesCache) {
-      return;
+  // Carga los roles si aún no están cargados
+  async ensureRoles(force: boolean = false): Promise<Role[]> {
+    // Si ya tenemos roles y no queremos forzar, devolvemos cache
+    if (this.roles && this.roles.length > 0 && !force) {
+      return this.roles;
     }
 
-    // Verificar que estamos en el navegador
-    if (typeof window === 'undefined') {
-      this.rolesCache = [];
-      return;
-    }
-
-    // Verificar si hay autenticación (token en localStorage O usuario en localStorage para OAuth)
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (!token && !savedUser) {
-      console.log('⚠️ No authentication found, skipping role loading');
-      this.rolesCache = [];
-      return;
+    // En SSR no hacemos nada
+    if (typeof window === "undefined") {
+      return this.roles ?? [];
     }
 
     try {
-      console.log('🔄 Loading roles from API...');
-      const response = await apiClient.get<any>('/roles', true);
-      
-      // El backend puede devolver array directo o { data: [...] }
-      let roles: Role[];
-      
-      if (Array.isArray(response)) {
-        roles = response;
-      } else if (response && Array.isArray(response.data)) {
-        roles = response.data;
-      } else if (response && Array.isArray(response.roles)) {
-        roles = response.roles;
-      } else {
-        console.error('❌ Unexpected response structure from /roles:', response);
-        roles = [];
-      }
-      
-      this.rolesCache = roles;
-      
-      // Crear mapeos
-      roles.forEach(role => {
-        this.roleMapCache.set(role.name, role.id);
-        this.roleMapIdCache.set(role.id, role.name);
-      });
-      
-      console.log(`✅ Loaded ${roles.length} roles:`, roles.map(r => r.name).join(', '));
-    } catch (error: any) {
-      console.error('❌ Error loading roles:', error);
-      
-      // Si es 401, el token expiró o es inválido
-      if (error?.statusCode === 401) {
-        console.error('🔒 Unauthorized: Token may be expired or invalid');
-      }
-      
-      // Inicializar cache vacío para evitar llamadas repetidas
-      this.rolesCache = [];
+      console.log("🔄 Loading roles from API...");
+      const res = await apiClient.get<any>("/roles", true);
+
+      const roles: Role[] = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.roles)
+        ? res.roles
+        : [];
+
+      this.roles = roles;
+      console.log(
+        `✅ Loaded ${roles.length} roles:`,
+        roles.map((r) => r.name).join(", ")
+      );
+      return roles;
+    } catch (err) {
+      console.error("❌ Error loading roles:", err);
+      this.roles = [];
+      return [];
     }
   }
 
-  getRoleIdByName(name: string): string | null {
-    return this.roleMapCache.get(name) || null;
-  }
-
-  getRoleNameById(id: string): string | null {
-    return this.roleMapIdCache.get(id) || null;
-  }
-
   getAllRoles(): Role[] {
-    return this.rolesCache || [];
+    return this.roles ?? [];
   }
 
-  clearCache(): void {
-    this.rolesCache = null;
-    this.roleMapCache.clear();
-    this.roleMapIdCache.clear();
+  findByName(name: string): Role | undefined {
+    return (this.roles ?? []).find((r) => r.name === name);
   }
 
-  isLoaded(): boolean {
-    return this.rolesCache !== null;
+  clear(): void {
+    this.roles = null;
   }
 }
 
