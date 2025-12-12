@@ -8,7 +8,8 @@ import {
 import { mapBackendRoleToFrontend } from "@/shared/constants";
 
 const USER_KEY = "auth_user"; // 🔑 usa una sola key consistente
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not set");
 
 export class AuthService {
   // ---------- Helpers de storage ----------
