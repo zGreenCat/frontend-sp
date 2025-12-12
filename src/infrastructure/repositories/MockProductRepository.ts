@@ -68,7 +68,7 @@ const MOCK_PRODUCTS: Product[] = [
   },
 ];
 
-let products = [...MOCK_PRODUCTS];
+const products = [...MOCK_PRODUCTS];
 
 export class MockProductRepository implements IProductRepository {
   async findAll(tenantId: string): Promise<Product[]> {

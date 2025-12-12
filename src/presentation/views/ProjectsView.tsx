@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,17 +16,21 @@ export function ProjectsView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    loadProjects();
-  }, []);
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
-  const loadProjects = async () => {
-    setLoading(true);
-    const result = await projectRepo.findAll(TENANT_ID);
-    setProjects(result);
-    setLoading(false);
-  };
+    const loadProjects = async () => {
+      setLoading(true);
+      const result = await projectRepo.findAll(TENANT_ID);
+      setProjects(result);
+      setLoading(false);
+    };
+
+    loadProjects();
+  }, [projectRepo]);
 
   const filteredProjects = projects.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||

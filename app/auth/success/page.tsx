@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/infrastructure/services/authService";
 import { Loader2 } from "lucide-react";
@@ -8,32 +8,32 @@ import { Loader2 } from "lucide-react";
 export default function AuthSuccessPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
+    const handleAuthSuccess = async () => {
+      try {
+        // El backend ya estableció la cookie httpOnly con el JWT
+        // getProfile() enviará la cookie automáticamente y guardará el usuario
+        await authService.getProfile();
+        
+        // Pequeña pausa para que el usuario vea el mensaje de éxito
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        router.push("/dashboard");
+        
+      } catch (err) {
+        console.error("❌ Error en auth success:", err);
+        setError("Error al completar la autenticación");
+        setTimeout(() => router.push("/login"), 3000);
+      }
+    };
+
     handleAuthSuccess();
-  }, []);
-
-  const handleAuthSuccess = async () => {
-    
-    try {
-      
-      // El backend ya estableció la cookie httpOnly con el JWT
-      // getProfile() enviará la cookie automáticamente y guardará el usuario
-      const user = await authService.getProfile();
-      
-
-      
-      // Pequeña pausa para que el usuario vea el mensaje de éxito
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      router.push("/dashboard");
-      
-    } catch (err) {
-      console.error("❌ Error en auth success:", err);
-      setError("Error al completar la autenticación");
-      setTimeout(() => router.push("/login"), 3000);
-    }
-  };
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, User, LogOut, Settings } from "lucide-react";
+import { Search, User as UserIcon, LogOut, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -89,7 +89,7 @@ export function AppTopbar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleProfile} className="cursor-pointer">
-              <User className="mr-2 h-4 w-4" />
+              <UserIcon className="mr-2 h-4 w-4" />
               <span>Mi Perfil</span>
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer">

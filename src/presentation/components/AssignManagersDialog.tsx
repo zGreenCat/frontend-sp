@@ -47,7 +47,8 @@ export function AssignManagersDialog({
   const loadManagers = async () => {
     setLoadingOptions(true);
     try {
-      const users = await userRepo.findAll(TENANT_ID);
+      const response = await userRepo.findAll(TENANT_ID);
+      const users = response.data || [];
       
       // Filtrar solo usuarios con rol JEFE y habilitados
       const managers = users.filter(u => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,17 +16,21 @@ export function WarehousesView() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    loadWarehouses();
-  }, []);
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
-  const loadWarehouses = async () => {
-    setLoading(true);
-    const result = await warehouseRepo.findAll(TENANT_ID);
-    setWarehouses(result);
-    setLoading(false);
-  };
+    const loadWarehouses = async () => {
+      setLoading(true);
+      const result = await warehouseRepo.findAll(TENANT_ID);
+      setWarehouses(result);
+      setLoading(false);
+    };
+
+    loadWarehouses();
+  }, [warehouseRepo]);
 
   const filteredWarehouses = warehouses.filter(w =>
     w.name.toLowerCase().includes(search.toLowerCase())

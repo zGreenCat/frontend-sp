@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,17 +16,21 @@ export function ProvidersView() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    loadProviders();
-  }, []);
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
-  const loadProviders = async () => {
-    setLoading(true);
-    const result = await providerRepo.findAll(TENANT_ID);
-    setProviders(result);
-    setLoading(false);
-  };
+    const loadProviders = async () => {
+      setLoading(true);
+      const result = await providerRepo.findAll(TENANT_ID);
+      setProviders(result);
+      setLoading(false);
+    };
+
+    loadProviders();
+  }, [providerRepo]);
 
   const filteredProviders = providers.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())

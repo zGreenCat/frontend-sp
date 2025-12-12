@@ -23,8 +23,12 @@ export function useAreaDetail(areaId: string) {
       const getDetailUseCase = new GetAreaDetail(areaRepo);
       const result = await getDetailUseCase.execute(areaId);
 
-      if (!result.ok || !result.value) {
+      if (!result.ok) {
         throw new Error(result.error || "El área solicitada no existe");
+      }
+
+      if (!result.value) {
+        throw new Error("El área solicitada no existe");
       }
 
       const { area: areaData, managers, warehouses } = result.value;

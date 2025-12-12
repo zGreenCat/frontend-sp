@@ -20,7 +20,7 @@ const MOCK_PROJECTS: Project[] = [
   },
 ];
 
-let projects = [...MOCK_PROJECTS];
+const projects = [...MOCK_PROJECTS];
 
 export class MockProjectRepository implements IProjectRepository {
   async findAll(tenantId: string): Promise<Project[]> {

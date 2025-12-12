@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,17 +15,21 @@ export function BoxesView() {
   const { boxRepo } = useRepositories();
   const [boxes, setBoxes] = useState<Box[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    loadBoxes();
-  }, []);
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
-  const loadBoxes = async () => {
-    setLoading(true);
-    const result = await boxRepo.findAll(TENANT_ID);
-    setBoxes(result);
-    setLoading(false);
-  };
+    const loadBoxes = async () => {
+      setLoading(true);
+      const result = await boxRepo.findAll(TENANT_ID);
+      setBoxes(result);
+      setLoading(false);
+    };
+
+    loadBoxes();
+  }, [boxRepo]);
 
   return (
     <div className="space-y-6">

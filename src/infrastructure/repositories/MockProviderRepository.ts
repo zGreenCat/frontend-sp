@@ -18,7 +18,7 @@ const MOCK_PROVIDERS: Provider[] = [
   },
 ];
 
-let providers = [...MOCK_PROVIDERS];
+const providers = [...MOCK_PROVIDERS];
 
 export class MockProviderRepository implements IProviderRepository {
   async findAll(tenantId: string): Promise<Provider[]> {

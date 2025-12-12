@@ -19,13 +19,8 @@ export class SyncUserAssignments {
     previousAreas = [],
     previousWarehouses = [],
   }: SyncUserAssignmentsInput): Promise<void> {
-    const isJefe =
-      role === 'JEFE_AREA' ||
-      role === USER_ROLES.JEFE;
-
-    const isSupervisor =
-      role === 'SUPERVISOR' ||
-      role === USER_ROLES.SUPERVISOR;
+    const isJefe = role === USER_ROLES.JEFE;
+    const isSupervisor = role === USER_ROLES.SUPERVISOR;
 
     // --- JEFE: asignaciones área <-> usuario ---
     if (isJefe) {

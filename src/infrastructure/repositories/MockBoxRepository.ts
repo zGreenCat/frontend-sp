@@ -66,7 +66,7 @@ const MOCK_BOXES: Box[] = [
   },
 ];
 
-let boxes = [...MOCK_BOXES];
+const boxes = [...MOCK_BOXES];
 
 export class MockBoxRepository implements IBoxRepository {
   async findAll(tenantId: string): Promise<Box[]> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,17 +18,21 @@ export function ProductsView() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
-  const loadProducts = async () => {
-    setLoading(true);
-    const result = await productRepo.findAll(TENANT_ID);
-    setProducts(result);
-    setLoading(false);
-  };
+    const loadProducts = async () => {
+      setLoading(true);
+      const result = await productRepo.findAll(TENANT_ID);
+      setProducts(result);
+      setLoading(false);
+    };
+
+    loadProducts();
+  }, [productRepo]);
 
   const handleImport = () => {
     toast({

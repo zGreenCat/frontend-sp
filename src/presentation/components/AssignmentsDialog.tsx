@@ -96,11 +96,12 @@ export function AssignmentsDialog({
 
       const userRole = getUserRole();
       const userAreas = currentUser?.areas || [];
+      const userAreaIds = userAreas.map(a => typeof a === 'string' ? a : a.id);
 
       // Si es Jefe de Área, solo puede ver/asignar sus propias áreas
       let filteredAreas = areas.filter(a => a.status === 'ACTIVO');
-      if (userRole === USER_ROLES.JEFE && userAreas.length > 0) {
-        filteredAreas = filteredAreas.filter(a => userAreas.includes(a.id));
+      if (userRole === USER_ROLES.JEFE && userAreaIds.length > 0) {
+        filteredAreas = filteredAreas.filter(a => userAreaIds.includes(a.id));
       }
 
       // Todas las áreas disponibles, sin duplicar
@@ -133,9 +134,9 @@ export function AssignmentsDialog({
       // Solo aplicar filtro de áreas si:
       // 1. El usuario actual es JEFE (no ADMIN)
       // 2. Y NO está editando un SUPERVISOR (los supervisores pueden tener cualquier bodega)
-      if (userRole === USER_ROLES.JEFE && userAreas.length > 0 && !isEditingSupervisor) {
+      if (userRole === USER_ROLES.JEFE && userAreaIds.length > 0 && !isEditingSupervisor) {
         filteredWarehouses = filteredWarehouses.filter(w => 
-          w.areaId && userAreas.includes(w.areaId)
+          w.areaId && userAreaIds.includes(w.areaId)
         );
       }
 

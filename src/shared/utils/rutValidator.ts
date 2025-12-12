@@ -10,7 +10,7 @@
  */
 export function formatRut(raw: string): string {
   // Dejar solo números y K/k
-  let clean = raw.replace(/[^\dkK]/g, "").toUpperCase();
+  const clean = raw.replace(/[^\dkK]/g, "").toUpperCase();
 
   if (clean.length === 0) return "";
 
