@@ -1,9 +1,10 @@
 import { ApiError } from "@/shared/types/auth.types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not set");
 
 export class ApiClient {
-  private baseURL: string;
+  private baseURL: string | undefined;
   private static isRedirecting = false;
 
   constructor() {
@@ -144,7 +145,7 @@ private handleSessionExpired(): void {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "GET",
       headers: this.getHeaders(requiresAuth),
-      credentials: requiresAuth ? 'include' : 'same-origin',
+      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -159,7 +160,7 @@ private handleSessionExpired(): void {
       method: "POST",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
-      credentials: requiresAuth ? 'include' : 'same-origin',
+      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -174,7 +175,7 @@ private handleSessionExpired(): void {
       method: "PUT",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
-      credentials: requiresAuth ? 'include' : 'same-origin',
+      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -187,7 +188,7 @@ private handleSessionExpired(): void {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "DELETE",
       headers: this.getHeaders(requiresAuth),
-      credentials: requiresAuth ? 'include' : 'same-origin',
+      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
