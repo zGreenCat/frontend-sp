@@ -76,6 +76,18 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const [selectedJefeToRemove, setSelectedJefeToRemove] = useState<{ manager: User; name: string } | null>(null);
   const [selectedWarehouseToRemove, setSelectedWarehouseToRemove] = useState<WarehouseEntity | null>(null);
 
+  // Calcular parent y children usando caché de React Query
+  const parentArea = useMemo(() => {
+    if (!area?.parentId) return null;
+    return allAreas.find((a) => a.id === area.parentId) ?? null;
+  }, [area, allAreas]);
+
+  const childAreas = useMemo(() => {
+    return allAreas.filter(
+      (a) => a.parentId === areaId || (a as any).parentAreaId === areaId
+    );
+  }, [allAreas, areaId]);
+
   // Validar si el área es nodo hoja (sin sub-áreas)
   const isLeafNode = useMemo(() => {
     return childAreas.length === 0;
@@ -92,18 +104,6 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
     }
     setWarehousesDialogOpen(true);
   };
-
-  // Calcular parent y children usando caché de React Query
-  const parentArea = useMemo(() => {
-    if (!area?.parentId) return null;
-    return allAreas.find((a) => a.id === area.parentId) ?? null;
-  }, [area, allAreas]);
-
-  const childAreas = useMemo(() => {
-    return allAreas.filter(
-      (a) => a.parentId === areaId || (a as any).parentAreaId === areaId
-    );
-  }, [allAreas, areaId]);
 
   const openRemoveJefeConfirm = (manager: User, jefeName: string) => {
     setSelectedJefeToRemove({ manager, name: jefeName });

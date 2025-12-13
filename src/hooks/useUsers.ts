@@ -131,7 +131,7 @@ export const useUpdateUser = () => {
 };
 
 export const useToggleUserStatus = () => {
-  const { userRepo, auditLogRepo } = useRepositories();
+  const { userRepo } = useRepositories();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -144,7 +144,7 @@ export const useToggleUserStatus = () => {
       newStatus: "HABILITADO" | "DESHABILITADO";
       performedBy: string;
     }) => {
-      const useCase = new ToggleUserStatus(userRepo, auditLogRepo);
+      const useCase = new ToggleUserStatus(userRepo);
       const result = await useCase.execute({
         targetUserId: userId,
         newStatus,
