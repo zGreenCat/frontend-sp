@@ -72,6 +72,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
   const [confirmRemoveJefeOpen, setConfirmRemoveJefeOpen] = useState(false);
   const [confirmRemoveWarehouseOpen, setConfirmRemoveWarehouseOpen] = useState(false);
+  const [singleWarehouseWarningOpen, setSingleWarehouseWarningOpen] = useState(false);
 
   const [selectedJefeToRemove, setSelectedJefeToRemove] = useState<{ manager: User; name: string } | null>(null);
   const [selectedWarehouseToRemove, setSelectedWarehouseToRemove] = useState<WarehouseEntity | null>(null);

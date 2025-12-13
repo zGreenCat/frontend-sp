@@ -175,6 +175,36 @@ export function AssignmentsDialog({
     await onSubmit(data);
   };
 
+  // Mensaje de confirmación con resumen de cambios
+  const confirmMessage = useMemo(() => {
+    const currentAreasCount = user.areas?.length || 0;
+    const newAreasCount = form.watch('areas')?.length || 0;
+    const currentWarehousesCount = user.warehouses?.length || 0;
+    const newWarehousesCount = form.watch('warehouses')?.length || 0;
+    
+    const changes: string[] = [];
+    
+    if (showAreas && newAreasCount !== currentAreasCount) {
+      changes.push(`${newAreasCount} área${newAreasCount !== 1 ? 's' : ''}`);
+    }
+    
+    if (showWarehouses && newWarehousesCount !== currentWarehousesCount) {
+      changes.push(`${newWarehousesCount} bodega${newWarehousesCount !== 1 ? 's' : ''}`);
+    }
+    
+    if (changes.length === 0) {
+      return null;
+    }
+    
+    return `Se asignarán ${changes.join(' y ')} a ${user.name} ${user.lastName}`;
+  }, [form.watch('areas'), form.watch('warehouses'), user, showAreas, showWarehouses]);
+
+  const hasChanges = useMemo(() => {
+    const areasChanged = JSON.stringify(form.watch('areas') || []) !== JSON.stringify(user.areas || []);
+    const warehousesChanged = JSON.stringify(form.watch('warehouses') || []) !== JSON.stringify(user.warehouses || []);
+    return areasChanged || warehousesChanged;
+  }, [form.watch('areas'), form.watch('warehouses'), user]);
+
   // Determinar si se deben mostrar áreas o bodegas según el rol del usuario
   // El backend usa JEFE_AREA pero el frontend puede usar JEFE
   const userRoleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name || '';
@@ -306,6 +336,15 @@ export function AssignmentsDialog({
               </div>
             )}
 
+            {/* Resumen de cambios */}
+            {confirmMessage && hasChanges && (
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm text-blue-900 dark:text-blue-200">
+                  📝 {confirmMessage}
+                </p>
+              </div>
+            )}
+
             {/* Botones */}
             <div className="flex gap-3 pt-4">
               <Button
@@ -319,8 +358,9 @@ export function AssignmentsDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading || loadingOptions}
+                disabled={isLoading || loadingOptions || !hasChanges}
                 className="flex-1 bg-primary text-primary-foreground"
+                title={confirmMessage || undefined}
               >
                 {isLoading ? "Guardando..." : "Guardar Asignaciones"}
               </Button>

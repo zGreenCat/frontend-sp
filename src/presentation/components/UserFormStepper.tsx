@@ -266,53 +266,64 @@ export function UserFormStepper({
   return (
     <div className="space-y-6">
       {/* Steps indicator */}
-      <div className="flex items-center justify-between">
-        {STEPS.map((step, index) => (
-          <div key={step.id} className="flex items-center flex-1">
-            <div className="flex flex-col items-center flex-1">
-              <div
-                className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all",
-                  currentStep === step.id &&
-                    "border-primary bg-primary text-primary-foreground",
-                  currentStep > step.id &&
-                    "border-green-500 bg-green-500 text-white",
-                  currentStep < step.id &&
-                    "border-muted-foreground/30 text-muted-foreground"
-                )}
-              >
-                {currentStep > step.id ? (
-                  <Check className="h-5 w-5" />
-                ) : (
-                  <span className="text-sm font-semibold">{step.id}</span>
-                )}
-              </div>
-              <div className="mt-2 text-center">
-                <p
-                  className={cn(
-                    "text-xs font-medium",
-                    currentStep >= step.id
-                      ? "text-foreground"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {step.title}
-                </p>
-              </div>
+<div className="w-full flex justify-center">
+  <div className="inline-flex items-center">
+    {STEPS.map((step, index) => {
+      const isCurrent = currentStep === step.id;
+      const isCompleted = currentStep > step.id;
+
+      return (
+        <div key={step.id} className="flex items-center">
+          {/* Círculo + texto */}
+          <div className="flex flex-col items-center">
+            <div
+              className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center border-2 text-sm font-semibold transition-all",
+                isCurrent &&
+                  "border-primary bg-primary text-primary-foreground shadow-sm",
+                isCompleted && "border-green-500 bg-green-500 text-white",
+                !isCurrent &&
+                  !isCompleted &&
+                  "border-muted-foreground/30 text-muted-foreground bg-background"
+              )}
+            >
+              {isCompleted ? (
+                <Check className="h-5 w-5" />
+              ) : (
+                <span>{step.id}</span>
+              )}
             </div>
-            {index < STEPS.length - 1 && (
-              <div
-                className={cn(
-                  "h-[2px] flex-1 mx-2 transition-all",
-                  currentStep > step.id
-                    ? "bg-green-500"
-                    : "bg-muted-foreground/20"
-                )}
-              />
-            )}
+            <p
+              className={cn(
+                "mt-1 text-xs font-medium text-center",
+                currentStep >= step.id
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+              )}
+            >
+              {step.title}
+            </p>
           </div>
-        ))}
-      </div>
+
+          {/* Conector SOLO si hay siguiente step */}
+          {index < STEPS.length - 1 && (
+            <div
+              className={cn(
+                "h-[2px] w-16 md:w-24 mx-4 transition-colors",
+                currentStep > step.id
+                  ? "bg-green-500"
+                  : "bg-muted-foreground/20"
+              )}
+            />
+          )}
+        </div>
+      );
+    })}
+  </div>
+</div>
+
+
+
 
       {/* Form */}
       <Form {...form}>

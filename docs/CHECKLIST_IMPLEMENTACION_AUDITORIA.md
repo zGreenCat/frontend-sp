@@ -10,11 +10,11 @@
 | Categoría | Total | Completado | En Progreso | Pendiente |
 |-----------|-------|------------|-------------|-----------|
 | 🔴 CRÍTICO | 5 | 5 | 0 | 0 |
-| 🟡 MEDIO | 10 | 4 | 0 | 6 |
-| 🟢 BAJO | 2 | 0 | 0 | 2 |
-| **TOTAL** | **17** | **9** | **0** | **8** |
+| 🟡 MEDIO | 10 | 5 | 0 | 5 |
+| 🟢 BAJO | 2 | 2 | 0 | 0 |
+| **TOTAL** | **17** | **12** | **0** | **5** |
 
-**Progreso General:** 53% (9/17)
+**Progreso General:** 71% (12/17)
 
 ---
 
@@ -245,7 +245,7 @@
 
 ---
 
-## 🟡 TODOs MEDIO (4/10 - 40%)
+## 🟡 TODOs MEDIO (6/10 - 60%)
 
 ### ✅ TODO #2: Agregar búsqueda por RUT
 - **Estado:** ✅ COMPLETADO (Nuevo - 2025-01-XX)
@@ -462,31 +462,45 @@
 
 ---
 
-### ⏳ TODO #13 & #14: Validar estado y capacidad de bodegas
-- **Estado:** ⏳ PENDIENTE
+### ✅ TODO #13 & #14: Validar estado y capacidad de bodegas
+- **Estado:** ✅ COMPLETADO (Nuevo - 2025-12-12)
 - **Prioridad:** 🟡 MEDIO
 - **Categoría:** Validación de Negocio
-- **Archivos a modificar:**
-  - `src/presentation/components/AssignWarehousesDialog.tsx` (líneas ~80)
-- **Implementación sugerida:**
+- **Archivo:** `src/presentation/components/AssignWarehousesDialog.tsx`
+- **Cambios aplicados:**
   ```typescript
-  const availableWarehouses = useMemo(() => {
-    return allWarehouses.filter(w => {
-      // Excluir bodegas ya asignadas
-      if (currentWarehouseIds.includes(w.id)) return false;
+  // Líneas 64-90
+  const warehousesOptions: Option[] = useMemo(() => {
+    const availableWarehouses = (warehouses || []).filter((w) => {
+      // ✅ Validar estado ACTIVO
+      if (w.status !== "ACTIVO") return false;
       
-      // ✅ AGREGAR: Validar estado ACTIVO
-      if (w.status !== 'ACTIVO') return false;
-      
-      // ✅ AGREGAR: Validar capacidad disponible
+      // ✅ Validar capacidad disponible
       const currentCapacity = w.currentCapacityKg || 0;
-      if (currentCapacity >= w.capacityKg) return false;
+      const maxCapacity = w.capacityKg || Infinity;
+      if (currentCapacity >= maxCapacity) return false;
       
       return true;
     });
-  }, [allWarehouses, currentWarehouseIds]);
+
+    return availableWarehouses.map((w) => {
+      const currentCapacity = w.currentCapacityKg || 0;
+      const maxCapacity = w.capacityKg || 0;
+      const percentageUsed = maxCapacity > 0 ? 
+        ((currentCapacity / maxCapacity) * 100).toFixed(0) : 0;
+      
+      return {
+        label: `${w.name} (${currentCapacity}/${maxCapacity} kg - ${percentageUsed}% usado)`,
+        value: w.id,
+      };
+    });
+  }, [warehouses]);
   ```
-- **Estimado:** 20 minutos
+- **Beneficios:**
+  - Solo muestra bodegas con estado ACTIVO
+  - Excluye bodegas sin capacidad disponible (llenas)
+  - Muestra porcentaje de uso en cada opción
+- **Verificación:** ✅ Sin errores TypeScript
 
 ---
 
@@ -585,58 +599,110 @@
 
 ---
 
-## 🟢 TODOs BAJO (0/2 - 0%)
+## 🟢 TODOs BAJO (2/2 - 100%)
 
-### ⏳ TODO #11: Modal de advertencia si es única bodega
-- **Estado:** ⏳ PENDIENTE
+### ✅ TODO #11: Modal de advertencia si es única bodega
+- **Estado:** ✅ COMPLETADO (Nuevo - 2025-12-12)
 - **Prioridad:** 🟢 BAJO
 - **Categoría:** UX
-- **Archivos a modificar:**
-  - `src/presentation/views/AreaDetailView.tsx` (líneas ~140)
-- **Implementación sugerida:**
+- **Archivo:** `src/presentation/views/AreaDetailView.tsx`
+- **Cambios aplicados:**
   ```typescript
-  const handleRemoveWarehouse = async (warehouseId: string) => {
-    // ✅ AGREGAR: Validación antes de remover
+  // Nuevo estado para warning de única bodega
+  const [singleWarehouseWarningOpen, setSingleWarehouseWarningOpen] = useState(false);
+
+  // Handler mejorado con validación
+  const openRemoveWarehouseDialog = (warehouse: WarehouseEntity) => {
+    // ✅ Advertencia si es la única bodega
     if (assignedWarehouses.length === 1) {
-      const confirmed = await showConfirmDialog({
-        title: "Remover única bodega",
-        description: "Esta es la única bodega asignada al área. Si la remueves, el área quedará sin bodegas. ¿Deseas continuar?",
-        variant: "warning"
-      });
-      
-      if (!confirmed) return;
+      setSelectedWarehouseToRemove(warehouse);
+      setSingleWarehouseWarningOpen(true);
+      return;
     }
     
-    // Continuar con remoción...
+    setSelectedWarehouseToRemove(warehouse);
+    setConfirmRemoveWarehouseOpen(true);
   };
+
+  // Handler para confirmar remoción de única bodega
+  const handleConfirmSingleWarehouseRemoval = () => {
+    setSingleWarehouseWarningOpen(false);
+    setConfirmRemoveWarehouseOpen(true);
+  };
+
+  // ConfirmDialog adicional para advertencia
+  <ConfirmDialog
+    open={singleWarehouseWarningOpen}
+    onOpenChange={setSingleWarehouseWarningOpen}
+    onConfirm={handleConfirmSingleWarehouseRemoval}
+    title="⚠️ Remover única bodega"
+    description={`Esta es la única bodega asignada al área "${area?.name || ""}". Si la remueves, el área quedará sin bodegas operativas.\n\n¿Estás seguro de que deseas continuar?`}
+    confirmText="Sí, remover de todas formas"
+  />
   ```
-- **Estimado:** 15 minutos
+- **Beneficios:**
+  - Previene remoción accidental de única bodega
+  - Mensaje de advertencia claro y específico
+  - UX mejorada con doble confirmación
+- **Verificación:** ✅ Sin errores TypeScript
 
 ---
 
-### ⏳ TODO #14: Mejorar mensaje de modal de reasignación
-- **Estado:** ⏳ PENDIENTE
+### ✅ TODO #14: Mejorar mensaje de modal de reasignación
+- **Estado:** ✅ COMPLETADO (Nuevo - 2025-12-12)
 - **Prioridad:** 🟢 BAJO
 - **Categoría:** UX
-- **Archivos a modificar:**
-  - `src/presentation/components/AssignmentsDialog.tsx` (líneas ~250)
-- **Implementación sugerida:**
+- **Archivo:** `src/presentation/components/AssignmentsDialog.tsx`
+- **Cambios aplicados:**
   ```typescript
+  // Mensaje de confirmación con resumen de cambios
   const confirmMessage = useMemo(() => {
-    const changes = [];
-    if (newAreas.length !== currentAreas.length) {
-      changes.push(`${newAreas.length} áreas`);
-    }
-    if (newWarehouses.length !== currentWarehouses.length) {
-      changes.push(`${newWarehouses.length} bodegas`);
+    const currentAreasCount = user.areas?.length || 0;
+    const newAreasCount = form.watch('areas')?.length || 0;
+    const currentWarehousesCount = user.warehouses?.length || 0;
+    const newWarehousesCount = form.watch('warehouses')?.length || 0;
+    
+    const changes: string[] = [];
+    
+    if (showAreas && newAreasCount !== currentAreasCount) {
+      changes.push(`${newAreasCount} área${newAreasCount !== 1 ? 's' : ''}`);
     }
     
-    if (changes.length === 0) return "No hay cambios para aplicar";
+    if (showWarehouses && newWarehousesCount !== currentWarehousesCount) {
+      changes.push(`${newWarehousesCount} bodega${newWarehousesCount !== 1 ? 's' : ''}`);
+    }
+    
+    if (changes.length === 0) {
+      return null;
+    }
     
     return `Se asignarán ${changes.join(' y ')} a ${user.name} ${user.lastName}`;
-  }, [newAreas, newWarehouses, currentAreas, currentWarehouses]);
+  }, [form.watch('areas'), form.watch('warehouses'), user, showAreas, showWarehouses]);
+
+  // Resumen visual antes de los botones
+  {confirmMessage && hasChanges && (
+    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+      <p className="text-sm text-blue-900 dark:text-blue-200">
+        📝 {confirmMessage}
+      </p>
+    </div>
+  )}
+
+  // Botón con tooltip y disabled si no hay cambios
+  <Button
+    type="submit"
+    disabled={isLoading || loadingOptions || !hasChanges}
+    title={confirmMessage || undefined}
+  >
+    {isLoading ? "Guardando..." : "Guardar Asignaciones"}
+  </Button>
   ```
-- **Estimado:** 15 minutos
+- **Beneficios:**
+  - Mensaje específico según cambios realizados
+  - Resumen visual antes de guardar
+  - Botón deshabilitado si no hay cambios
+  - Tooltip con información detallada
+- **Verificación:** ✅ Sin errores TypeScript
 
 ---
 
@@ -645,8 +711,10 @@
 ### Inmediato (Siguientes 2 horas)
 1. ✅ ~~Implementar TODO #2, #3, #4 (UX mejoras en UsersView)~~ COMPLETADO
 2. ✅ ~~Implementar TODO #7 (Mensajes modal confirmación)~~ COMPLETADO
-3. ⏳ **[SIGUIENTE]** Implementar TODO #10 (Historial asignaciones)
-4. ⏳ Implementar TODO #13 & #14 (Validación bodegas)
+3. ✅ ~~Implementar TODO #13 & #14 (Validación bodegas)~~ COMPLETADO
+4. ✅ ~~Implementar TODO #11 (Modal advertencia única bodega)~~ COMPLETADO
+5. ✅ ~~Implementar TODO #14 (Mensaje reasignación específico)~~ COMPLETADO
+6. ⏳ **[SIGUIENTE]** Implementar TODO #10 (Historial asignaciones) - Requiere backend
 
 ### Corto Plazo (Backend - 1-2 días)
 1. ⏳ Crear tabla `audit_logs` en base de datos
@@ -656,9 +724,7 @@
 5. ⏳ Implementar TODO #18 (Revocar asignaciones al deshabilitar Jefe)
 
 ### Mediano Plazo (Opcional - 3-5 días)
-1. ⏳ TODO #11 (Modal advertencia única bodega)
-2. ⏳ TODO #14 (Mensaje reasignación específico)
-3. ⏳ TODO #19 & #23 (Historial en detalle de área)
+1. ⏳ TODO #19 & #23 (Historial en detalle de área) - Requiere backend
 
 ---
 

@@ -936,12 +936,13 @@ export function UsersView() {
                           <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
                             Email
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                          <th className="text-center py-3 px-4 text-sm font-semibold text-muted-foreground">
                             Rol
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                          <th className="text-center py-3 px-4 text-sm font-semibold text-muted-foreground">
                             Estado
                           </th>
+
                           <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
                             Áreas / Bodegas
                           </th>
@@ -1003,12 +1004,13 @@ export function UsersView() {
                             <td className="py-4 px-4 text-sm text-foreground">
                               {user.email}
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-4 text-center align-middle">
                               <EntityBadge status={user.role} />
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-4 text-center align-middle">
                               <EntityBadge status={user.status} />
                             </td>
+
                             <td className="py-4 px-4">
                               <div className="space-y-2">
                                 {/* Áreas */}

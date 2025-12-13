@@ -59,16 +59,32 @@ export function AssignWarehousesDialog({
     }
   }, [open, currentWarehouseIds]);
 
-  // Opciones para el MultiSelect (solo bodegas activas)
+  // Opciones para el MultiSelect (solo bodegas activas y con capacidad)
   const warehousesOptions: Option[] = useMemo(() => {
-    const activeWarehouses = (warehouses || []).filter(
-      (w) => w.status === "ACTIVO"
+    const availableWarehouses = (warehouses || []).filter(
+      (w) => {
+        // ✅ Validar estado ACTIVO
+        if (w.status !== "ACTIVO") return false;
+        
+        // ✅ Validar capacidad disponible
+        const currentCapacity = w.currentCapacityKg || 0;
+        const maxCapacity = w.capacityKg || Infinity;
+        if (currentCapacity >= maxCapacity) return false;
+        
+        return true;
+      }
     );
 
-    return activeWarehouses.map((w) => ({
-      label: `${w.name} (${w.capacityKg} kg)`,
-      value: w.id,
-    }));
+    return availableWarehouses.map((w) => {
+      const currentCapacity = w.currentCapacityKg || 0;
+      const maxCapacity = w.capacityKg || 0;
+      const percentageUsed = maxCapacity > 0 ? ((currentCapacity / maxCapacity) * 100).toFixed(0) : 0;
+      
+      return {
+        label: `${w.name} (${currentCapacity}/${maxCapacity} kg - ${percentageUsed}% usado)`,
+        value: w.id,
+      };
+    });
   }, [warehouses]);
 
   const handleSave = async () => {
