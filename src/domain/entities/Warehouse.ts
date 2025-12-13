@@ -8,4 +8,5 @@ export interface Warehouse {
   areaId?: string;
   supervisorId?: string;
   tenantId: string;
+  currentCapacityKg?: number; // capacidad ocupada actual (opcional)
 }

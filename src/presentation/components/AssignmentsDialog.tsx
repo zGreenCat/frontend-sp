@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -55,6 +55,7 @@ export function AssignmentsDialog({
 }: AssignmentsDialogProps) {
   const { areaRepo, warehouseRepo } = useRepositories();
   const { user: currentUser } = useAuth();
+
   const [areasOptions, setAreasOptions] = useState<Option[]>([]);
   const [warehousesOptions, setWarehousesOptions] = useState<Option[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -67,16 +68,20 @@ export function AssignmentsDialog({
     },
   });
 
-  // Helper para extraer el rol del usuario correctamente
+  // Helper para extraer el rol del usuario actual correctamente
   const getUserRole = (): string => {
     if (!currentUser) return USER_ROLES.SUPERVISOR;
-    
-    if (typeof currentUser.role === 'string') {
+
+    if (typeof currentUser.role === "string") {
       return currentUser.role;
-    } else if (currentUser.role && typeof currentUser.role === 'object' && 'name' in currentUser.role) {
+    } else if (
+      currentUser.role &&
+      typeof currentUser.role === "object" &&
+      "name" in currentUser.role
+    ) {
       return (currentUser.role as any).name;
     } else {
-      return currentUser.roleId || USER_ROLES.SUPERVISOR;
+      return (currentUser as any).roleId || USER_ROLES.SUPERVISOR;
     }
   };
 
@@ -84,6 +89,7 @@ export function AssignmentsDialog({
     if (open) {
       loadOptions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user]);
 
   const loadOptions = async () => {
@@ -96,70 +102,79 @@ export function AssignmentsDialog({
 
       const userRole = getUserRole();
       const userAreas = currentUser?.areas || [];
-      const userAreaIds = userAreas.map(a => typeof a === 'string' ? a : a.id);
+      const userAreaIds = userAreas.map((a: any) =>
+        typeof a === "string" ? a : a.id
+      );
 
-      // Si es Jefe de Área, solo puede ver/asignar sus propias áreas
-      let filteredAreas = areas.filter(a => a.status === 'ACTIVO');
+      // ÁREAS ───────────────────────────────────────────
+      let filteredAreas = areas.filter((a) => a.status === "ACTIVO");
       if (userRole === USER_ROLES.JEFE && userAreaIds.length > 0) {
-        filteredAreas = filteredAreas.filter(a => userAreaIds.includes(a.id));
+        filteredAreas = filteredAreas.filter((a) => userAreaIds.includes(a.id));
       }
 
-      // Todas las áreas disponibles, sin duplicar
       const areaOptionsMap = new Map<string, { label: string; value: string }>();
-      
-      // Primero agregar todas las áreas activas
-      filteredAreas.forEach(a => {
+
+      filteredAreas.forEach((a) => {
         areaOptionsMap.set(a.id, { label: a.name, value: a.id });
       });
 
-      // Luego, si el usuario tiene áreas asignadas, asegurar que estén en las opciones
       const userAssignedAreas = user.areaDetails || [];
-      userAssignedAreas.forEach(userArea => {
+      userAssignedAreas.forEach((userArea) => {
         if (!areaOptionsMap.has(userArea.id)) {
-          areaOptionsMap.set(userArea.id, { label: userArea.name, value: userArea.id });
+          areaOptionsMap.set(userArea.id, {
+            label: userArea.name,
+            value: userArea.id,
+          });
         }
       });
 
-      const finalAreasOptions = Array.from(areaOptionsMap.values());
-      setAreasOptions(finalAreasOptions);
+      setAreasOptions(Array.from(areaOptionsMap.values()));
 
-      // Filtrar bodegas:
-      // - Para SUPERVISORES (el usuario a editar): mostrar TODAS las bodegas activas
-      // - Para JEFES DE ÁREA (el usuario actual que está editando): solo sus áreas
-      const userToEditRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name || '';
-      const isEditingSupervisor = userToEditRole === 'SUPERVISOR' || userToEditRole === USER_ROLES.SUPERVISOR;
-      
-      let filteredWarehouses = warehouses.filter(w => w.status === 'ACTIVO');
-      
-      // Solo aplicar filtro de áreas si:
-      // 1. El usuario actual es JEFE (no ADMIN)
-      // 2. Y NO está editando un SUPERVISOR (los supervisores pueden tener cualquier bodega)
-      if (userRole === USER_ROLES.JEFE && userAreaIds.length > 0 && !isEditingSupervisor) {
-        filteredWarehouses = filteredWarehouses.filter(w => 
-          w.areaId && userAreaIds.includes(w.areaId)
+      // BODEGAS ─────────────────────────────────────────
+      const userToEditRole =
+        typeof user.role === "string"
+          ? user.role
+          : (user.role as any)?.name || "";
+      const isEditingSupervisor =
+        userToEditRole === "SUPERVISOR" ||
+        userToEditRole === USER_ROLES.SUPERVISOR;
+
+      let filteredWarehouses = warehouses.filter(
+        (w) => w.status === "ACTIVO"
+      );
+
+      if (
+        userRole === USER_ROLES.JEFE &&
+        userAreaIds.length > 0 &&
+        !isEditingSupervisor
+      ) {
+        filteredWarehouses = filteredWarehouses.filter(
+          (w: any) => w.areaId && userAreaIds.includes(w.areaId)
         );
       }
 
-      // Todas las bodegas disponibles, sin duplicar
-      const warehouseOptionsMap = new Map<string, { label: string; value: string }>();
-      
-      // Primero agregar todas las bodegas filtradas
-      filteredWarehouses.forEach(w => {
+      const warehouseOptionsMap = new Map<
+        string,
+        { label: string; value: string }
+      >();
+
+      filteredWarehouses.forEach((w: any) => {
         warehouseOptionsMap.set(w.id, { label: w.name, value: w.id });
       });
 
-      // Luego, si el usuario tiene bodegas asignadas, asegurar que estén en las opciones
       const userAssignedWarehouses = user.warehouseDetails || [];
-      userAssignedWarehouses.forEach(userWarehouse => {
+      userAssignedWarehouses.forEach((userWarehouse) => {
         if (!warehouseOptionsMap.has(userWarehouse.id)) {
-          warehouseOptionsMap.set(userWarehouse.id, { label: userWarehouse.name, value: userWarehouse.id });
+          warehouseOptionsMap.set(userWarehouse.id, {
+            label: userWarehouse.name,
+            value: userWarehouse.id,
+          });
         }
       });
 
-      const finalWarehousesOptions = Array.from(warehouseOptionsMap.values());
-      setWarehousesOptions(finalWarehousesOptions);
+      setWarehousesOptions(Array.from(warehouseOptionsMap.values()));
 
-      // Resetear formulario después de cargar las opciones
+      // Resetear valores del form
       form.reset({
         areas: user.areas || [],
         warehouses: user.warehouses || [],
@@ -175,41 +190,75 @@ export function AssignmentsDialog({
     await onSubmit(data);
   };
 
+  // Rol del usuario que estamos editando
+  const userRoleName =
+    typeof user.role === "string"
+      ? user.role
+      : (user.role as any)?.name || "";
+
+  const showAreas =
+    userRoleName === "JEFE" ||
+    userRoleName === "JEFE_AREA" ||
+    userRoleName === USER_ROLES.JEFE;
+
+  const showWarehouses =
+    userRoleName === "SUPERVISOR" || userRoleName === USER_ROLES.SUPERVISOR;
+
+  // Valores observados del formulario para usarlos en los useMemo
+  const watchedAreas = form.watch("areas");
+  const watchedWarehouses = form.watch("warehouses");
+
   // Mensaje de confirmación con resumen de cambios
   const confirmMessage = useMemo(() => {
     const currentAreasCount = user.areas?.length || 0;
-    const newAreasCount = form.watch('areas')?.length || 0;
+    const newAreasCount = watchedAreas?.length || 0;
     const currentWarehousesCount = user.warehouses?.length || 0;
-    const newWarehousesCount = form.watch('warehouses')?.length || 0;
-    
+    const newWarehousesCount = watchedWarehouses?.length || 0;
+
     const changes: string[] = [];
-    
+
     if (showAreas && newAreasCount !== currentAreasCount) {
-      changes.push(`${newAreasCount} área${newAreasCount !== 1 ? 's' : ''}`);
+      changes.push(
+        `${newAreasCount} área${newAreasCount !== 1 ? "s" : ""}`
+      );
     }
-    
+
     if (showWarehouses && newWarehousesCount !== currentWarehousesCount) {
-      changes.push(`${newWarehousesCount} bodega${newWarehousesCount !== 1 ? 's' : ''}`);
+      changes.push(
+        `${newWarehousesCount} bodega${
+          newWarehousesCount !== 1 ? "s" : ""
+        }`
+      );
     }
-    
+
     if (changes.length === 0) {
       return null;
     }
-    
-    return `Se asignarán ${changes.join(' y ')} a ${user.name} ${user.lastName}`;
-  }, [form.watch('areas'), form.watch('warehouses'), user, showAreas, showWarehouses]);
+
+    return `Se asignarán ${changes.join(" y ")} a ${
+      user.name
+    } ${user.lastName}`;
+  }, [
+    watchedAreas,
+    watchedWarehouses,
+    user.areas,
+    user.warehouses,
+    user.name,
+    user.lastName,
+    showAreas,
+    showWarehouses,
+  ]);
 
   const hasChanges = useMemo(() => {
-    const areasChanged = JSON.stringify(form.watch('areas') || []) !== JSON.stringify(user.areas || []);
-    const warehousesChanged = JSON.stringify(form.watch('warehouses') || []) !== JSON.stringify(user.warehouses || []);
-    return areasChanged || warehousesChanged;
-  }, [form.watch('areas'), form.watch('warehouses'), user]);
+    const areasChanged =
+      JSON.stringify(watchedAreas || []) !==
+      JSON.stringify(user.areas || []);
+    const warehousesChanged =
+      JSON.stringify(watchedWarehouses || []) !==
+      JSON.stringify(user.warehouses || []);
 
-  // Determinar si se deben mostrar áreas o bodegas según el rol del usuario
-  // El backend usa JEFE_AREA pero el frontend puede usar JEFE
-  const userRoleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name || '';
-  const showAreas = userRoleName === 'JEFE' || userRoleName === 'JEFE_AREA' || userRoleName === USER_ROLES.JEFE;
-  const showWarehouses = userRoleName === 'SUPERVISOR' || userRoleName === USER_ROLES.SUPERVISOR;
+    return areasChanged || warehousesChanged;
+  }, [watchedAreas, watchedWarehouses, user.areas, user.warehouses]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,9 +283,17 @@ export function AssignmentsDialog({
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
             <Badge variant="outline" className="text-sm">
-              {userRoleName === 'JEFE' || userRoleName === 'JEFE_AREA' || userRoleName === USER_ROLES.JEFE ? 'Jefe de Área' : 
-               userRoleName === 'SUPERVISOR' || userRoleName === USER_ROLES.SUPERVISOR ? 'Supervisor' : 
-               userRoleName === 'ADMIN' || userRoleName === USER_ROLES.ADMIN ? 'Administrador' : userRoleName}
+              {userRoleName === "JEFE" ||
+              userRoleName === "JEFE_AREA" ||
+              userRoleName === USER_ROLES.JEFE
+                ? "Jefe de Área"
+                : userRoleName === "SUPERVISOR" ||
+                  userRoleName === USER_ROLES.SUPERVISOR
+                ? "Supervisor"
+                : userRoleName === "ADMIN" ||
+                  userRoleName === USER_ROLES.ADMIN
+                ? "Administrador"
+                : userRoleName}
             </Badge>
           </div>
         </div>
@@ -265,7 +322,11 @@ export function AssignmentsDialog({
                           options={areasOptions}
                           selected={field.value}
                           onChange={field.onChange}
-                          placeholder={areasOptions.length > 0 ? `Haz clic para seleccionar (${areasOptions.length} disponibles)` : "No hay áreas disponibles"}
+                          placeholder={
+                            areasOptions.length > 0
+                              ? `Haz clic para seleccionar (${areasOptions.length} disponibles)`
+                              : "No hay áreas disponibles"
+                          }
                           disabled={isLoading}
                           className="w-full"
                         />
@@ -273,10 +334,13 @@ export function AssignmentsDialog({
                     </FormControl>
                     {!loadingOptions && (
                       <FormDescription className="text-xs text-muted-foreground">
-                        {field.value.length === 0 
+                        {field.value.length === 0
                           ? `⚠️ Este usuario no tiene áreas asignadas. ${areasOptions.length} áreas disponibles para seleccionar.`
-                          : `${field.value.length} área${field.value.length > 1 ? 's' : ''} seleccionada${field.value.length > 1 ? 's' : ''}`
-                        }
+                          : `${field.value.length} área${
+                              field.value.length > 1 ? "s" : ""
+                            } seleccionada${
+                              field.value.length > 1 ? "s" : ""
+                            }`}
                       </FormDescription>
                     )}
                     <FormMessage />
@@ -307,7 +371,11 @@ export function AssignmentsDialog({
                           options={warehousesOptions}
                           selected={field.value}
                           onChange={field.onChange}
-                          placeholder={warehousesOptions.length > 0 ? `Haz clic para seleccionar (${warehousesOptions.length} disponibles)` : "No hay bodegas disponibles"}
+                          placeholder={
+                            warehousesOptions.length > 0
+                              ? `Haz clic para seleccionar (${warehousesOptions.length} disponibles)`
+                              : "No hay bodegas disponibles"
+                          }
                           disabled={isLoading}
                           className="w-full"
                         />
@@ -315,10 +383,13 @@ export function AssignmentsDialog({
                     </FormControl>
                     {!loadingOptions && (
                       <FormDescription className="text-xs text-muted-foreground">
-                        {field.value.length === 0 
+                        {field.value.length === 0
                           ? `⚠️ Este usuario no tiene bodegas asignadas. ${warehousesOptions.length} bodegas disponibles para seleccionar.`
-                          : `${field.value.length} bodega${field.value.length > 1 ? 's' : ''} seleccionada${field.value.length > 1 ? 's' : ''}`
-                        }
+                          : `${field.value.length} bodega${
+                              field.value.length > 1 ? "s" : ""
+                            } seleccionada${
+                              field.value.length > 1 ? "s" : ""
+                            }`}
                       </FormDescription>
                     )}
                     <FormMessage />
@@ -331,7 +402,8 @@ export function AssignmentsDialog({
             {!showAreas && !showWarehouses && (
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
                 <p className="text-sm text-amber-800 dark:text-amber-200">
-                  Los usuarios con rol <strong>{user.role}</strong> no tienen asignaciones de áreas ni bodegas.
+                  Los usuarios con rol <strong>{user.role}</strong> no tienen
+                  asignaciones de áreas ni bodegas.
                 </p>
               </div>
             )}
