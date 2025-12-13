@@ -9,6 +9,7 @@ import { CreateUser } from "@/application/usecases/user/CreateUser";
 import { ToggleUserStatus } from '@/application/usecases/user/ToggleUserStatus';
 import { UpdateUserPhone } from '@/application/usecases/user/UpdateUserPhone';
 import { ValidateUserUnique } from '@/application/usecases/user/ValidateUserUnique';
+import { userEnablementHistoryKeys } from './useUserEnablementHistory';
 interface UsersListResult {
   users: User[];
   totalPages: number;
@@ -130,21 +131,24 @@ export const useUpdateUser = () => {
 };
 
 export const useToggleUserStatus = () => {
-  const { userRepo } = useRepositories();
+  const { userRepo, auditLogRepo } = useRepositories();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       userId,
       newStatus,
+      performedBy,
     }: {
       userId: string;
       newStatus: "HABILITADO" | "DESHABILITADO";
+      performedBy: string;
     }) => {
-      const useCase = new ToggleUserStatus(userRepo);
+      const useCase = new ToggleUserStatus(userRepo, auditLogRepo);
       const result = await useCase.execute({
         targetUserId: userId,
         newStatus,
+        performedBy,
         tenantId: TENANT_ID,
       });
 
@@ -158,6 +162,14 @@ export const useToggleUserStatus = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
       queryClient.invalidateQueries({
         queryKey: userKeys.detail(updatedUser.id),
+      });
+      // Invalidar historial de habilitación del usuario afectado
+      queryClient.invalidateQueries({
+        queryKey: userEnablementHistoryKeys.byUser(updatedUser.id),
+      });
+      // Invalidar historial global (por si está abierto)
+      queryClient.invalidateQueries({
+        queryKey: userEnablementHistoryKeys.all,
       });
     },
   });

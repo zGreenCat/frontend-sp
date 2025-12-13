@@ -76,6 +76,23 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const [selectedJefeToRemove, setSelectedJefeToRemove] = useState<{ manager: User; name: string } | null>(null);
   const [selectedWarehouseToRemove, setSelectedWarehouseToRemove] = useState<WarehouseEntity | null>(null);
 
+  // Validar si el área es nodo hoja (sin sub-áreas)
+  const isLeafNode = useMemo(() => {
+    return childAreas.length === 0;
+  }, [childAreas]);
+
+  const handleOpenWarehousesDialog = () => {
+    if (!isLeafNode) {
+      toast({
+        title: "❌ Operación no permitida",
+        description: "Solo puedes asignar bodegas a áreas sin sub-áreas (nodos hoja). Esta área tiene sub-áreas dependientes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setWarehousesDialogOpen(true);
+  };
+
   // Calcular parent y children usando caché de React Query
   const parentArea = useMemo(() => {
     if (!area?.parentId) return null;
@@ -341,7 +358,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Bodegas Asignadas</CardTitle>
               <Button
-                onClick={() => setWarehousesDialogOpen(true)}
+                onClick={handleOpenWarehousesDialog}
                 size="sm"
                 className="gap-2"
               >

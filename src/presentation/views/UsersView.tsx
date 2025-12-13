@@ -36,6 +36,7 @@ import { formatRUT } from "@/shared/utils/formatters";
 import { UserDialog } from "@/presentation/components/UserDialog";
 import { AssignmentsDialog } from "@/presentation/components/AssignmentsDialog";
 import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
+import { UserDetailDialog } from "@/presentation/components/UserDetailDialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
@@ -121,6 +122,7 @@ export function UsersView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [assignmentsDialogOpen, setAssignmentsDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false); // ← NUEVO
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -396,6 +398,7 @@ export function UsersView() {
       await toggleStatusMutation.mutateAsync({
         userId: selectedUser.id,
         newStatus,
+        performedBy: currentUser?.id || '', // Registrar quién realizó el cambio
       });
 
       toast({
@@ -429,6 +432,11 @@ export function UsersView() {
   const openAssignmentsDialog = (user: User) => {
     setSelectedUser(user);
     setAssignmentsDialogOpen(true);
+  };
+
+  const openDetailDialog = (user: User) => {
+    setSelectedUser(user);
+    setDetailDialogOpen(true);
   };
 
   const openDeleteConfirm = (user: User) => {
@@ -479,7 +487,9 @@ export function UsersView() {
       search === "" ||
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.lastName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      // ✅ TODO #2: Agregar búsqueda por RUT (normalizar sin puntos ni guiones)
+      (u.rut && u.rut.replace(/[.-]/g, '').includes(search.replace(/[.-]/g, '')));
 
     const userRoleStr =
       typeof u.role === "string" ? u.role : (u.role as any)?.name || "";
@@ -682,11 +692,16 @@ export function UsersView() {
                     return (
                       <div
                         key={user.id}
-                        className="border border-border rounded-lg p-3 bg-card shadow-sm flex flex-col gap-2"
+                        className={`border border-border rounded-lg p-3 bg-card shadow-sm flex flex-col gap-2 ${
+                          user.status === "DESHABILITADO" ? "opacity-60 bg-red-50 border-red-200" : ""
+                        }`}
                       >
                         {/* Nombre + RUT + alerta sin asignar */}
                         <div className="flex items-start justify-between gap-2">
-                          <div>
+                          <div 
+                            className="cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => openDetailDialog(user)}
+                          >
                             <p className="font-semibold text-sm">
                               {user.name} {user.lastName}
                             </p>
@@ -884,6 +899,7 @@ export function UsersView() {
                                     size="icon"
                                     className="h-8 w-8"
                                     onClick={() => openDeleteConfirm(user)}
+                                    disabled={false}
                                   >
                                     {user.status === "HABILITADO" ? (
                                       <UserX className="h-4 w-4 text-amber-600" />
@@ -938,11 +954,16 @@ export function UsersView() {
                         {filteredUsers.map((user) => (
                           <tr
                             key={user.id}
-                            className="border-b border-border hover:bg-secondary/20 transition-colors"
+                            className={`border-b border-border hover:bg-secondary/20 transition-colors ${
+                              user.status === "DESHABILITADO" ? "bg-red-50/50 opacity-70" : ""
+                            }`}
                           >
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-2">
-                                <div>
+                                <div 
+                                  className="cursor-pointer hover:text-primary transition-colors"
+                                  onClick={() => openDetailDialog(user)}
+                                >
                                   <p className="font-medium text-foreground">
                                     {user.name} {user.lastName}
                                   </p>
@@ -1278,6 +1299,13 @@ export function UsersView() {
         />
       )}
 
+      {/* Dialog de detalle de usuario con historial */}
+      <UserDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        user={selectedUser}
+      />
+
       {/* Dialog confirmar habilitar/deshabilitar */}
       <ConfirmDialog
         open={confirmOpen}
@@ -1288,11 +1316,11 @@ export function UsersView() {
             ? "¿Deshabilitar usuario?"
             : "¿Habilitar usuario?"
         }
-        description={`¿Está seguro de ${
+        description={
           selectedUser?.status === "HABILITADO"
-            ? "deshabilitar"
-            : "habilitar"
-        } al usuario ${selectedUser?.name} ${selectedUser?.lastName}?`}
+            ? `¿Confirma deshabilitar a ${selectedUser?.name} ${selectedUser?.lastName}? No podrá acceder al sistema y sus asignaciones quedarán inactivas.`
+            : `¿Confirma habilitar a ${selectedUser?.name} ${selectedUser?.lastName}? Podrá volver a acceder al sistema con sus asignaciones actuales.`
+        }
       />
     </>
   );
