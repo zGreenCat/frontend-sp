@@ -1,135 +1,59 @@
+import { apiClient } from '../api/apiClient';
 import { IAssignmentHistoryRepository } from '@/domain/repositories/IAssignmentHistoryRepository';
-import { AssignmentHistoryEntry } from '@/domain/entities/AssignmentHistory';
-import { apiClient } from '@/infrastructure/api/apiClient';
+import {
+  AssignmentHistoryEntry,
+  AssignmentHistoryResponse,
+} from '@/domain/entities/AssignmentHistory';
 
-/**
- * Repositorio de historial de asignaciones
- * NOTA: El backend actualmente NO tiene implementados los endpoints de assignment-history.
- * Este repositorio funciona en modo degradado guardando localmente los registros hasta que
- * el backend implemente:
- * - POST /assignment-history (crear entrada)
- * - GET /assignment-history/user/{userId} (obtener por usuario)
- * - GET /assignment-history/recent (obtener recientes)
- */
 export class ApiAssignmentHistoryRepository implements IAssignmentHistoryRepository {
-  private readonly STORAGE_KEY = 'assignment_history_cache';
-  
-  /**
-   * Obtiene el historial cacheado localmente
-   */
-  private getLocalHistory(): AssignmentHistoryEntry[] {
-    if (typeof window === 'undefined') return [];
-    
+  async findByUserId(
+    userId: string,
+    page: number = 1,
+    limit?: number
+  ): Promise<AssignmentHistoryResponse> {
     try {
-      const cached = localStorage.getItem(this.STORAGE_KEY);
-      if (!cached) return [];
-      
-      const entries = JSON.parse(cached) as AssignmentHistoryEntry[];
-      return entries.map(e => ({
-        ...e,
-        timestamp: new Date(e.timestamp)
-      }));
-    } catch (error) {
-      console.error('Error reading local history cache:', error);
-      return [];
-    }
-  }
-  
-  /**
-   * Guarda el historial en cache local
-   */
-  private saveLocalHistory(entries: AssignmentHistoryEntry[]): void {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(entries));
-    } catch (error) {
-      console.error('Error saving local history cache:', error);
-    }
-  }
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      if (limit) params.append('limit', limit.toString());
 
-  async findByUserId(userId: string, tenantId: string): Promise<AssignmentHistoryEntry[]> {
-    try {
-      // Intentar obtener del backend
-      const response = await apiClient.get<AssignmentHistoryEntry[]>(
-        `/assignment-history/user/${userId}?tenantId=${tenantId}`,
+      const response = await apiClient.get<any>(
+        `/assignment-history/user/${userId}?${params.toString()}`,
         true
       );
-      return response;
-    } catch (error: any) {
-      // Si el endpoint no existe (404), usar cache local
-      if (error?.response?.status === 404) {
-        console.info('📦 Backend endpoint not available, using local cache for assignment history');
-        const localHistory = this.getLocalHistory();
-        return localHistory.filter(e => e.userId === userId && e.tenantId === tenantId);
-      }
-      
+
+      return this.mapResponse(response);
+    } catch (error) {
       console.error('Error fetching assignment history:', error);
-      return [];
+      throw error;
     }
   }
 
-  async create(entry: Omit<AssignmentHistoryEntry, 'id'>): Promise<AssignmentHistoryEntry> {
-    const newEntry: AssignmentHistoryEntry = {
-      ...entry,
-      id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date(entry.timestamp),
+  private mapResponse(response: any): AssignmentHistoryResponse {
+    return {
+      data: (response.data || []).map(this.mapEntry),
+      total: response.total || 0,
+      page: response.page || 1,
+      limit: response.limit || null,
+      totalPages: response.totalPages || 1,
+      hasNext: response.hasNext || false,
+      hasPrev: response.hasPrev || false,
     };
-    
-    try {
-      // Intentar guardar en backend
-      const response = await apiClient.post<AssignmentHistoryEntry>(
-        '/assignment-history',
-        entry,
-        true
-      );
-      return response;
-    } catch (error: any) {
-      // Si el endpoint no existe (404), guardar localmente
-      if (error?.response?.status === 404) {
-        console.info('📦 Backend endpoint not available, saving assignment history locally');
-        const localHistory = this.getLocalHistory();
-        localHistory.push(newEntry);
-        
-        // Mantener solo últimas 100 entradas
-        if (localHistory.length > 100) {
-          localHistory.splice(0, localHistory.length - 100);
-        }
-        
-        this.saveLocalHistory(localHistory);
-        return newEntry;
-      }
-      
-      console.error('Error creating assignment history entry:', error);
-      // Aún así guardar localmente como fallback
-      const localHistory = this.getLocalHistory();
-      localHistory.push(newEntry);
-      this.saveLocalHistory(localHistory);
-      return newEntry;
-    }
   }
 
-  async findRecent(tenantId: string, limit: number = 50): Promise<AssignmentHistoryEntry[]> {
-    try {
-      // Intentar obtener del backend
-      const response = await apiClient.get<AssignmentHistoryEntry[]>(
-        `/assignment-history/recent?tenantId=${tenantId}&limit=${limit}`,
-        true
-      );
-      return response;
-    } catch (error: any) {
-      // Si el endpoint no existe (404), usar cache local
-      if (error?.response?.status === 404) {
-        console.info('📦 Backend endpoint not available, using local cache for recent history');
-        const localHistory = this.getLocalHistory();
-        return localHistory
-          .filter(e => e.tenantId === tenantId)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, limit);
-      }
-      
-      console.error('Error fetching recent assignment history:', error);
-      return [];
-    }
-  }
+  private mapEntry = (data: any): AssignmentHistoryEntry => {
+    return {
+      id: data.id,
+      userId: data.userId,
+      entityId: data.entityId,
+      entityName: data.entityName || 'Unknown',
+      entityType: data.entityType as 'AREA' | 'WAREHOUSE',
+      action: data.action as 'ASSIGNED' | 'REMOVED',
+      performedById: data.performedById,
+      performedByName: data.performedByName || 'Unknown',
+      performedByEmail: data.performedByEmail || '',
+      timestamp: new Date(data.timestamp),
+      revokedAt: data.revokedAt ? new Date(data.revokedAt) : null,
+      isActive: data.isActive ?? true,
+    };
+  };
 }

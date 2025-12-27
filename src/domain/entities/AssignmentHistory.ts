@@ -1,19 +1,27 @@
 export type AssignmentAction = 'ASSIGNED' | 'REMOVED';
-export type AssignmentType = 'AREA' | 'WAREHOUSE';
+export type AssignmentEntityType = 'AREA' | 'WAREHOUSE';
 
 export interface AssignmentHistoryEntry {
   id: string;
   userId: string;
-  entityId: string; // ID del área o bodega
-  entityName: string; // Nombre del área o bodega para visualización
-  entityType: AssignmentType;
+  entityId: string;
+  entityName: string;
+  entityType: AssignmentEntityType;
   action: AssignmentAction;
-  performedBy: string; // ID del usuario que realizó el cambio
-  performedByName: string; // Nombre del usuario que realizó el cambio
+  performedById: string;
+  performedByName: string;
+  performedByEmail: string;
   timestamp: Date;
-  tenantId: string;
+  revokedAt: Date | null;
+  isActive: boolean;
 }
 
-export interface AssignmentHistory {
-  entries: AssignmentHistoryEntry[];
+export interface AssignmentHistoryResponse {
+  data: AssignmentHistoryEntry[];
+  total: number;
+  page: number;
+  limit: number | null;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }

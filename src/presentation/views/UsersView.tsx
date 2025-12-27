@@ -35,7 +35,7 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { formatRUT } from "@/shared/utils/formatters";
 import { UserDialog } from "@/presentation/components/UserDialog";
 import { AssignmentsDialog } from "@/presentation/components/AssignmentsDialog";
-import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
+import { ToggleUserStatusDialog } from "@/presentation/components/ToggleUserStatusDialog";
 import { UserDetailDialog } from "@/presentation/components/UserDetailDialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -385,7 +385,7 @@ export function UsersView() {
   };
 
   // Habilitar / deshabilitar usuario usando hook useToggleUserStatus
-  const handleDisable = async () => {
+  const handleDisable = async (reason: string) => {
     if (!selectedUser) return;
 
     setActionLoading(true);
@@ -399,6 +399,7 @@ export function UsersView() {
         userId: selectedUser.id,
         newStatus,
         performedBy: currentUser?.id || '', // Registrar quién realizó el cambio
+        reason: reason || undefined, // Pasar la razón del cambio
       });
 
       toast({
@@ -1300,7 +1301,6 @@ export function UsersView() {
           isLoading={actionLoading}
         />
       )}
-
       {/* Dialog de detalle de usuario con historial */}
       <UserDetailDialog
         open={detailDialogOpen}
@@ -1308,21 +1308,13 @@ export function UsersView() {
         user={selectedUser}
       />
 
-      {/* Dialog confirmar habilitar/deshabilitar */}
-      <ConfirmDialog
+      {/* Dialog confirmar habilitar/deshabilitar con razón */}
+      <ToggleUserStatusDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
+        user={selectedUser}
         onConfirm={handleDisable}
-        title={
-          selectedUser?.status === "HABILITADO"
-            ? "¿Deshabilitar usuario?"
-            : "¿Habilitar usuario?"
-        }
-        description={
-          selectedUser?.status === "HABILITADO"
-            ? `¿Confirma deshabilitar a ${selectedUser?.name} ${selectedUser?.lastName}? No podrá acceder al sistema y sus asignaciones quedarán inactivas.`
-            : `¿Confirma habilitar a ${selectedUser?.name} ${selectedUser?.lastName}? Podrá volver a acceder al sistema con sus asignaciones actuales.`
-        }
+        isLoading={actionLoading}
       />
     </>
   );

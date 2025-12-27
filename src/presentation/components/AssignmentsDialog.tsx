@@ -23,12 +23,15 @@ import {
 } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, MapPin, Warehouse } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserCheck, MapPin, Warehouse, History } from "lucide-react";
 import { MultiSelect, type Option } from "@/components/ui/multi-select";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { User } from "@/domain/entities/User";
 import { TENANT_ID, USER_ROLES } from "@/shared/constants";
 import { useAuth } from "@/hooks/use-auth";
+import { useAssignmentHistory } from "@/hooks/useAssignmentHistory";
+import { AssignmentHistoryList } from "@/presentation/components/AssignmentHistoryList";
 
 // Schema para asignaciones
 const assignmentsSchema = z.object({
@@ -67,6 +70,10 @@ export function AssignmentsDialog({
       warehouses: user.warehouses || [],
     },
   });
+
+  // Hook para cargar historial de asignaciones
+  const { data: historyData, isLoading: loadingHistory } = useAssignmentHistory(user.id);
+  const assignmentHistory = historyData?.data || [];
 
   // Helper para extraer el rol del usuario actual correctamente
   const getUserRole = (): string => {
@@ -298,8 +305,18 @@ export function AssignmentsDialog({
           </div>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <Tabs defaultValue="assignments" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="assignments">Asignaciones</TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-2" />
+              Historial
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="assignments" className="space-y-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             {/* Áreas - Solo para JEFE */}
             {showAreas && (
               <FormField
@@ -439,6 +456,17 @@ export function AssignmentsDialog({
             </div>
           </form>
         </Form>
+          </TabsContent>
+
+          <TabsContent value="history">
+            <div className="py-4">
+              <AssignmentHistoryList 
+                entries={assignmentHistory} 
+                isLoading={loadingHistory} 
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

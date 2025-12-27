@@ -1,15 +1,49 @@
 {
   "info": {
     "_postman_id": "5f7df3d9-3ee0-4873-a4a1-b298d1d03f87",
-    "name": "SPack",
-    "description": "Colección de endpoints para testear el backend de SmartPack (Auth, Users).",
+    "name": "SmartPack Backend - Complete API",
+    "description": "Colección completa de endpoints para SmartPack Backend: Auth, Users, Roles, Areas, Warehouses y Assignments",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "38493185"
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "default"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "default"
+    }
+  ],
   "item": [
     {
       "name": "Auth",
       "item": [
+        {
+          "name": "/auth/register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo.usuario@ekiproject.cl\",\n  \"password\": \"Password123!@#\",\n  \"firstName\": \"Nuevo\",\n  \"lastName\": \"Usuario\",\n  \"rut\": \"12.345.678-9\",\n  \"phone\": \"+56912345678\",\n  \"roleId\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
         {
           "name": "/auth/login",
           "event": [
@@ -17,19 +51,16 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const jsonData = pm.response.json();\r",
-                  "\r",
-                  "if (jsonData.accessToken) {\r",
-                  "    pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);\r",
-                  "    console.log(\"Token guardado:\", jsonData.accessToken);\r",
-                  "} else {\r",
-                  "    console.warn(\"No se encontró 'accessToken' en la respuesta.\");\r",
-                  "}\r",
-                  ""
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);",
+                  "    console.log(\"✓ Token guardado en accessToken\");",
+                  "} else {",
+                  "    console.warn(\"✗ No se encontró token en la respuesta\");",
+                  "}"
                 ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "packages": {}
               }
             }
           ],
@@ -43,12 +74,48 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"fcondori@ekiproject.cl\",\n  \"password\": \"Admin123!@#\"\n}"
+              "raw": "{\n  \"email\": \"fdcg.contacto1@gmail.com\",\n  \"password\": \"Admin123!@#\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/auth/login",
+              "raw": "{{base_url}/auth/login",
               "host": ["{{base_url}}"],
               "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/auth/google",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "google"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/auth/me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
             }
           },
           "response": []
@@ -72,20 +139,52 @@
               ]
             },
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"email\": \"usuario.prueba@example.com\",\r\n  \"password\": \"Password123!@#\",\r\n  \"firstName\": \"Usuario\",\r\n  \"lastName\": \"Prueba\",\r\n  \"rut\": null,\r\n  \"phone\": null,\r\n  \"roleId\": null\r\n}\r\n",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"email\": \"usuario.nuevo@ekiproject.cl\",\n  \"password\": \"Password123!@#\",\n  \"firstName\": \"Usuario\",\n  \"lastName\": \"Nuevo\",\n  \"rut\": \"15.123.456-7\",\n  \"phone\": \"+56987654321\",\n  \"roleId\": null\n}"
             },
             "url": {
               "raw": "{{base_url}}/users",
               "host": ["{{base_url}}"],
               "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/users/validate-unique",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rut\": \"12345678-9\",\n  \"email\": \"test@ekiproject.cl\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/validate-unique",
+              "host": ["{{base_url}}"],
+              "path": ["users", "validate-unique"]
             }
           },
           "response": []
@@ -106,7 +205,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/users?page=1&limit=10&search=&sortBy=createdAt&order=desc",
+              "raw": "{{base_url}}/users?page=1&limit=10&search=&sortBy=createdAt&order=desc&roleId=&isEnabled=",
               "host": ["{{base_url}}"],
               "path": ["users"],
               "query": [
@@ -130,6 +229,16 @@
                 {
                   "key": "order",
                   "value": "desc"
+                },
+                {
+                  "key": "roleId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "isEnabled",
+                  "value": "",
+                  "disabled": true
                 }
               ]
             }
@@ -219,20 +328,20 @@
               ]
             },
             "method": "PUT",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"email\": \"usuario3.actualizado@example.com\",\r\n  \"firstName\": \"Usuario 3\",\r\n  \"lastName\": \"Actualizado\",\r\n  \"rut\": \"11.111.111-1\",\r\n  \"phone\": \"+56912345678\",\r\n  \"isEnabled\": true\r\n}\r\n",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"phone\": \"+56987654321\",\n  \"isEnabled\": false,\n  \"reason\": \"Usuario inactivo por solicitud\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/users/",
+              "raw": "{{base_url}}/users/37b6119d-6bb0-48c1-978d-f68c76bf65de",
               "host": ["{{base_url}}"],
-              "path": ["users", ""]
+              "path": ["users", "37b6119d-6bb0-48c1-978d-f68c76bf65de"]
             }
           },
           "response": []
@@ -259,6 +368,102 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "/users/{userId}/enablement-history",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/37b6119d-6bb0-48c1-978d-f68c76bf65de/enablement-history?page=1&limit=10&sortBy=occurredAt&order=desc",
+              "host": ["{{base_url}}"],
+              "path": [
+                "users",
+                "37b6119d-6bb0-48c1-978d-f68c76bf65de",
+                "enablement-history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "occurredAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/enablement-history (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enablement-history?page=1&limit=10&sortBy=occurredAt&order=desc&userId=&action=",
+              "host": ["{{base_url}}"],
+              "path": ["enablement-history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "occurredAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "action",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -281,9 +486,37 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/roles",
+              "raw": "{{base_url}}/roles?page=1&limit=10&search=&sortBy=createdAt&order=desc&isEnabled=",
               "host": ["{{base_url}}"],
-              "path": ["roles"]
+              "path": ["roles"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "isEnabled",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
             }
           },
           "response": []
@@ -291,7 +524,7 @@
       ]
     },
     {
-      "name": "Area",
+      "name": "Areas",
       "item": [
         {
           "name": "/areas",
@@ -307,15 +540,15 @@
               ]
             },
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"name\": \"Zona Este\",\r\n  \"nodeType\": \"CHILD\",\r\n  \"parentAreaId\": \"278dbc09-b38d-4f65-b482-f2d4f2117351\"\r\n}\r\n\r\n\r\n",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"name\": \"Nueva Área\",\n  \"nodeType\": \"ROOT\",\n  \"parentAreaId\": null\n}"
             },
             "url": {
               "raw": "{{base_url}}/areas",
@@ -341,9 +574,37 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/areas",
+              "raw": "{{base_url}}/areas?page=1&limit=10&search=&sortBy=createdAt&order=desc&isEnabled=",
               "host": ["{{base_url}}"],
-              "path": ["areas"]
+              "path": ["areas"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "isEnabled",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
             }
           },
           "response": []
@@ -364,9 +625,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/areas/f8c35061-fa89-4b47-bcdc-a007d09bc8d4",
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
               "host": ["{{base_url}}"],
-              "path": ["areas", "f8c35061-fa89-4b47-bcdc-a007d09bc8d4"]
+              "path": ["areas", "6ebee4b1-b76a-4aba-bb92-9fe76349bb77"]
             }
           },
           "response": []
@@ -374,53 +635,31 @@
         {
           "name": "/areas/{id}",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "PUT",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/areas/{id}",
-              "host": ["{{base_url}}"],
-              "path": ["areas", "{id}"]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Assignments",
-      "item": [
-        {
-          "name": "/areas/{areaId}/warehouses",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"warehouseId\": \"01921be2-9fd3-4d31-98d2-8a979193188a\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"name\": \"Área Actualizada\",\n  \"nodeType\": \"ROOT\",\n  \"parentAreaId\": null\n}"
             },
             "url": {
-              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/warehouses",
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
               "host": ["{{base_url}}"],
-              "path": [
-                "areas",
-                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
-                "warehouses"
-              ]
+              "path": ["areas", "6ebee4b1-b76a-4aba-bb92-9fe76349bb77"]
             }
           },
           "response": []
@@ -438,16 +677,203 @@
                 }
               ]
             },
-            "method": "POST",
+            "method": "GET",
             "header": [],
+            "url": {
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/managers?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": [
+                "areas",
+                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+                "managers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/areas/{areaId/history",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/history",
+              "host": ["{{base_url}}"],
+              "path": [
+                "areas",
+                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+                "history"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Warehouses",
+      "item": [
+        {
+          "name": "/warehouses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses?page=1&limit=10&search=&sortBy=createdAt&order=desc&isEnabled=",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "isEnabled",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses/01921be2-9fd3-4d31-98d2-8a979193188a",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses", "01921be2-9fd3-4d31-98d2-8a979193188a"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{warehouseId}/supervisors",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses/01921be2-9fd3-4d31-98d2-8a979193188a/supervisors?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": [
+                "warehouses",
+                "01921be2-9fd3-4d31-98d2-8a979193188a",
+                "supervisors"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "item": [
+        {
+          "name": "/areas/{areaId}/managers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"managerId\": \"afad5af8-9110-4cad-9a1e-d937a435a827\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"managerId\": \"afad5af8-9110-4cad-9a1e-d937a435a827\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/managers",
@@ -462,13 +888,73 @@
           "response": []
         },
         {
+          "name": "/areas/{areaId}/warehouses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"01921be2-9fd3-4d31-98d2-8a979193188a\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/warehouses",
+              "host": ["{{base_url}}"],
+              "path": [
+                "areas",
+                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+                "warehouses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "/warehouses/{warehouseId}/supervisors",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supervisorId\": \"usuario-supervisor-id\"\n}"
+            },
             "url": {
-              "raw": "/warehouses/{warehouseId}/supervisors",
-              "path": ["warehouses", "{warehouseId}", "supervisors"]
+              "raw": "{{base_url}}/warehouses/01921be2-9fd3-4d31-98d2-8a979193188a/supervisors",
+              "host": ["{{base_url}}"],
+              "path": [
+                "warehouses",
+                "01921be2-9fd3-4d31-98d2-8a979193188a",
+                "supervisors"
+              ]
             }
           },
           "response": []
@@ -489,9 +975,32 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/assignments",
+              "raw": "{{base_url}}/assignments?page=1&limit=10&sortBy=assignedAt&order=desc&isEnabled=",
               "host": ["{{base_url}}"],
-              "path": ["assignments"]
+              "path": ["assignments"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "assignedAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "isEnabled",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
             }
           },
           "response": []
@@ -499,8 +1008,68 @@
         {
           "name": "/assignments/{id}",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
-            "header": []
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/assignments/88764947-d4a5-4876-a1da-44a14d94de0e",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", "88764947-d4a5-4876-a1da-44a14d94de0e"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/assignment-history/user/{userId}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/assignment-history/user/afad5af8-9110-4cad-9a1e-d937a435a827?page=1&limit=50&sortBy=timestamp&order=desc",
+              "host": ["{{base_url}}"],
+              "path": [
+                "assignment-history",
+                "user",
+                "afad5af8-9110-4cad-9a1e-d937a435a827"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "timestamp"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -528,78 +1097,6 @@
           "response": []
         }
       ]
-    },
-    {
-      "name": "Warehouses",
-      "item": [
-        {
-          "name": "/warehouses",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/warehouses",
-              "host": ["{{base_url}}"],
-              "path": ["warehouses"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/warehouses/{id}",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/warehouses/dac6b1a4-b290-4e42-9856-aca7a39ec275",
-              "host": ["{{base_url}}"],
-              "path": ["warehouses", "dac6b1a4-b290-4e42-9856-aca7a39ec275"]
-            }
-          },
-          "response": []
-        }
-      ]
-    }
-  ],
-  "variable": [
-    {
-      "key": "access_token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "base_url",
-      "value": "http://localhost:3000",
-      "type": "string"
-    },
-    {
-      "key": "user_id",
-      "value": "efa1d4f2-a208-4676-aafb-de5bcda044a2",
-      "type": "string"
-    },
-    {
-      "key": "accessToken",
-      "value": ""
     }
   ]
 }

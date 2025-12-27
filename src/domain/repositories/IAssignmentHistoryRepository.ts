@@ -1,7 +1,13 @@
-import { AssignmentHistoryEntry } from '@/domain/entities/AssignmentHistory';
+import { AssignmentHistoryResponse } from '../entities/AssignmentHistory';
 
 export interface IAssignmentHistoryRepository {
-  findByUserId(userId: string, tenantId: string): Promise<AssignmentHistoryEntry[]>;
-  create(entry: Omit<AssignmentHistoryEntry, 'id'>): Promise<AssignmentHistoryEntry>;
-  findRecent(tenantId: string, limit?: number): Promise<AssignmentHistoryEntry[]>;
+  /**
+   * GET /assignment-history/user/{userId}
+   * Obtiene el historial de asignaciones de un usuario específico
+   */
+  findByUserId(
+    userId: string,
+    page?: number,
+    limit?: number
+  ): Promise<AssignmentHistoryResponse>;
 }

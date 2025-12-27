@@ -139,10 +139,12 @@ export const useToggleUserStatus = () => {
       userId,
       newStatus,
       performedBy,
+      reason,
     }: {
       userId: string;
       newStatus: "HABILITADO" | "DESHABILITADO";
       performedBy: string;
+      reason?: string;
     }) => {
       const useCase = new ToggleUserStatus(userRepo);
       const result = await useCase.execute({
@@ -150,6 +152,7 @@ export const useToggleUserStatus = () => {
         newStatus,
         performedBy,
         tenantId: TENANT_ID,
+        reason,
       });
 
       if (!result.ok) {

@@ -362,6 +362,10 @@ export class ApiUserRepository implements IUserRepository {
         payload.isEnabled = updates.status === 'HABILITADO';
       }
 
+      if (updates.reason !== undefined) {
+        payload.reason = updates.reason;
+      }
+
       // ⚠️ IMPORTANTE:
       // - Este método SOLO actualiza datos propios del usuario.
       // - NO maneja ni role ni areas/warehouses.

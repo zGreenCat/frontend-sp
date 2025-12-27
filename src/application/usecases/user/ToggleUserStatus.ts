@@ -13,6 +13,7 @@ export class ToggleUserStatus {
     newStatus: "HABILITADO" | "DESHABILITADO";
     performedBy: string; // ID del usuario que realiza el cambio
     tenantId: string;
+    reason?: string; // Razón del cambio de estado
   }): Promise<Result<User>> {
     try {
       // Actualizar el estado del usuario
@@ -21,6 +22,7 @@ export class ToggleUserStatus {
         params.targetUserId,
         {
           status: params.newStatus,
+          reason: params.reason,
         },
         params.tenantId
       );

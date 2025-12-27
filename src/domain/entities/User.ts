@@ -47,6 +47,7 @@ export interface User {
   areaAssignments?: AreaAssignmentDetail[]; // Info completa de asignaciones
   assignmentHistory?: AssignmentHistoryEntry[];
   tenantId: string;
+  reason?: string; // Razón del último cambio de estado
 }
 
 export interface ValidateUserUniqueInput {

@@ -17,6 +17,7 @@ import {
   UserPlus,
   Star,
   GitBranch,
+  History,
 } from "lucide-react";
 
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
@@ -35,6 +36,8 @@ import { useAreas, useUpdateArea } from "@/hooks/useAreas";
 import { useAreaDetail } from "@/hooks/useAreaDetail";
 import { useRemoveManager } from "@/hooks/useAssignments";
 import { RemoveWarehouseFromArea } from "@/application/usecases/assignment/RemoveWarehouseToArea";
+import { useAreaHistory } from "@/hooks/useAreaHistory";
+import { AssignmentHistoryList } from "@/presentation/components/AssignmentHistoryList";
 
 interface AreaDetailViewProps {
   areaId: string;
@@ -60,6 +63,9 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const area: Area | null = data?.area ?? null;
   const assignedManagers: User[] = data?.managers ?? [];
   const assignedWarehouses: WarehouseEntity[] = data?.warehouses ?? [];
+
+  // Hook para cargar historial del área
+  const { data: historyEntries = [], isLoading: loadingHistory } = useAreaHistory(areaId);
 
   const [warehousesDialogOpen, setWarehousesDialogOpen] = useState(false);
   const [managersDialogOpen, setManagersDialogOpen] = useState(false);
@@ -338,7 +344,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
 
       {/* Tabs para asignaciones */}
       <Tabs defaultValue="warehouses" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="warehouses" className="gap-2">
             <Warehouse className="h-4 w-4" />
             Bodegas ({assignedWarehouses.length})
@@ -350,6 +356,10 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
           <TabsTrigger value="subareas" className="gap-2">
             <Building2 className="h-4 w-4" />
             Sub-áreas ({childAreas.length})
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            Historial
           </TabsTrigger>
         </TabsList>
 
@@ -518,6 +528,25 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab de Historial */}
+        
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Historial de Modificaciones
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AssignmentHistoryList 
+                entries={historyEntries} 
+                isLoading={loadingHistory} 
+              />
             </CardContent>
           </Card>
         </TabsContent>
