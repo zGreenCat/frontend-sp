@@ -106,10 +106,13 @@ export function useAreaDetail(areaId: string) {
       const warehousesAsEntities: WarehouseEntity[] = warehouses.map((w: any) => ({
         id: w.id,
         name: w.name,
-        location: w.location || "",
-        capacityKg: w.capacityKg || 0,
-        status: (w.status || "ACTIVO") as "ACTIVO" | "INACTIVO",
+        maxCapacityKg: w.maxCapacityKg || w.capacityKg || 900,
+        isEnabled: w.isEnabled ?? (w.status === "ACTIVO"),
+        capacityKg: w.capacityKg || w.maxCapacityKg || 900, // deprecated alias
+        status: (w.isEnabled ?? (w.status === "ACTIVO")) ? "ACTIVO" : "INACTIVO",
         tenantId: TENANT_ID,
+        areaId: w.areaId,
+        supervisorId: w.supervisorId,
       }));
 
       return {

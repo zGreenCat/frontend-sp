@@ -5,36 +5,46 @@ import { apiClient } from '@/infrastructure/api/apiClient';
 interface BackendWarehouse {
   id: string;
   name: string;
-  capacityKg?: number;
-  capacity?: number;
+  maxCapacityKg?: number;
+  capacityKg?: number; // deprecated, por compatibilidad
+  capacity?: number; // deprecated, por compatibilidad
   isEnabled?: boolean;
-  status?: string;
+  status?: string; // deprecated, por compatibilidad
   areaId?: string;
   supervisorId?: string;
   tenantId?: string;
   createdAt?: string;
   updatedAt?: string;
+  currentCapacityKg?: number;
 }
 
 export class ApiWarehouseRepository implements IWarehouseRepository {
   private mapBackendWarehouse(backendWarehouse: BackendWarehouse): Warehouse {
-    // El backend puede usar isEnabled (boolean) o status (string)
-    let status: 'ACTIVO' | 'INACTIVO' = 'ACTIVO';
+    // Mapear isEnabled del backend
+    const isEnabled = backendWarehouse.isEnabled ?? true;
     
-    if (typeof backendWarehouse.isEnabled === 'boolean') {
-      status = backendWarehouse.isEnabled ? 'ACTIVO' : 'INACTIVO';
-    } else if (backendWarehouse.status) {
-      status = backendWarehouse.status === 'ACTIVO' ? 'ACTIVO' : 'INACTIVO';
-    }
+    // Mapear maxCapacityKg del backend (con fallbacks por compatibilidad)
+    const maxCapacityKg = backendWarehouse.maxCapacityKg 
+      || backendWarehouse.capacityKg 
+      || backendWarehouse.capacity 
+      || 900;
     
     return {
       id: backendWarehouse.id,
       name: backendWarehouse.name,
-      capacityKg: backendWarehouse.capacityKg || backendWarehouse.capacity || 0,
-      status,
+      maxCapacityKg,
+      isEnabled,
       areaId: backendWarehouse.areaId,
       supervisorId: backendWarehouse.supervisorId,
-      tenantId: backendWarehouse.tenantId || '',
+      tenantId: backendWarehouse.tenantId,
+      currentCapacityKg: backendWarehouse.currentCapacityKg,
+      createdAt: backendWarehouse.createdAt,
+      updatedAt: backendWarehouse.updatedAt,
+      // Computed property para retrocompatibilidad
+      get status() {
+        return this.isEnabled ? 'ACTIVO' : 'INACTIVO';
+      },
+      capacityKg: maxCapacityKg, // deprecated alias
     };
   }
 
@@ -85,8 +95,14 @@ export class ApiWarehouseRepository implements IWarehouseRepository {
 
   async create(warehouse: Omit<Warehouse, 'id'>): Promise<Warehouse> {
     try {
-      // TODO: Backend debe implementar POST /warehouses
-      throw new Error('POST /warehouses not implemented in backend');
+      const response = await apiClient.post<any>('/warehouses', {
+        name: warehouse.name,
+        maxCapacityKg: warehouse.maxCapacityKg,
+        isEnabled: warehouse.isEnabled ?? true,
+      }, true);
+
+      const backendWarehouse = response.data || response;
+      return this.mapBackendWarehouse(backendWarehouse);
     } catch (error) {
       console.error('Error creating warehouse:', error);
       throw error;

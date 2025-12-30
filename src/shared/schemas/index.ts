@@ -99,11 +99,8 @@ export type UpdateAreaInput = z.infer<typeof updateAreaSchema>;
 
 export const createWarehouseSchema = z.object({
   name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
-  capacityKg: z.number().min(0, 'Capacidad debe ser mayor a 0'),
-  status: z.string().default('ACTIVO'),
-  areaId: z.string().optional(),
-  supervisorId: z.string().optional(),
-  tenantId: z.string().min(1),
+  maxCapacityKg: z.number().min(1, 'Capacidad debe ser mayor a 0').default(900),
+  isEnabled: z.boolean().default(true),
 });
 
 export const updateWarehouseSchema = createWarehouseSchema.partial().extend({

@@ -29,13 +29,14 @@ export function AssignmentHistoryView({ userId, tenantId }: AssignmentHistoryVie
 
   useEffect(() => {
     loadHistory();
-  }, [userId, tenantId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const entries = await assignmentHistoryRepo.findByUserId(userId, tenantId);
-      setHistory(entries);
+      const response = await assignmentHistoryRepo.findByUserId(userId);
+      setHistory(response.data);
     } catch (error) {
       console.error("Error loading assignment history:", error);
     } finally {

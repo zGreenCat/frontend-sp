@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { Warehouse } from '@/domain/entities/Warehouse';
+import { CreateWarehouseInput } from '@/shared/schemas';
 import { TENANT_ID } from '@/shared/constants';
 
 // Query Keys
@@ -60,8 +61,8 @@ export const useCreateWarehouse = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Omit<Warehouse, 'id' | 'createdAt' | 'updatedAt'>) =>
-      warehouseRepo.create({ ...data, tenantId: TENANT_ID }),
+    mutationFn: (data: CreateWarehouseInput) =>
+      warehouseRepo.create(data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all });
     },
