@@ -20,7 +20,6 @@ export function WarehousesView() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
 
   // React Query hooks
   const { data: warehouses = [], isLoading: loading } = useWarehouses();
@@ -39,7 +38,6 @@ export function WarehousesView() {
   );
 
   const handleCreate = async (data: CreateWarehouseInput) => {
-    setActionLoading(true);
     try {
       const createdWarehouse = await createWarehouseMutation.mutateAsync(data);
 
@@ -57,15 +55,12 @@ export function WarehousesView() {
         description: error?.message || "No se pudo crear la bodega. Intenta nuevamente.",
         variant: "destructive",
       });
-    } finally {
-      setActionLoading(false);
     }
   };
 
   const handleEdit = async (data: CreateWarehouseInput) => {
     if (!selectedWarehouse) return;
 
-    setActionLoading(true);
     try {
       const updatedWarehouse = await updateWarehouseMutation.mutateAsync({
         id: selectedWarehouse.id,
@@ -90,8 +85,6 @@ export function WarehousesView() {
         description: error?.message || "No se pudo actualizar la bodega. Intenta nuevamente.",
         variant: "destructive",
       });
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -239,7 +232,7 @@ export function WarehousesView() {
               }
             : undefined
         }
-        isLoading={actionLoading}
+        isLoading={createWarehouseMutation.isPending || updateWarehouseMutation.isPending}
         mode={selectedWarehouse ? "edit" : "create"}
       />
     </div>

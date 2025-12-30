@@ -1,5 +1,6 @@
 import { WarehouseDetailView } from "@/presentation/views/WarehouseDetailView";
 
-export default function WarehouseDetailPage({ params }: { params: { id: string } }) {
-  return <WarehouseDetailView warehouseId={params.id} />;
+export default async function WarehouseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <WarehouseDetailView warehouseId={id} />;
 }

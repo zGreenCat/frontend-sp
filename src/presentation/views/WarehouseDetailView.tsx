@@ -58,7 +58,6 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
   const { toast } = useToast();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
 
@@ -77,7 +76,6 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
   const handleEdit = async (data: CreateWarehouseInput) => {
     if (!warehouse) return;
 
-    setActionLoading(true);
     try {
       const updatedWarehouse = await updateWarehouseMutation.mutateAsync({
         id: warehouse.id,
@@ -101,8 +99,6 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
         description: error?.message || "No se pudo actualizar la bodega. Intenta nuevamente.",
         variant: "destructive",
       });
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -359,7 +355,7 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
             maxCapacityKg: warehouse.maxCapacityKg || warehouse.capacityKg || 900,
             isEnabled: warehouse.isEnabled ?? (warehouse.status === "ACTIVO"),
           }}
-          isLoading={actionLoading}
+          isLoading={updateWarehouseMutation.isPending}
           mode="edit"
         />
       )}
