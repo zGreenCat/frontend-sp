@@ -181,6 +181,21 @@ private handleSessionExpired(): void {
     return this.handleResponse<T>(response);
   }
 
+  async patch<T, D = unknown>(
+    endpoint: string,
+    data: D,
+    requiresAuth: boolean = true
+  ): Promise<T> {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      method: "PATCH",
+      headers: this.getHeaders(requiresAuth),
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+
+    return this.handleResponse<T>(response);
+  }
+
   async delete<T>(
     endpoint: string,
     requiresAuth: boolean = true

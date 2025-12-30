@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { Warehouse } from '@/domain/entities/Warehouse';
-import { CreateWarehouseInput } from '@/shared/schemas';
+import { CreateWarehouseInput, UpdateWarehouseInput } from '@/shared/schemas';
 import { TENANT_ID } from '@/shared/constants';
 
 // Query Keys
@@ -78,8 +78,8 @@ export const useUpdateWarehouse = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Warehouse> }) =>
-      warehouseRepo.update(id, data, TENANT_ID),
+    mutationFn: ({ id, data }: { id: string; data: Partial<UpdateWarehouseInput> }) =>
+      warehouseRepo.update(id, data as any, TENANT_ID),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all });
       queryClient.invalidateQueries({ queryKey: warehouseKeys.detail(variables.id) });

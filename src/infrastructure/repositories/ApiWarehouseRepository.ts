@@ -111,8 +111,16 @@ export class ApiWarehouseRepository implements IWarehouseRepository {
 
   async update(id: string, updates: Partial<Warehouse>, tenantId: string): Promise<Warehouse> {
     try {
-      // TODO: Backend debe implementar PUT /warehouses/{id}
-      throw new Error('PUT /warehouses/{id} not implemented in backend');
+      const payload: any = {};
+      
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.maxCapacityKg !== undefined) payload.maxCapacityKg = updates.maxCapacityKg;
+      if (updates.isEnabled !== undefined) payload.isEnabled = updates.isEnabled;
+
+      const response = await apiClient.patch<any>(`/warehouses/${id}`, payload, true);
+
+      const backendWarehouse = response.data || response;
+      return this.mapBackendWarehouse(backendWarehouse);
     } catch (error) {
       console.error('Error updating warehouse:', error);
       throw error;

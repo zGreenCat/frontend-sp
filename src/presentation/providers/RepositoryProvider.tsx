@@ -5,6 +5,7 @@ import React, { createContext, useContext, ReactNode } from 'react';
 import { ApiUserRepository } from '@/infrastructure/repositories/ApiUserRepository';
 import { ApiAreaRepository } from '@/infrastructure/repositories/ApiAreaRepository';
 import { ApiWarehouseRepository } from '@/infrastructure/repositories/ApiWarehouseRepository';
+import { ApiWarehouseMovementRepository } from '@/infrastructure/repositories/ApiWarehouseMovementRepository';
 import { ApiAssignmentHistoryRepository } from '@/infrastructure/repositories/ApiAssignmentHistoryRepository';
 import { ApiAssignmentRepository } from '@/infrastructure/repositories/ApiAssignmentRepository';
 import { ApiAuditLogRepository } from '@/infrastructure/repositories/ApiAuditLogRepository';
@@ -18,6 +19,7 @@ import { MockProjectRepository } from '@/infrastructure/repositories/MockProject
 import { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { IAreaRepository } from '@/domain/repositories/IAreaRepository';
 import { IWarehouseRepository } from '@/domain/repositories/IWarehouseRepository';
+import { IWarehouseMovementRepository } from '@/domain/repositories/IWarehouseMovementRepository';
 import { IAssignmentHistoryRepository } from '@/domain/repositories/IAssignmentHistoryRepository';
 import { IAssignmentRepository } from '@/domain/repositories/IAssignmentRepository';
 import { IAuditLogRepository } from '@/domain/repositories/IAuditLogRepository';
@@ -27,6 +29,7 @@ interface Repositories {
   userRepo: IUserRepository;
   areaRepo: IAreaRepository;
   warehouseRepo: IWarehouseRepository;
+  warehouseMovementRepo: IWarehouseMovementRepository;
   boxRepo: MockBoxRepository;
   productRepo: MockProductRepository;
   providerRepo: MockProviderRepository;
@@ -45,6 +48,7 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     userRepo: new ApiUserRepository(),
     areaRepo: new ApiAreaRepository(),
     warehouseRepo: new ApiWarehouseRepository(),
+    warehouseMovementRepo: new ApiWarehouseMovementRepository(),
     assignmentHistoryRepo: new ApiAssignmentHistoryRepository(),
     assignmentRepo: new ApiAssignmentRepository(),
     auditLogRepo: new ApiAuditLogRepository(),

@@ -1,32 +1,38 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Edit } from "lucide-react";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { WarehouseDialog } from "@/presentation/components/WarehouseDialog";
-import { useWarehouses, useCreateWarehouse } from "@/hooks/useWarehouses";
+import { useWarehouses, useCreateWarehouse, useUpdateWarehouse } from "@/hooks/useWarehouses";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { CreateWarehouseInput } from "@/shared/schemas";
+import { Warehouse } from "@/domain/entities/Warehouse";
 
 export function WarehousesView() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   // React Query hooks
   const { data: warehouses = [], isLoading: loading } = useWarehouses();
   const createWarehouseMutation = useCreateWarehouse();
+  const updateWarehouseMutation = useUpdateWarehouse();
 
   // Permisos y toasts
   const { can } = usePermissions();
   const { toast } = useToast();
 
-  const canCreate = can("WAREHOUSES_CREATE");
+  const canCreate = can("warehouses:create");
+  const canEdit = can("warehouses:edit");
 
   const filteredWarehouses = warehouses.filter((w) =>
     w.name.toLowerCase().includes(search.toLowerCase())
@@ -43,6 +49,7 @@ export function WarehousesView() {
       });
 
       setDialogOpen(false);
+      setSelectedWarehouse(null);
     } catch (error: any) {
       console.error("Error al crear bodega:", error);
       toast({
@@ -55,7 +62,54 @@ export function WarehousesView() {
     }
   };
 
+  const handleEdit = async (data: CreateWarehouseInput) => {
+    if (!selectedWarehouse) return;
+
+    setActionLoading(true);
+    try {
+      const updatedWarehouse = await updateWarehouseMutation.mutateAsync({
+        id: selectedWarehouse.id,
+        data: {
+          name: data.name,
+          maxCapacityKg: data.maxCapacityKg,
+          isEnabled: data.isEnabled,
+        },
+      });
+
+      toast({
+        title: "✅ Bodega actualizada",
+        description: `La bodega "${updatedWarehouse.name}" ha sido actualizada correctamente.`,
+      });
+
+      setDialogOpen(false);
+      setSelectedWarehouse(null);
+    } catch (error: any) {
+      console.error("Error al actualizar bodega:", error);
+      toast({
+        title: "❌ Error al actualizar bodega",
+        description: error?.message || "No se pudo actualizar la bodega. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSubmit = async (data: CreateWarehouseInput) => {
+    if (selectedWarehouse) {
+      await handleEdit(data);
+    } else {
+      await handleCreate(data);
+    }
+  };
+
   const openCreateDialog = () => {
+    setSelectedWarehouse(null);
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (warehouse: Warehouse) => {
+    setSelectedWarehouse(warehouse);
     setDialogOpen(true);
   };
 
@@ -111,6 +165,11 @@ export function WarehousesView() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
                       Área
                     </th>
+                    {canEdit && (
+                      <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">
+                        Acciones
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -120,7 +179,12 @@ export function WarehousesView() {
                       className="border-b border-border hover:bg-secondary/20 transition-colors"
                     >
                       <td className="py-4 px-4 font-medium text-foreground">
-                        {warehouse.name}
+                        <button
+                          onClick={() => router.push(`/warehouses/${warehouse.id}`)}
+                          className="text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          {warehouse.name}
+                        </button>
                       </td>
                       <td className="py-4 px-4 text-foreground">
                         {warehouse.maxCapacityKg?.toLocaleString() || warehouse.capacityKg?.toLocaleString() || 0}
@@ -139,6 +203,19 @@ export function WarehousesView() {
                       <td className="py-4 px-4 text-sm text-muted-foreground">
                         {warehouse.areaId ? `Área ${warehouse.areaId}` : "Sin asignar"}
                       </td>
+                      {canEdit && (
+                        <td className="py-4 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(warehouse)}
+                            className="h-8 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Editar
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -148,13 +225,22 @@ export function WarehousesView() {
         </CardContent>
       </Card>
 
-      {/* Dialog para crear bodega */}
+      {/* Dialog para crear/editar bodega */}
       <WarehouseDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSubmit={handleCreate}
+        onSubmit={handleSubmit}
+        defaultValues={
+          selectedWarehouse
+            ? {
+                name: selectedWarehouse.name,
+                maxCapacityKg: selectedWarehouse.maxCapacityKg || selectedWarehouse.capacityKg || 900,
+                isEnabled: selectedWarehouse.isEnabled ?? (selectedWarehouse.status === "ACTIVO"),
+              }
+            : undefined
+        }
         isLoading={actionLoading}
-        mode="create"
+        mode={selectedWarehouse ? "edit" : "create"}
       />
     </div>
   );
