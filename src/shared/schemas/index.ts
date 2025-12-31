@@ -111,25 +111,55 @@ export type CreateWarehouseInput = z.infer<typeof createWarehouseSchema>;
 export type UpdateWarehouseInput = z.infer<typeof updateWarehouseSchema>;
 
 // ────────────────────────────────────────────────────────────────
-// BOX SCHEMAS
+// BOX SCHEMAS (campos reales del backend)
 // ────────────────────────────────────────────────────────────────
 
 export const createBoxSchema = z.object({
-  code: z.string().min(1, 'Código es requerido').max(50),
-  type: z.enum([BOX_TYPES.CARTON, BOX_TYPES.PLASTICO, BOX_TYPES.MADERA, BOX_TYPES.METALICA]),
-  status: z.string().default('DISPONIBLE'),
-  unitCost: z.number().min(0, 'Costo debe ser mayor o igual a 0'),
-  currency: z.enum([CURRENCIES.CLP, CURRENCIES.USD, CURRENCIES.EUR]),
-  history: z.array(z.any()).default([]),
-  tenantId: z.string().min(1),
+  qrCode: z.string()
+    .min(1, 'Código QR es requerido')
+    .max(100, 'Código QR no puede exceder 100 caracteres')
+    .regex(/^[A-Za-z0-9_-]+$/, 'Solo letras, números, guiones y guiones bajos'),
+  description: z.string()
+    .max(500, 'Descripción no puede exceder 500 caracteres')
+    .optional(),
+  type: z.enum(['PEQUEÑA', 'NORMAL', 'GRANDE'] as const, {
+    errorMap: () => ({ message: 'Tipo debe ser PEQUEÑA, NORMAL o GRANDE' }),
+  }),
+  currentWeightKg: z.number()
+    .min(0, 'Peso debe ser mayor o igual a 0')
+    .max(10000, 'Peso no puede exceder 10000 kg'),
+  warehouseId: z.string()
+    .min(1, 'Bodega es requerida'),
+  status: z.enum(['ACTIVA', 'INACTIVA', 'EN_USO'] as const).default('ACTIVA'),
 });
 
-export const updateBoxSchema = createBoxSchema.partial().extend({
+export const updateBoxSchema = z.object({
   id: z.string().min(1),
+  description: z.string()
+    .max(500, 'Descripción no puede exceder 500 caracteres')
+    .optional(),
+  type: z.enum(['PEQUEÑA', 'NORMAL', 'GRANDE'] as const).optional(),
+  currentWeightKg: z.number()
+    .min(0, 'Peso debe ser mayor o igual a 0')
+    .max(10000, 'Peso no puede exceder 10000 kg')
+    .optional(),
+  status: z.enum(['ACTIVA', 'INACTIVA', 'EN_USO'] as const).optional(),
+});
+
+export const moveBoxSchema = z.object({
+  warehouseId: z.string().min(1, 'Bodega destino es requerida'),
+});
+
+export const changeBoxStatusSchema = z.object({
+  status: z.enum(['ACTIVA', 'INACTIVA', 'EN_USO'] as const, {
+    errorMap: () => ({ message: 'Estado inválido' }),
+  }),
 });
 
 export type CreateBoxInput = z.infer<typeof createBoxSchema>;
 export type UpdateBoxInput = z.infer<typeof updateBoxSchema>;
+export type MoveBoxInput = z.infer<typeof moveBoxSchema>;
+export type ChangeBoxStatusInput = z.infer<typeof changeBoxStatusSchema>;
 
 // ────────────────────────────────────────────────────────────────
 // PRODUCT SCHEMAS

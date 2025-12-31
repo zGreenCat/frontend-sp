@@ -87,12 +87,18 @@ export const AREA_LEVELS = {
   DEPENDIENTE: 'DEPENDIENTE',
 } as const;
 
-// Box Types
+// Box Types (según backend)
 export const BOX_TYPES = {
-  CARTON: 'CARTÓN',
-  PLASTICO: 'PLÁSTICO',
-  MADERA: 'MADERA',
-  METALICA: 'METÁLICA',
+  PEQUEÑA: 'PEQUEÑA',
+  NORMAL: 'NORMAL',
+  GRANDE: 'GRANDE',
+} as const;
+
+// Box Status (según backend)
+export const BOX_STATUS = {
+  ACTIVA: 'ACTIVA',
+  INACTIVA: 'INACTIVA',
+  EN_USO: 'EN_USO',
 } as const;
 
 // Currency

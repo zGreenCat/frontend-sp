@@ -1,16 +1,15 @@
-import { IBoxRepository } from '@/domain/repositories/IBoxRepository';
-import { Box } from '@/domain/entities/Box';
+import { IBoxRepository, BoxListFilters, BoxListResponse } from '@/domain/repositories/IBoxRepository';
 import { Result, success, failure } from '@/shared/types/Result';
 
 export class ListBoxes {
   constructor(private boxRepo: IBoxRepository) {}
 
-  async execute(tenantId: string): Promise<Result<Box[]>> {
+  async execute(tenantId: string, filters?: BoxListFilters): Promise<Result<BoxListResponse>> {
     try {
-      const boxes = await this.boxRepo.findAll(tenantId);
-      return success(boxes);
-    } catch {
-      return failure('Error al listar cajas');
+      const response = await this.boxRepo.findAll(tenantId, filters);
+      return success(response);
+    } catch (error: any) {
+      return failure(error?.message || 'Error al listar cajas');
     }
   }
 }

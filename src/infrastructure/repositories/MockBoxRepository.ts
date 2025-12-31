@@ -5,6 +5,7 @@ const MOCK_BOXES: Box[] = [
   {
     id: '1',
     code: 'BOX-001',
+    description: 'Caja estándar para productos de consumo general',
     type: 'ESTANDAR',
     status: 'ACTIVO',
     unitCost: 15000,
@@ -31,6 +32,7 @@ const MOCK_BOXES: Box[] = [
   {
     id: '2',
     code: 'BOX-002',
+    description: 'Caja especial reforzada para productos delicados',
     type: 'ESPECIAL',
     status: 'EN_USO',
     unitCost: 25000,
@@ -49,6 +51,7 @@ const MOCK_BOXES: Box[] = [
   {
     id: '3',
     code: 'BOX-003',
+    description: 'Caja con aislamiento térmico para productos refrigerados',
     type: 'REFRIGERADO',
     status: 'ACTIVO',
     unitCost: 50000,

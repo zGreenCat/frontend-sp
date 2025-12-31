@@ -10,8 +10,8 @@ import { ApiAssignmentHistoryRepository } from '@/infrastructure/repositories/Ap
 import { ApiAssignmentRepository } from '@/infrastructure/repositories/ApiAssignmentRepository';
 import { ApiAuditLogRepository } from '@/infrastructure/repositories/ApiAuditLogRepository';
 import { ApiUserEnablementHistoryRepository } from '@/infrastructure/repositories/ApiUserEnablementHistoryRepository';
+import { ApiBoxRepository } from '@/infrastructure/repositories/ApiBoxRepository';
 // Mock Repositories (mantener para módulos no conectados)
-import { MockBoxRepository } from '@/infrastructure/repositories/MockBoxRepository';
 import { MockProductRepository } from '@/infrastructure/repositories/MockProductRepository';
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
 import { MockProjectRepository } from '@/infrastructure/repositories/MockProjectRepository';
@@ -24,13 +24,14 @@ import { IAssignmentHistoryRepository } from '@/domain/repositories/IAssignmentH
 import { IAssignmentRepository } from '@/domain/repositories/IAssignmentRepository';
 import { IAuditLogRepository } from '@/domain/repositories/IAuditLogRepository';
 import { IUserEnablementHistoryRepository } from '@/domain/repositories/IUserEnablementHistoryRepository';
+import { IBoxRepository } from '@/domain/repositories/IBoxRepository';
 
 interface Repositories {
   userRepo: IUserRepository;
   areaRepo: IAreaRepository;
   warehouseRepo: IWarehouseRepository;
   warehouseMovementRepo: IWarehouseMovementRepository;
-  boxRepo: MockBoxRepository;
+  boxRepo: IBoxRepository;
   productRepo: MockProductRepository;
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
@@ -53,12 +54,19 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     assignmentRepo: new ApiAssignmentRepository(),
     auditLogRepo: new ApiAuditLogRepository(),
     userEnablementHistoryRepo: new ApiUserEnablementHistoryRepository(),
+    boxRepo: new ApiBoxRepository(), // ✅ AHORA USA API REAL
     // Repositorios Mock (pendientes de conectar)
-    boxRepo: new MockBoxRepository(),
     productRepo: new MockProductRepository(),
     providerRepo: new MockProviderRepository(),
     projectRepo: new MockProjectRepository(),
   };
+
+  return (
+    <RepositoryContext.Provider value={repos}>
+      {children}
+    </RepositoryContext.Provider>
+  );
+};
 
   return (
     <RepositoryContext.Provider value={repos}>

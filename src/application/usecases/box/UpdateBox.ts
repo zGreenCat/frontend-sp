@@ -1,16 +1,16 @@
-import { IBoxRepository } from '@/domain/repositories/IBoxRepository';
+import { IBoxRepository, UpdateBoxDTO } from '@/domain/repositories/IBoxRepository';
 import { Box } from '@/domain/entities/Box';
 import { Result, success, failure } from '@/shared/types/Result';
 
 export class UpdateBox {
   constructor(private boxRepo: IBoxRepository) {}
 
-  async execute(id: string, updates: Partial<Box>, tenantId: string): Promise<Result<Box>> {
+  async execute(id: string, data: UpdateBoxDTO, tenantId: string): Promise<Result<Box>> {
     try {
-      const box = await this.boxRepo.update(id, updates, tenantId);
+      const box = await this.boxRepo.update(id, data, tenantId);
       return success(box);
-    } catch {
-      return failure('Error al actualizar caja');
+    } catch (error: any) {
+      return failure(error?.message || 'Error al actualizar caja');
     }
   }
 }
