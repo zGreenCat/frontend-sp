@@ -68,13 +68,6 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-  return (
-    <RepositoryContext.Provider value={repos}>
-      {children}
-    </RepositoryContext.Provider>
-  );
-};
-
 export const useRepositories = () => {
   const context = useContext(RepositoryContext);
   if (!context) {

@@ -94,11 +94,12 @@ export const BOX_TYPES = {
   GRANDE: 'GRANDE',
 } as const;
 
-// Box Status (según backend)
+// Box Status (según backend real)
 export const BOX_STATUS = {
-  ACTIVA: 'ACTIVA',
-  INACTIVA: 'INACTIVA',
-  EN_USO: 'EN_USO',
+  DISPONIBLE: 'DISPONIBLE',
+  EN_REPARACION: 'EN_REPARACION',
+  DANADA: 'DANADA',
+  RETIRADA: 'RETIRADA',
 } as const;
 
 // Currency

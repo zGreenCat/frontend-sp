@@ -13,21 +13,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Edit, Search, QrCode, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Eye, Edit, Search, QrCode, ChevronLeft, ChevronRight, LayoutGrid, List, MapPin } from "lucide-react";
 import { Box } from "@/domain/entities/Box";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { BoxDialog } from "@/presentation/components/BoxDialog";
+import { BoxesTable } from "@/presentation/components/BoxesTable";
 import { useBoxes, useCreateBox, useUpdateBox, useFindBoxByQr } from "@/hooks/useBoxes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { CreateBoxInput } from "@/shared/schemas";
 import { BOX_STATUS } from "@/shared/constants";
+import { cn } from "@/lib/utils";
+
+type BoxViewMode = "grid" | "table";
 
 export function BoxesView() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBox, setSelectedBox] = useState<Box | null>(null);
+
+  // Vista: grid o tabla
+  const [viewMode, setViewMode] = useState<BoxViewMode>("grid");
 
   // Filtros y paginación
   const [searchTerm, setSearchTerm] = useState("");
@@ -255,11 +262,40 @@ export function BoxesView() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
-            <SelectItem value={BOX_STATUS.ACTIVA}>Activa</SelectItem>
-            <SelectItem value={BOX_STATUS.INACTIVA}>Inactiva</SelectItem>
-            <SelectItem value={BOX_STATUS.EN_USO}>En Uso</SelectItem>
+            <SelectItem value={BOX_STATUS.DISPONIBLE}>Disponible</SelectItem>
+            <SelectItem value={BOX_STATUS.EN_REPARACION}>En reparación</SelectItem>
+            <SelectItem value={BOX_STATUS.DANADA}>Dañada</SelectItem>
+            <SelectItem value={BOX_STATUS.RETIRADA}>Retirada</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Toggle Vista Grid/Tabla */}
+        <div className="flex gap-1 border border-border rounded-md p-1">
+          <Button
+            variant={viewMode === "grid" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("grid")}
+            className={cn(
+              "h-8 gap-1.5",
+              viewMode === "grid" && "bg-primary text-primary-foreground hover:bg-primary/90"
+            )}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            <span className="hidden sm:inline">Cards</span>
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+            className={cn(
+              "h-8 gap-1.5",
+              viewMode === "table" && "bg-primary text-primary-foreground hover:bg-primary/90"
+            )}
+          >
+            <List className="h-4 w-4" />
+            <span className="hidden sm:inline">Tabla</span>
+          </Button>
+        </div>
       </div>
 
       {/* Resultados y paginación */}
@@ -304,66 +340,96 @@ export function BoxesView() {
       ) : boxes.length === 0 ? (
         <EmptyState message="No se encontraron cajas" />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {boxes.map((box) => (
-            <Card key={box.id} className="shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-base font-mono">
-                    {box.qrCode}
-                  </Badge>
-                  <EntityBadge status={box.status} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {box.description && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Descripción</p>
-                    <p className="text-sm text-foreground line-clamp-2">{box.description}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Tipo</p>
-                  <p className="font-medium text-foreground">{box.type}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Peso/Contenido</p>
-                  <p className="text-lg font-bold text-primary">
-                    {box.currentWeightKg.toFixed(1)} kg
-                  </p>
-                </div>
-                {box.warehouse && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Bodega</p>
-                    <p className="text-sm font-medium text-foreground">{box.warehouse.name}</p>
-                  </div>
-                )}
+        <>
+          {/* Vista Grid (Cards) */}
+          {viewMode === "grid" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {boxes.map((box) => (
+                <Card key={box.id} className="shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-base font-mono">
+                        {box.qrCode}
+                      </Badge>
+                      <EntityBadge status={box.status} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {box.description && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Descripción</p>
+                        <p className="text-sm text-foreground line-clamp-2">{box.description}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Tipo</p>
+                      <EntityBadge status={box.type} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Peso/Contenido</p>
+                      <p className="text-lg font-bold text-primary">
+                        {box.currentWeightKg.toFixed(1)} kg
+                      </p>
+                    </div>
 
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-9 gap-2"
-                    onClick={() => goToDetail(box.id)}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Ver Detalle
-                  </Button>
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(box)}
-                      className="h-9 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Editar
-                    </Button>
-                  )}
-                </div>
+                    {/* Bodega (nuevo) */}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Ubicación</p>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                        {box.warehouseName || box.warehouse?.name ? (
+                          <p className="text-sm font-medium text-foreground">
+                            {box.warehouseName || box.warehouse?.name}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-500 italic">
+                            Sin bodega asignada
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-9 gap-2"
+                        onClick={() => goToDetail(box.id)}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Ver Detalle
+                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(box)}
+                          className="h-9 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Editar
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Vista Tabla */}
+          {viewMode === "table" && (
+            <Card>
+              <CardContent className="p-0">
+                <BoxesTable
+                  boxes={boxes}
+                  canEdit={canEdit}
+                  onViewDetail={goToDetail}
+                  onEdit={openEditDialog}
+                />
               </CardContent>
             </Card>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Dialog para crear/editar caja */}
@@ -379,7 +445,7 @@ export function BoxesView() {
                 type: selectedBox.type,
                 status: selectedBox.status,
                 currentWeightKg: selectedBox.currentWeightKg,
-                warehouseId: selectedBox.warehouseId,
+                warehouseId: selectedBox.warehouseId || "",
               }
             : undefined
         }

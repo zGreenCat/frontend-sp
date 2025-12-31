@@ -51,7 +51,7 @@ export function BoxForm({
       qrCode: defaultValues?.qrCode || "",
       description: defaultValues?.description || "",
       type: defaultValues?.type || "NORMAL",
-      status: defaultValues?.status || "ACTIVA",
+      status: defaultValues?.status || "DISPONIBLE",
       currentWeightKg: defaultValues?.currentWeightKg || 0,
       warehouseId: defaultValues?.warehouseId || "",
     },
@@ -246,9 +246,10 @@ export function BoxForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={BOX_STATUS.ACTIVA}>Activa</SelectItem>
-                  <SelectItem value={BOX_STATUS.INACTIVA}>Inactiva</SelectItem>
-                  <SelectItem value={BOX_STATUS.EN_USO}>En Uso</SelectItem>
+                  <SelectItem value={BOX_STATUS.DISPONIBLE}>Disponible</SelectItem>
+                  <SelectItem value={BOX_STATUS.EN_REPARACION}>En reparación</SelectItem>
+                  <SelectItem value={BOX_STATUS.DANADA}>Dañada</SelectItem>
+                  <SelectItem value={BOX_STATUS.RETIRADA}>Retirada</SelectItem>
                 </SelectContent>
               </Select>
               <FormDescription className="text-xs">

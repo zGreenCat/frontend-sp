@@ -382,7 +382,7 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
               type: box.type,
               status: box.status,
               currentWeightKg: box.currentWeightKg,
-              warehouseId: box.warehouseId,
+              warehouseId: box.warehouseId || "",
             }}
             isLoading={updateBoxMutation.isPending}
             mode="edit"
@@ -391,7 +391,7 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
           <MoveBoxDialog
             boxId={box.id}
             boxQrCode={box.qrCode}
-            currentWarehouseId={box.warehouseId}
+            currentWarehouseId={box.warehouseId || ""}
             open={moveDialogOpen}
             onOpenChange={setMoveDialogOpen}
           />

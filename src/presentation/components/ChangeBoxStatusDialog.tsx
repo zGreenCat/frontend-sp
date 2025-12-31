@@ -44,9 +44,10 @@ export function ChangeBoxStatusDialog({
   const changeStatusMutation = useChangeBoxStatus();
 
   const statusOptions = [
-    { value: BOX_STATUS.ACTIVA, label: "Activa" },
-    { value: BOX_STATUS.INACTIVA, label: "Inactiva" },
-    { value: BOX_STATUS.EN_USO, label: "En Uso" },
+    { value: BOX_STATUS.DISPONIBLE, label: "Disponible" },
+    { value: BOX_STATUS.EN_REPARACION, label: "En reparación" },
+    { value: BOX_STATUS.DANADA, label: "Dañada" },
+    { value: BOX_STATUS.RETIRADA, label: "Retirada" },
   ];
 
   const handleChangeStatus = async () => {

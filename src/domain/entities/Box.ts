@@ -1,5 +1,5 @@
-// Box Status según backend
-export type BoxStatus = 'ACTIVA' | 'INACTIVA' | 'EN_USO';
+// Box Status según backend real
+export type BoxStatus = 'DISPONIBLE' | 'EN_REPARACION' | 'DANADA' | 'RETIRADA';
 
 // Box Type según backend (PEQUEÑA, NORMAL, GRANDE)
 export type BoxType = 'PEQUEÑA' | 'NORMAL' | 'GRANDE';
@@ -31,10 +31,12 @@ export interface Box {
   type: BoxType;
   currentWeightKg: number; // Peso/contenido actual
   status: BoxStatus;
-  warehouseId: string; // Bodega actual
-  warehouse?: Warehouse; // Información de la bodega (si viene en el detalle)
+  warehouseId: string | null; // Bodega actual (puede ser null)
+  warehouseName?: string | null; // Nombre de la bodega (viene del backend)
+  warehouse?: Warehouse; // Información completa de la bodega (solo en detalle)
   history?: HistoryEvent[]; // Historial de eventos
   tenantId: string;
+  isActive: boolean; // Estado de activación
   createdAt: string;
   updatedAt: string;
 }

@@ -130,7 +130,7 @@ export const createBoxSchema = z.object({
     .max(10000, 'Peso no puede exceder 10000 kg'),
   warehouseId: z.string()
     .min(1, 'Bodega es requerida'),
-  status: z.enum(['ACTIVA', 'INACTIVA', 'EN_USO'] as const).default('ACTIVA'),
+  status: z.enum(['DISPONIBLE', 'EN_REPARACION', 'DANADA', 'RETIRADA'] as const).default('DISPONIBLE'),
 });
 
 export const updateBoxSchema = z.object({
@@ -143,7 +143,7 @@ export const updateBoxSchema = z.object({
     .min(0, 'Peso debe ser mayor o igual a 0')
     .max(10000, 'Peso no puede exceder 10000 kg')
     .optional(),
-  status: z.enum(['ACTIVA', 'INACTIVA', 'EN_USO'] as const).optional(),
+  status: z.enum(['DISPONIBLE', 'EN_REPARACION', 'DANADA', 'RETIRADA'] as const).optional(),
 });
 
 export const moveBoxSchema = z.object({
@@ -151,7 +151,7 @@ export const moveBoxSchema = z.object({
 });
 
 export const changeBoxStatusSchema = z.object({
-  status: z.enum(['ACTIVA', 'INACTIVA', 'EN_USO'] as const, {
+  status: z.enum(['DISPONIBLE', 'EN_REPARACION', 'DANADA', 'RETIRADA'] as const, {
     errorMap: () => ({ message: 'Estado inválido' }),
   }),
 });

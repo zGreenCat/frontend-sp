@@ -20,13 +20,15 @@ interface BackendBox {
   type: string;
   currentWeightKg: number;
   status: string;
-  warehouseId: string;
+  warehouseId: string | null;
+  warehouseName?: string | null; // Nombre de la bodega
   warehouse?: {
     id: string;
     name: string;
     capacityKg: number;
   };
   tenantId: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
   history?: BackendHistoryEvent[];
@@ -66,8 +68,9 @@ export class ApiBoxRepository implements IBoxRepository {
       description: backendBox.description,
       type: backendBox.type as 'PEQUEÑA' | 'NORMAL' | 'GRANDE',
       currentWeightKg: backendBox.currentWeightKg,
-      status: backendBox.status as 'ACTIVA' | 'INACTIVA' | 'EN_USO',
+      status: backendBox.status as 'DISPONIBLE' | 'EN_REPARACION' | 'DANADA' | 'RETIRADA',
       warehouseId: backendBox.warehouseId,
+      warehouseName: backendBox.warehouseName ?? null, // ✅ Agregar campo del backend
       warehouse: backendBox.warehouse ? {
         id: backendBox.warehouse.id,
         name: backendBox.warehouse.name,
@@ -75,6 +78,7 @@ export class ApiBoxRepository implements IBoxRepository {
       } : undefined,
       history: backendBox.history?.map(this.mapBackendHistoryEvent),
       tenantId: backendBox.tenantId,
+      isActive: backendBox.isActive,
       createdAt: backendBox.createdAt,
       updatedAt: backendBox.updatedAt,
     };
