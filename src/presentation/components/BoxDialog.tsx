@@ -40,12 +40,12 @@ export function BoxDialog({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">
-            {mode === "create" ? "Nueva Caja" : "Editar Caja"}
+            {mode === "create" ? "Nueva Caja" : "Editar Datos de la Caja"}
           </DialogTitle>
           <DialogDescription>
             {mode === "create"
               ? "Crea una nueva caja para gestionar contenedores y embalajes."
-              : "Modifica la información de la caja seleccionada."}
+              : "Modifica los datos maestros de la caja (descripción, tipo, peso). Para cambiar bodega o estado, usa las opciones específicas."}
           </DialogDescription>
         </DialogHeader>
         <BoxForm

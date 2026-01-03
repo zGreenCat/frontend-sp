@@ -13,18 +13,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Edit, Search, QrCode, ChevronLeft, ChevronRight, LayoutGrid, List, MapPin } from "lucide-react";
+import {
+  Plus,
+  Eye,
+  Edit,
+  Search,
+  QrCode,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  List,
+  MapPin,
+  TruckIcon,
+  ToggleLeft,
+} from "lucide-react";
 import { Box } from "@/domain/entities/Box";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { BoxDialog } from "@/presentation/components/BoxDialog";
 import { BoxesTable } from "@/presentation/components/BoxesTable";
-import { useBoxes, useCreateBox, useUpdateBox, useFindBoxByQr } from "@/hooks/useBoxes";
+import { MoveBoxDialog } from "@/presentation/components/MoveBoxDialog";
+import { ChangeBoxStatusDialog } from "@/presentation/components/ChangeBoxStatusDialog";
+import {
+  useBoxes,
+  useCreateBox,
+  useUpdateBox,
+  useFindBoxByQr,
+} from "@/hooks/useBoxes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { CreateBoxInput } from "@/shared/schemas";
 import { BOX_STATUS } from "@/shared/constants";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 
 type BoxViewMode = "grid" | "table";
 
@@ -32,6 +53,12 @@ export function BoxesView() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBox, setSelectedBox] = useState<Box | null>(null);
+
+  // Estado para los 3 diálogos de edición separados
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [selectedBoxForMove, setSelectedBoxForMove] = useState<Box | null>(null);
+  const [selectedBoxForStatus, setSelectedBoxForStatus] = useState<Box | null>(null);
 
   // Vista: grid o tabla
   const [viewMode, setViewMode] = useState<BoxViewMode>("grid");
@@ -84,7 +111,8 @@ export function BoxesView() {
       console.error("Error al crear caja:", error);
       toast({
         title: "❌ Error al crear caja",
-        description: error?.message || "No se pudo crear la caja. Intenta nuevamente.",
+        description:
+          error?.message || "No se pudo crear la caja. Intenta nuevamente.",
         variant: "destructive",
       });
     }
@@ -100,14 +128,14 @@ export function BoxesView() {
           id: selectedBox.id,
           description: data.description,
           type: data.type,
-          status: data.status,
           currentWeightKg: data.currentWeightKg,
+          // NO incluir status ni warehouseId (se editan por separado)
         },
       });
 
       toast({
         title: "✅ Caja actualizada",
-        description: `La caja "${updatedBox.qrCode}" ha sido actualizada correctamente.`,
+        description: `Los datos de la caja "${updatedBox.qrCode}" han sido actualizados correctamente.`,
       });
 
       setDialogOpen(false);
@@ -116,7 +144,9 @@ export function BoxesView() {
       console.error("Error al actualizar caja:", error);
       toast({
         title: "❌ Error al actualizar caja",
-        description: error?.message || "No se pudo actualizar la caja. Intenta nuevamente.",
+        description:
+          error?.message ||
+          "No se pudo actualizar la caja. Intenta nuevamente.",
         variant: "destructive",
       });
     }
@@ -176,6 +206,16 @@ export function BoxesView() {
     setDialogOpen(true);
   };
 
+  const openMoveDialog = (box: Box) => {
+    setSelectedBoxForMove(box);
+    setMoveDialogOpen(true);
+  };
+
+  const openStatusDialog = (box: Box) => {
+    setSelectedBoxForStatus(box);
+    setStatusDialogOpen(true);
+  };
+
   const goToDetail = (boxId: string) => {
     router.push(`/boxes/${boxId}`);
   };
@@ -194,7 +234,9 @@ export function BoxesView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Cajas</h1>
-          <p className="text-muted-foreground">Gestión de contenedores y embalajes</p>
+          <p className="text-muted-foreground">
+            Gestión de contenedores y embalajes
+          </p>
         </div>
         {canCreate && (
           <Button
@@ -263,7 +305,9 @@ export function BoxesView() {
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
             <SelectItem value={BOX_STATUS.DISPONIBLE}>Disponible</SelectItem>
-            <SelectItem value={BOX_STATUS.EN_REPARACION}>En reparación</SelectItem>
+            <SelectItem value={BOX_STATUS.EN_REPARACION}>
+              En reparación
+            </SelectItem>
             <SelectItem value={BOX_STATUS.DANADA}>Dañada</SelectItem>
             <SelectItem value={BOX_STATUS.RETIRADA}>Retirada</SelectItem>
           </SelectContent>
@@ -277,7 +321,8 @@ export function BoxesView() {
             onClick={() => setViewMode("grid")}
             className={cn(
               "h-8 gap-1.5",
-              viewMode === "grid" && "bg-primary text-primary-foreground hover:bg-primary/90"
+              viewMode === "grid" &&
+                "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
           >
             <LayoutGrid className="h-4 w-4" />
@@ -289,7 +334,8 @@ export function BoxesView() {
             onClick={() => setViewMode("table")}
             className={cn(
               "h-8 gap-1.5",
-              viewMode === "table" && "bg-primary text-primary-foreground hover:bg-primary/90"
+              viewMode === "table" &&
+                "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
           >
             <List className="h-4 w-4" />
@@ -340,99 +386,162 @@ export function BoxesView() {
       ) : boxes.length === 0 ? (
         <EmptyState message="No se encontraron cajas" />
       ) : (
-        <>
-          {/* Vista Grid (Cards) */}
-          {viewMode === "grid" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {boxes.map((box) => (
-                <Card key={box.id} className="shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-base font-mono">
-                        {box.qrCode}
-                      </Badge>
-                      <EntityBadge status={box.status} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {box.description && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Descripción</p>
-                        <p className="text-sm text-foreground line-clamp-2">{box.description}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Tipo</p>
-                      <EntityBadge status={box.type} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Peso/Contenido</p>
-                      <p className="text-lg font-bold text-primary">
-                        {box.currentWeightKg.toFixed(1)} kg
-                      </p>
-                    </div>
+        // 👇 Aquí entra Framer Motion para animar el cambio grid ↔ tabla
+        <div className="relative min-h-[200px]">
+          <AnimatePresence mode="wait" initial={false}>
+            {viewMode === "grid" ? (
+              <motion.div
+                key="grid"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                {boxes.map((box) => (
+  <Card
+    key={box.id}
+    className="shadow-sm hover:shadow-md transition-shadow"
+  >
+    <CardHeader>
+      <div className="flex items-center justify-between">
+        <Badge variant="outline" className="text-base font-mono">
+          {box.qrCode}
+        </Badge>
+        {/* Estado: solo lectura, sin onClick */}
+        <EntityBadge status={box.status} />
+      </div>
+    </CardHeader>
 
-                    {/* Bodega (nuevo) */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Ubicación</p>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                        {box.warehouseName || box.warehouse?.name ? (
-                          <p className="text-sm font-medium text-foreground">
-                            {box.warehouseName || box.warehouse?.name}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-slate-500 italic">
-                            Sin bodega asignada
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1 h-9 gap-2"
-                        onClick={() => goToDetail(box.id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver Detalle
-                      </Button>
-                      {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(box)}
-                          className="h-9 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Vista Tabla */}
-          {viewMode === "table" && (
-            <Card>
-              <CardContent className="p-0">
-                <BoxesTable
-                  boxes={boxes}
-                  canEdit={canEdit}
-                  onViewDetail={goToDetail}
-                  onEdit={openEditDialog}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </>
+    <CardContent className="space-y-4">
+      {box.description && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">Descripción</p>
+          <p className="text-sm text-foreground line-clamp-2">
+            {box.description}
+          </p>
+        </div>
       )}
 
-      {/* Dialog para crear/editar caja */}
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">Tipo</p>
+        <EntityBadge status={box.type} />
+      </div>
+
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">Peso/Contenido</p>
+        <p className="text-lg font-bold text-primary">
+          {box.currentWeightKg.toFixed(1)} kg
+        </p>
+      </div>
+
+      {/* Bodega */}
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">Ubicación</p>
+        <div className="flex items-center gap-2 min-w-0">
+          <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0" />
+          {box.warehouseName || (box as any).warehouse?.name ? (
+            <p className="text-sm font-medium text-foreground truncate">
+              {box.warehouseName || (box as any).warehouse?.name}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500 italic">
+              Sin bodega asignada
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Acciones: Ver + rail de 3 iconos */}
+      {/* Acciones: iconos + Ver Detalle en una sola fila */}
+<div className="flex items-center justify-between pt-2 gap-2">
+  {/* Rail de acciones rápidas */}
+  {canEdit && (
+    <div className="flex items-center gap-1.5">
+      {/* Cambiar estado */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => openStatusDialog(box)}
+        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
+                   dark:text-blue-400 dark:hover:bg-blue-950"
+        title="Cambiar estado"
+        aria-label="Cambiar estado de la caja"
+      >
+        <ToggleLeft className="h-4 w-4" />
+      </Button>
+
+      {/* Mover bodega */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => openMoveDialog(box)}
+        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
+                   dark:text-blue-400 dark:hover:bg-blue-950"
+        title="Mover a otra bodega"
+        aria-label="Mover caja a otra bodega"
+      >
+        <TruckIcon className="h-4 w-4" />
+      </Button>
+
+      {/* Editar datos maestros */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => openEditDialog(box)}
+        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
+                   dark:text-blue-400 dark:hover:bg-blue-950"
+        title="Editar datos de la caja"
+        aria-label="Editar datos de la caja"
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+    </div>
+  )}
+
+  {/* CTA principal */}
+  <Button
+    variant="outline"
+    className="flex-1 h-9 gap-2"
+    onClick={() => goToDetail(box.id)}
+  >
+    <Eye className="h-4 w-4" />
+    Ver Detalle
+  </Button>
+</div>
+
+    </CardContent>
+  </Card>
+))}
+
+              </motion.div>
+            ) : (
+              <motion.div
+                key="table"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18 }}
+              >
+                <Card>
+                  <CardContent className="p-0">
+                    <BoxesTable
+                      boxes={boxes}
+                      canEdit={canEdit}
+                      onViewDetail={goToDetail}
+                      onEdit={openEditDialog}
+                      onMove={openMoveDialog}
+                      onChangeStatus={openStatusDialog}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Dialog para crear/editar DATOS MAESTROS de caja */}
       <BoxDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -452,6 +561,28 @@ export function BoxesView() {
         isLoading={createBoxMutation.isPending || updateBoxMutation.isPending}
         mode={selectedBox ? "edit" : "create"}
       />
+
+      {/* Dialog para MOVER bodega */}
+      {selectedBoxForMove && (
+        <MoveBoxDialog
+          open={moveDialogOpen}
+          onOpenChange={setMoveDialogOpen}
+          boxId={selectedBoxForMove.id}
+          boxQrCode={selectedBoxForMove.qrCode}
+          currentWarehouseId={selectedBoxForMove.warehouseId || ""}
+        />
+      )}
+
+      {/* Dialog para CAMBIAR estado */}
+      {selectedBoxForStatus && (
+        <ChangeBoxStatusDialog
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          boxId={selectedBoxForStatus.id}
+          boxQrCode={selectedBoxForStatus.qrCode}
+          currentStatus={selectedBoxForStatus.status}
+        />
+      )}
     </div>
   );
 }

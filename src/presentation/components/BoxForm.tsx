@@ -189,76 +189,80 @@ export function BoxForm({
           )}
         />
 
-        {/* Bodega (nuevo campo obligatorio) */}
-        <FormField
-          control={form.control}
-          name="warehouseId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Bodega *</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                disabled={isLoading || loadingWarehouses}
-              >
-                <FormControl>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder={loadingWarehouses ? "Cargando bodegas..." : "Selecciona una bodega"} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {warehouses.length === 0 ? (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      No hay bodegas disponibles
-                    </div>
-                  ) : (
-                  warehouses.map((warehouse: any) => (
-                    <SelectItem key={warehouse.id} value={warehouse.id}>
-                      {warehouse.name} ({warehouse.currentCapacityKg?.toFixed(0) || 0} / {warehouse.maxCapacityKg} kg)
-                    </SelectItem>
-                  ))
-                  )}
-                </SelectContent>
-              </Select>
-              <FormDescription className="text-xs">
-                Bodega donde se ubicará la caja
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Bodega - SOLO visible en modo CREATE */}
+        {mode === "create" && (
+          <FormField
+            control={form.control}
+            name="warehouseId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bodega *</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={isLoading || loadingWarehouses}
+                >
+                  <FormControl>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder={loadingWarehouses ? "Cargando bodegas..." : "Selecciona una bodega"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {warehouses.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        No hay bodegas disponibles
+                      </div>
+                    ) : (
+                    warehouses.map((warehouse: any) => (
+                      <SelectItem key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name} ({warehouse.currentCapacityKg?.toFixed(0) || 0} / {warehouse.maxCapacityKg} kg)
+                      </SelectItem>
+                    ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormDescription className="text-xs">
+                  Bodega donde se ubicará la caja
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
-        {/* Estado */}
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Estado *</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                disabled={isLoading}
-              >
-                <FormControl>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Selecciona el estado" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={BOX_STATUS.DISPONIBLE}>Disponible</SelectItem>
-                  <SelectItem value={BOX_STATUS.EN_REPARACION}>En reparación</SelectItem>
-                  <SelectItem value={BOX_STATUS.DANADA}>Dañada</SelectItem>
-                  <SelectItem value={BOX_STATUS.RETIRADA}>Retirada</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription className="text-xs">
-                Estado operativo de la caja
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Estado - SOLO visible en modo CREATE */}
+        {mode === "create" && (
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Estado *</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={isLoading}
+                >
+                  <FormControl>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Selecciona el estado" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={BOX_STATUS.DISPONIBLE}>Disponible</SelectItem>
+                    <SelectItem value={BOX_STATUS.EN_REPARACION}>En reparación</SelectItem>
+                    <SelectItem value={BOX_STATUS.DANADA}>Dañada</SelectItem>
+                    <SelectItem value={BOX_STATUS.RETIRADA}>Retirada</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription className="text-xs">
+                  Estado operativo de la caja
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* Botones de acción */}
         <div className="flex gap-3 pt-4">

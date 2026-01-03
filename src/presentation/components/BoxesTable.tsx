@@ -7,7 +7,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Edit, MapPin } from "lucide-react";
+import { Eye, Edit, MapPin, TruckIcon, ToggleLeft } from "lucide-react";
 import { Box } from "@/domain/entities/Box";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { cn } from "@/lib/utils";
@@ -17,9 +17,11 @@ interface BoxesTableProps {
   canEdit: boolean;
   onViewDetail: (boxId: string) => void;
   onEdit: (box: Box) => void;
+  onMove?: (box: Box) => void;
+  onChangeStatus?: (box: Box) => void;
 }
 
-export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit }: BoxesTableProps) {
+export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit, onMove, onChangeStatus }: BoxesTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -83,23 +85,45 @@ export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit }: BoxesTableP
                 </p>
               </td>
 
-              {/* Estado */}
+              {/* Estado - clickeable para cambiar */}
               <td className="py-4 px-4 text-center">
-                <EntityBadge status={box.status} />
+                <button
+                  onClick={() => canEdit && onChangeStatus && onChangeStatus(box)}
+                  disabled={!canEdit || !onChangeStatus}
+                  className={cn(
+                    "transition-opacity",
+                    canEdit && onChangeStatus && "cursor-pointer hover:opacity-80"
+                  )}
+                >
+                  <EntityBadge status={box.status} />
+                </button>
               </td>
 
-              {/* Bodega */}
+              {/* Bodega - con botón para mover */}
               <td className="py-4 px-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  {box.warehouseName || box.warehouse?.name ? (
-                    <span className="text-sm text-foreground font-medium">
-                      {box.warehouseName || box.warehouse?.name}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground italic">
-                      Sin bodega asignada
-                    </span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    {box.warehouseName || box.warehouse?.name ? (
+                      <span className="text-sm text-foreground font-medium truncate">
+                        {box.warehouseName || box.warehouse?.name}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground italic">
+                        Sin bodega
+                      </span>
+                    )}
+                  </div>
+                  {canEdit && onMove && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onMove(box)}
+                      className="h-7 px-2 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                      title="Mover a otra bodega"
+                    >
+                      <TruckIcon className="h-3.5 w-3.5" />
+                    </Button>
                   )}
                 </div>
               </td>
