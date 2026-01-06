@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ interface BoxDetailViewProps {
 
 export function BoxDetailView({ boxId }: BoxDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { can } = usePermissions();
   const { toast } = useToast();
 
@@ -48,6 +49,21 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
   const canEdit = can("boxes:edit");
   const canMove = canEdit; // Usar mismo permiso que edit
   const canDeactivate = canEdit; // Usar mismo permiso que edit
+  
+  // Leer returnUrl de la query string
+  const returnUrl = searchParams.get("returnUrl");
+  
+  // Función para manejar la navegación de regreso
+  const handleBack = () => {
+    if (returnUrl) {
+      router.push(returnUrl);
+    } else {
+      router.push("/boxes");
+    }
+  };
+  
+  // Texto dinámico del botón de volver
+  const backButtonText = returnUrl ? "Volver a la Bodega" : "Volver a Cajas";
 
   // Queries
   const { data: box, isLoading: loadingBox } = useBoxById(boxId);
@@ -108,8 +124,8 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Caja no encontrada</p>
-        <Button onClick={() => router.push("/boxes")} className="mt-4">
-          Volver a Cajas
+        <Button onClick={handleBack} className="mt-4">
+          {backButtonText}
         </Button>
       </div>
     );
@@ -122,11 +138,11 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/boxes")}
+          onClick={handleBack}
           className="gap-2 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver a Cajas
+          {backButtonText}
         </Button>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

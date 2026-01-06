@@ -274,7 +274,7 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
                       <div
                         key={box.id}
                         className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/boxes/${box.id}`)}
+                        onClick={() => router.push(`/boxes/${box.id}?returnUrl=/warehouses/${warehouseId}`)}
                       >
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
@@ -309,7 +309,7 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
                             className="w-full gap-2 mt-2"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/boxes/${box.id}`);
+                              router.push(`/boxes/${box.id}?returnUrl=/warehouses/${warehouseId}`);
                             }}
                           >
                             <Eye className="h-4 w-4" />
