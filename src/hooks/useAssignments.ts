@@ -7,7 +7,49 @@ import { RemoveManagerToArea } from "@/application/usecases/assignment/RemoveMan
 import { AssignWarehouseToArea } from "@/application/usecases/assignment/AssignWarehouseToArea";
 import { RemoveWarehouseFromArea } from "@/application/usecases/assignment/RemoveWarehouseToArea";
 import { AssignSupervisorToWarehouse } from "@/application/usecases/assignment/AssignSupervisorToWarehouse";
-import { RemoveSupervisorToWarehouse } from "@/application/usecases/assignment/RemoveSupervisorToWarehouse";    
+import { RemoveSupervisorToWarehouse } from "@/application/usecases/assignment/RemoveSupervisorToWarehouse";
+import { RemoveAssignment } from "@/application/usecases/assignment/RemoveAssignment";
+
+/**
+ * ✅ NEW: Remove an assignment directly using its ID
+ * This is the preferred method - no GET call needed!
+ */
+export const useRemoveAssignment = () => {
+  const { assignmentRepo } = useRepositories();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      assignmentId,
+      areaId,
+    }: {
+      assignmentId: string;
+      areaId?: string; // Optional for invalidation
+    }) => {
+      const useCase = new RemoveAssignment(assignmentRepo);
+      const result = await useCase.execute(assignmentId);
+
+      if (!result.ok) {
+        throw new Error(result.error || "Error al remover asignación");
+      }
+
+      return null;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate area queries if areaId is provided
+      if (variables.areaId) {
+        queryClient.invalidateQueries({ queryKey: areaKeys.all });
+        queryClient.invalidateQueries({
+          queryKey: areaKeys.detail(variables.areaId),
+        });
+      }
+      // Always invalidate general queries
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["warehouses"] });
+    },
+  });
+};
+
 /**
  * Asignar un Jefe (manager) a un área
  */
@@ -43,7 +85,9 @@ export const useAssignManager = () => {
 };
 
 /**
+ * ⚠️ DEPRECATED: Use useRemoveAssignment(assignmentId) instead
  * Remover un Jefe (manager) de un área
+ * This hook does a GET to find the assignment ID - inefficient!
  */
 export const useRemoveManager = () => {
   const { assignmentRepo } = useRepositories();
@@ -115,7 +159,9 @@ export const useAssignWarehouseToArea = () => {
 
 
 /**
+ * ⚠️ DEPRECATED: Use useRemoveAssignment(assignmentId) instead
  * Remover una bodega de un área
+ * This hook does a GET to find the assignment ID - inefficient!
  */
 export const useRemoveWarehouseFromArea = () => {
   const { assignmentRepo } = useRepositories();
@@ -187,6 +233,11 @@ export const useAssignSupervisorToWarehouse = () => {
   });
 };
 
+/**
+ * ⚠️ DEPRECATED: Use useRemoveAssignment(assignmentId) instead  
+ * Remover un supervisor de una bodega
+ * This hook does a GET to find the assignment ID - inefficient!
+ */
 export const useRemoveSupervisorFromWarehouse = () => {
   const { assignmentRepo } = useRepositories();
   const queryClient = useQueryClient();

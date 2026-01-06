@@ -175,7 +175,7 @@ export const useMoveBox = () => {
   return useMutation({
     mutationFn: async ({ id, warehouseId }: { id: string; warehouseId: string }): Promise<Box> => {
       const useCase = new MoveBox(boxRepo);
-      const result = await useCase.execute(id, { warehouseId }, TENANT_ID);
+      const result = await useCase.execute(id, { targetWarehouseId: warehouseId }, TENANT_ID);
       
       if (!result.ok) {
         throw new Error(result.error);

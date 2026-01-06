@@ -47,6 +47,8 @@ interface BackendUser {
       capacityKg: number;
     };
     assignedAt: string;
+    assignedBy?: string;
+    revokedAt?: string | null;
     isActive: boolean;
   }>;
 }
@@ -108,6 +110,26 @@ export class ApiUserRepository implements IUserRepository {
       },
     })) || [];
     
+    // Preservar warehouseAssignments completo
+    const warehouseAssignments = backendUser.warehouseAssignments?.map(w => ({
+      id: w.id,
+      userId: backendUser.id,
+      warehouseId: w.warehouseId,
+      assignedBy: w.assignedBy,
+      assignedAt: w.assignedAt,
+      revokedAt: w.revokedAt || null,
+      isActive: w.isActive,
+      warehouse: w.warehouse ? {
+        id: w.warehouse.id,
+        name: w.warehouse.name,
+        isEnabled: true, // Backend doesn't send this in assignment, default to true
+      } : {
+        id: w.warehouseId,
+        name: 'Sin nombre',
+        isEnabled: true,
+      },
+    })) || [];
+    
     
     
     return {
@@ -124,6 +146,7 @@ export class ApiUserRepository implements IUserRepository {
       areaDetails,
       warehouseDetails,
       areaAssignments,
+      warehouseAssignments, // ✅ Include full warehouse assignment data
       tenantId: backendUser.tenantId,
     };
   }

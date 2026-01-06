@@ -43,7 +43,7 @@ export interface UpdateBoxDTO {
 }
 
 export interface MoveBoxDTO {
-  warehouseId: string;
+  targetWarehouseId: string;
 }
 
 export interface ChangeStatusDTO {

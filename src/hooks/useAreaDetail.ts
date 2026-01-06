@@ -102,17 +102,19 @@ export function useAreaDetail(areaId: string) {
           };
         });
 
-      // --- MAP WAREHOUSES -> WarehouseEntity[] (mismo mapping que tenías) ---
+      // --- MAP WAREHOUSES -> WarehouseEntity[] ---
       const warehousesAsEntities: WarehouseEntity[] = warehouses.map((w: any) => ({
         id: w.id,
         name: w.name,
-        maxCapacityKg: w.maxCapacityKg || w.capacityKg || 900,
-        isEnabled: w.isEnabled ?? (w.status === "ACTIVO"),
-        capacityKg: w.capacityKg || w.maxCapacityKg || 900, // deprecated alias
-        status: (w.isEnabled ?? (w.status === "ACTIVO")) ? "ACTIVO" : "INACTIVO",
+        maxCapacityKg: w.maxCapacityKg || 900,
+        isEnabled: w.isEnabled ?? true, // ✅ Estado de la bodega desde backend
+        capacityKg: w.maxCapacityKg || 900, // deprecated alias
+        status: w.isEnabled ? "ACTIVO" : "INACTIVO", // ✅ Badge basado en isEnabled
         tenantId: TENANT_ID,
-        areaId: w.areaId,
+        areaId: areaId,
         supervisorId: w.supervisorId,
+        assignmentId: w.assignmentId, // 👈 Include assignmentId for direct removal
+        assignmentIsActive: w.isActive ?? true, // Estado de la asignación (opcional)
       }));
 
       return {

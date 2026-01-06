@@ -194,7 +194,7 @@ export function WarehousesView() {
                         />
                       </td>
                       <td className="py-4 px-4 text-sm text-muted-foreground">
-                        {warehouse.areaId ? `Área ${warehouse.areaId}` : "Sin asignar"}
+                        {warehouse.areaName || "Sin asignar"}
                       </td>
                       {canEdit && (
                         <td className="py-4 px-4 text-right">

@@ -16,6 +16,10 @@ interface BackendWarehouse {
   createdAt?: string;
   updatedAt?: string;
   currentCapacityKg?: number;
+  area?: {
+    idArea: string;
+    nameArea: string;
+  };
 }
 
 export class ApiWarehouseRepository implements IWarehouseRepository {
@@ -29,12 +33,17 @@ export class ApiWarehouseRepository implements IWarehouseRepository {
       || backendWarehouse.capacity 
       || 900;
     
+    // ✅ Extraer areaId y areaName desde area anidada
+    const areaId = backendWarehouse.area?.idArea || backendWarehouse.areaId;
+    const areaName = backendWarehouse.area?.nameArea;
+    
     return {
       id: backendWarehouse.id,
       name: backendWarehouse.name,
       maxCapacityKg,
       isEnabled,
-      areaId: backendWarehouse.areaId,
+      areaId,
+      areaName, // ✅ Incluir nombre del área
       supervisorId: backendWarehouse.supervisorId,
       tenantId: backendWarehouse.tenantId,
       currentCapacityKg: backendWarehouse.currentCapacityKg,

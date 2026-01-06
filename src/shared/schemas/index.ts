@@ -134,7 +134,6 @@ export const createBoxSchema = z.object({
 });
 
 export const updateBoxSchema = z.object({
-  id: z.string().min(1),
   description: z.string()
     .max(500, 'Descripción no puede exceder 500 caracteres')
     .optional(),

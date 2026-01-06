@@ -32,7 +32,20 @@ export class ApiAssignmentRepository implements IAssignmentRepository {
   async assignWarehouseToArea(areaId: string, warehouseId: string): Promise<void> {
     await apiClient.post(`/areas/${areaId}/warehouses`, { warehouseId }, true);
   }
- async removeManagerFromArea(
+
+  /**
+   * ✅ NEW: Remove an assignment directly using its ID
+   * This is the preferred method as it avoids the GET call to find the assignment
+   */
+  async removeAssignment(assignmentId: string): Promise<void> {
+    await apiClient.delete(`/assignments/${assignmentId}`, true);
+  }
+ /**
+   * ⚠️ DEPRECATED: Use removeAssignment(assignmentId) instead
+   * This method does a GET to find the assignment ID, which is inefficient
+   * The assignmentId is now available in API responses (managers[].assignmentId)
+   */
+  async removeManagerFromArea(
     areaId: string,
     userId: string
   ): Promise<void> {
@@ -59,6 +72,11 @@ export class ApiAssignmentRepository implements IAssignmentRepository {
     await apiClient.post(`/warehouses/${warehouseId}/supervisors`, { supervisorId }, true);
   }
 
+  /**
+   * ⚠️ DEPRECATED: Use removeAssignment(assignmentId) instead
+   * This method does a GET to find the assignment ID, which is inefficient
+   * The assignmentId is now available in API responses (warehouseAssignments[].id)
+   */
   async removeSupervisorFromWarehouse(warehouseId: string, supervisorId: string): Promise<void> {
    
     const response = await apiClient.get<any>("/assignments", true);
@@ -79,7 +97,12 @@ export class ApiAssignmentRepository implements IAssignmentRepository {
 
     await apiClient.delete(`/assignments/${assignment.id}`, true);
   }
-   async removeWarehouseFromArea(
+   /**
+   * ⚠️ DEPRECATED: Use removeAssignment(assignmentId) instead
+   * This method does a GET to find the assignment ID, which is inefficient
+   * The assignmentId is now available in API responses (warehouses[].assignmentId)
+   */
+  async removeWarehouseFromArea(
     areaId: string,
     warehouseId: string
   ): Promise<void> {

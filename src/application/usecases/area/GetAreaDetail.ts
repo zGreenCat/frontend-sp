@@ -5,7 +5,15 @@ import { Result } from '@/shared/types/Result';
 export interface AreaDetail {
   area: Area;
   managers: Array<{ id: string; name: string; email: string; role?: string; assignmentId?: string }>;
-  warehouses: Array<{ id: string; name: string }>;
+  warehouses: Array<{ 
+    id: string; 
+    name: string; 
+    assignmentId?: string; 
+    maxCapacityKg?: number;
+    isEnabled?: boolean;
+    isActive?: boolean;
+    assignedAt?: string;
+  }>;
 }
 
 export class GetAreaDetail {

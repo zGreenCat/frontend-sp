@@ -34,8 +34,7 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { ConfirmDialog } from "@/presentation/components/ConfirmDialog";
 import { useAreas, useUpdateArea } from "@/hooks/useAreas";
 import { useAreaDetail } from "@/hooks/useAreaDetail";
-import { useRemoveManager } from "@/hooks/useAssignments";
-import { RemoveWarehouseFromArea } from "@/application/usecases/assignment/RemoveWarehouseToArea";
+import { useRemoveAssignment } from "@/hooks/useAssignments";
 import { useAreaHistory } from "@/hooks/useAreaHistory";
 import { AssignmentHistoryList } from "@/presentation/components/AssignmentHistoryList";
 
@@ -51,7 +50,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   // React Query hooks - caché compartido
   const { data: allAreas = [] } = useAreas();
   const updateAreaMutation = useUpdateArea();
-  const removeManagerMutation = useRemoveManager();
+  const removeAssignmentMutation = useRemoveAssignment();
   // Hook nuevo: trae todo el detalle del área ya mapeado
   const {
     data,
@@ -95,20 +94,13 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
     );
   }, [allAreas, areaId]);
 
-  // Validar si el área es nodo hoja (sin sub-áreas)
-  const isLeafNode = useMemo(() => {
-    return childAreas.length === 0;
-  }, [childAreas]);
+  // REMOVED: Validación de "nodo hoja" - El backend permite asignar bodegas a cualquier área
+  // const isLeafNode = useMemo(() => {
+  //   return childAreas.length === 0;
+  // }, [childAreas]);
 
   const handleOpenWarehousesDialog = () => {
-    if (!isLeafNode) {
-      toast({
-        title: "❌ Operación no permitida",
-        description: "Solo puedes asignar bodegas a áreas sin sub-áreas (nodos hoja). Esta área tiene sub-áreas dependientes.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // ✅ Permitir asignar bodegas a cualquier área, tenga o no sub-áreas
     setWarehousesDialogOpen(true);
   };
 
@@ -121,12 +113,26 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
     if (!area || !selectedJefeToRemove) return;
 
     const { manager, name: jefeName } = selectedJefeToRemove;
+    
+    // ✅ Get assignmentId from manager's areaAssignments
+    const assignmentId = manager.areaAssignments?.[0]?.id;
+    
+    if (!assignmentId) {
+      toast({
+        title: "❌ Error",
+        description: "No se encontró el ID de la asignación",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setRemovingJefeId(manager.id);
 
     try {
-        await removeManagerMutation.mutateAsync({
+        // ✅ Use new hook with assignmentId - no GET call needed!
+        await removeAssignmentMutation.mutateAsync({
+          assignmentId,
           areaId: area.id,
-          managerId: manager.id,
         });
 
       toast({
@@ -157,14 +163,25 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
   const handleRemoveWarehouse = async () => {
     if (!area || !selectedWarehouseToRemove) return;
 
+    // ✅ Get assignmentId from warehouse data
+    const assignmentId = selectedWarehouseToRemove.assignmentId;
+    
+    if (!assignmentId) {
+      toast({
+        title: "❌ Error",
+        description: "No se encontró el ID de la asignación de la bodega",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setRemovingWarehouseId(selectedWarehouseToRemove.id);
     try {
-      const useCase = new RemoveWarehouseFromArea(assignmentRepo);
-      const result = await useCase.execute(area.id, selectedWarehouseToRemove.id);
-
-      if (!result.ok) {
-        throw new Error(result.error || "No se pudo remover la bodega del área");
-      }
+      // ✅ Use new hook with assignmentId - no GET call needed!
+      await removeAssignmentMutation.mutateAsync({
+        assignmentId,
+        areaId: area.id,
+      });
 
       toast({
         title: "✅ Bodega removida",
@@ -385,7 +402,8 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
                   {assignedWarehouses.map((warehouse) => (
                     <div
                       key={warehouse.id}
-                      className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                      className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer relative"
+                      onClick={() => router.push(`/warehouses/${warehouse.id}`)}
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
@@ -400,7 +418,10 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => openRemoveWarehouseConfirm(warehouse)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // ✅ Evitar navegación al clickear eliminar
+                            openRemoveWarehouseConfirm(warehouse);
+                          }}
                           disabled={removingWarehouseId === warehouse.id}
                           className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                           title="Quitar bodega del área"
@@ -558,7 +579,11 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
         onOpenChange={setWarehousesDialogOpen}
         areaId={area.id}
         areaName={area.name}
-        currentWarehouseIds={assignedWarehouses.map((w) => w.id)}
+        assignedWarehouses={assignedWarehouses.map((w) => ({
+          id: w.id,
+          name: w.name,
+          assignmentId: w.assignmentId,
+        }))}
         onSuccess={handleWarehousesSuccess}
       />
 

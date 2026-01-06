@@ -123,7 +123,15 @@ export class ApiAreaRepository implements IAreaRepository {
   async findByIdWithDetails(id: string): Promise<{
     area: Area;
     managers: Array<{ id: string; name: string; email: string; assignmentId?: string }>;
-    warehouses: Array<{ id: string; name: string }>;
+    warehouses: Array<{ 
+      id: string; 
+      name: string; 
+      assignmentId?: string;
+      maxCapacityKg?: number;
+      isEnabled?: boolean;
+      isActive?: boolean;
+      assignedAt?: string;
+    }>;
   } | null> {
     try {
       const response = await apiClient.get<any>(`/areas/${id}`, true);
@@ -139,10 +147,15 @@ export class ApiAreaRepository implements IAreaRepository {
         assignmentId: m.assignmentId || '', // ID de la asignación para poder eliminarla
       }));
       
-      // Mapear warehouses con manejo seguro
+      // Mapear warehouses con manejo seguro, incluyendo assignmentId y estado
       const warehouses = (backendArea.warehouses || []).map((w: any) => ({
         id: w.id || w.warehouseId || '',
         name: w.name || 'Sin nombre',
+        assignmentId: w.assignmentId || '', // ID de la asignación para poder eliminarla
+        maxCapacityKg: w.maxCapacityKg || w.capacityKg || 900,
+        isEnabled: w.isEnabled ?? true, // Estado de la bodega (si está habilitada o deshabilitada)
+        isActive: w.isActive ?? true, // Estado de la asignación (área-bodega)
+        assignedAt: w.assignedAt || null,
       }));
       
       

@@ -319,7 +319,10 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>
-                                  {format(new Date(event.timestamp), "dd MMM yyyy, HH:mm", { locale: es })}
+                                  {event.timestamp && !isNaN(new Date(event.timestamp).getTime()) 
+                                    ? format(new Date(event.timestamp), "dd MMM yyyy, HH:mm", { locale: es })
+                                    : "Fecha no disponible"
+                                  }
                                 </span>
                               </div>
                             </div>

@@ -31,6 +31,22 @@ export interface AreaAssignmentDetail {
   };
 }
 
+// Información completa de asignación de bodega (del backend)
+export interface WarehouseAssignmentDetail {
+  id: string; // ID de la asignación
+  userId: string;
+  warehouseId: string;
+  assignedBy?: string;
+  assignedAt: string;
+  revokedAt: string | null;
+  isActive: boolean;
+  warehouse: {
+    id: string;
+    name: string;
+    isEnabled: boolean;
+  };
+}
+
 export interface User {
   id: string;
   name: string;
@@ -44,7 +60,8 @@ export interface User {
   warehouses: string[];
   areaDetails?: AreaAssignment[];
   warehouseDetails?: WarehouseAssignment[];
-  areaAssignments?: AreaAssignmentDetail[]; // Info completa de asignaciones
+  areaAssignments?: AreaAssignmentDetail[]; // Info completa de asignaciones de áreas
+  warehouseAssignments?: WarehouseAssignmentDetail[]; // Info completa de asignaciones de bodegas
   assignmentHistory?: AssignmentHistoryEntry[];
   tenantId: string;
   reason?: string; // Razón del último cambio de estado

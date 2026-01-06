@@ -15,7 +15,7 @@ import { TENANT_ID } from "@/shared/constants";
 import { Warehouse as WarehouseEntity } from "@/domain/entities/Warehouse";
 import {
   useAssignWarehouseToArea,
-  useRemoveWarehouseFromArea,
+  useRemoveAssignment,
 } from "@/hooks/useAssignments";
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ interface AssignWarehousesDialogProps {
   onOpenChange: (open: boolean) => void;
   areaId: string;
   areaName: string;
-  currentWarehouseIds: string[];
+  assignedWarehouses: Array<{ id: string; name: string; assignmentId?: string }>; // ✅ Include assignmentId
   onSuccess: () => void;
 }
 
@@ -34,10 +34,12 @@ export function AssignWarehousesDialog({
   onOpenChange,
   areaId,
   areaName,
-  currentWarehouseIds,
+  assignedWarehouses,
   onSuccess,
 }: AssignWarehousesDialogProps) {
   const { toast } = useToast();
+  
+  const currentWarehouseIds = assignedWarehouses.map((w) => w.id);
 
   const [selectedWarehouseIds, setSelectedWarehouseIds] =
     useState<string[]>(currentWarehouseIds);
@@ -51,20 +53,21 @@ export function AssignWarehousesDialog({
   } = useWarehouses();
 
   const assignWarehouseMutation = useAssignWarehouseToArea();
-  const removeWarehouseMutation = useRemoveWarehouseFromArea();
+  const removeAssignmentMutation = useRemoveAssignment(); // ✅ New hook
 
+  // ✅ Fix: Solo depender de 'open' - currentWarehouseIds se recalcula automáticamente desde assignedWarehouses
   useEffect(() => {
     if (open) {
       setSelectedWarehouseIds(currentWarehouseIds);
     }
-  }, [open, currentWarehouseIds]);
+  }, [open]); // ❌ REMOVED: currentWarehouseIds from dependencies to prevent infinite loop
 
   // Opciones para el MultiSelect (solo bodegas activas y con capacidad)
   const warehousesOptions: Option[] = useMemo(() => {
     const availableWarehouses = (warehouses || []).filter(
       (w) => {
-        // ✅ Validar estado ACTIVO
-        if (w.status !== "ACTIVO") return false;
+        // ✅ VALIDAR: Bodega debe estar habilitada (isEnabled = true)
+        if (!w.isEnabled || w.status !== "ACTIVO") return false;
         
         // ✅ Validar capacidad disponible
         const currentCapacity = w.currentCapacityKg || 0;
@@ -98,6 +101,22 @@ export function AssignWarehousesDialog({
         (id) => !selectedWarehouseIds.includes(id)
       );
 
+      // ✅ VALIDACIÓN: Verificar que ninguna bodega a agregar esté deshabilitada
+      const disabledWarehouses = warehousesToAdd.filter((id) => {
+        const warehouse = warehouses.find((w) => w.id === id);
+        return warehouse && (!warehouse.isEnabled || warehouse.status !== "ACTIVO");
+      });
+
+      if (disabledWarehouses.length > 0) {
+        toast({
+          title: "❌ No se puede asignar",
+          description: "Una o más bodegas seleccionadas están deshabilitadas. Solo puedes asignar bodegas activas.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
       const promises: Promise<unknown>[] = [];
 
       for (const warehouseId of warehousesToAdd) {
@@ -109,13 +128,19 @@ export function AssignWarehousesDialog({
         );
       }
 
+      // ✅ Use assignmentId from assignedWarehouses - no GET call needed!
       for (const warehouseId of warehousesToRemove) {
-        promises.push(
-          removeWarehouseMutation.mutateAsync({
-            areaId,
-            warehouseId,
-          })
-        );
+        const warehouse = assignedWarehouses.find((w) => w.id === warehouseId);
+        if (warehouse?.assignmentId) {
+          promises.push(
+            removeAssignmentMutation.mutateAsync({
+              assignmentId: warehouse.assignmentId,
+              areaId,
+            })
+          );
+        } else {
+          console.warn(`No assignmentId found for warehouse ${warehouseId}`);
+        }
       }
 
       await Promise.all(promises);

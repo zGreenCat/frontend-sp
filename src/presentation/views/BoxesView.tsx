@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -43,7 +43,7 @@ import {
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { CreateBoxInput } from "@/shared/schemas";
-import { BOX_STATUS } from "@/shared/constants";
+import { BOX_STATUS, BOX_TYPES } from "@/shared/constants";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -66,11 +66,10 @@ export function BoxesView() {
   // Filtros y paginación
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const limit = 12;
-
-  // Búsqueda por QR
-  const [qrSearchTerm, setQrSearchTerm] = useState("");
 
   // React Query hooks
   const filters = {
@@ -84,6 +83,23 @@ export function BoxesView() {
   const boxes = boxesResponse?.data || [];
   const totalBoxes = boxesResponse?.total || 0;
   const totalPages = Math.ceil(totalBoxes / limit);
+
+  // Filtros adicionales aplicados en frontend (tipo y bodega)
+  const filteredBoxes = useMemo(() => {
+    return boxes.filter((box) => {
+      // Filtro por tipo
+      const matchType = typeFilter === "all" || box.type === typeFilter;
+
+      // Filtro por bodega
+      const hasWarehouse = !!(box.warehouseId || box.warehouseName || box.warehouse?.id);
+      const matchWarehouse =
+        warehouseFilter === "all" ||
+        (warehouseFilter === "assigned" && hasWarehouse) ||
+        (warehouseFilter === "unassigned" && !hasWarehouse);
+
+      return matchType && matchWarehouse;
+    });
+  }, [boxes, typeFilter, warehouseFilter]);
 
   const createBoxMutation = useCreateBox();
   const updateBoxMutation = useUpdateBox();
@@ -122,17 +138,16 @@ export function BoxesView() {
     if (!selectedBox) return;
 
     try {
+      console.log("Updating box with data:", selectedBox.id, data);
       const updatedBox = await updateBoxMutation.mutateAsync({
         id: selectedBox.id,
         data: {
-          id: selectedBox.id,
           description: data.description,
           type: data.type,
           currentWeightKg: data.currentWeightKg,
           // NO incluir status ni warehouseId (se editan por separado)
         },
       });
-
       toast({
         title: "✅ Caja actualizada",
         description: `Los datos de la caja "${updatedBox.qrCode}" han sido actualizados correctamente.`,
@@ -161,7 +176,7 @@ export function BoxesView() {
   };
 
   const handleSearchByQr = async () => {
-    if (!qrSearchTerm.trim()) {
+    if (!searchTerm.trim()) {
       toast({
         title: "⚠️ Campo vacío",
         description: "Ingresa un código QR para buscar.",
@@ -171,7 +186,7 @@ export function BoxesView() {
     }
 
     try {
-      const box = await findBoxByQrMutation.mutateAsync(qrSearchTerm.trim());
+      const box = await findBoxByQrMutation.mutateAsync(searchTerm.trim());
 
       if (box) {
         toast({
@@ -182,7 +197,7 @@ export function BoxesView() {
       } else {
         toast({
           title: "❌ No encontrada",
-          description: `No se encontró ninguna caja con el código QR "${qrSearchTerm}".`,
+          description: `No se encontró ninguna caja con el código QR "${searchTerm}".`,
           variant: "destructive",
         });
       }
@@ -249,72 +264,103 @@ export function BoxesView() {
         )}
       </div>
 
-      {/* Búsqueda por QR */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-2">
-            <div className="flex-1">
+      {/* Filtros y búsqueda unificada */}
+      <div className="flex flex-col gap-3">
+        {/* Primera fila: Búsqueda y botón QR */}
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar caja por código QR (Ej: BOX-001)..."
-                value={qrSearchTerm}
-                onChange={(e) => setQrSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSearchByQr();
+                placeholder="Buscar por código, descripción o tipo de caja..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
                 }}
-                className="h-10"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.ctrlKey) handleSearchByQr();
+                }}
+                className="h-10 pl-9"
               />
             </div>
-            <Button
-              onClick={handleSearchByQr}
-              disabled={findBoxByQrMutation.isPending}
-              className="h-10 gap-2"
-            >
-              <QrCode className="h-4 w-4" />
-              Buscar QR
-            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por código QR..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1); // Reset a página 1 al buscar
-              }}
-              className="h-10 pl-9"
-            />
-          </div>
+          <Button
+            onClick={handleSearchByQr}
+            disabled={findBoxByQrMutation.isPending}
+            variant="outline"
+            className="h-10 gap-2"
+            title="Buscar por código QR exacto"
+            aria-label="Buscar caja por código QR exacto"
+          >
+            <QrCode className="h-4 w-4" />
+            Buscar QR
+          </Button>
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => {
-            setStatusFilter(value);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-[200px] h-10">
-            <SelectValue placeholder="Filtrar por estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los estados</SelectItem>
-            <SelectItem value={BOX_STATUS.DISPONIBLE}>Disponible</SelectItem>
-            <SelectItem value={BOX_STATUS.EN_REPARACION}>
-              En reparación
-            </SelectItem>
-            <SelectItem value={BOX_STATUS.DANADA}>Dañada</SelectItem>
-            <SelectItem value={BOX_STATUS.RETIRADA}>Retirada</SelectItem>
-          </SelectContent>
-        </Select>
 
-        {/* Toggle Vista Grid/Tabla */}
-        <div className="flex gap-1 border border-border rounded-md p-1">
+        {/* Segunda fila: Filtros y toggle vista */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Filtro por estado */}
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[180px] h-10">
+              <SelectValue placeholder="Filtrar por estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los estados</SelectItem>
+              <SelectItem value={BOX_STATUS.DISPONIBLE}>Disponible</SelectItem>
+              <SelectItem value={BOX_STATUS.EN_REPARACION}>
+                En reparación
+              </SelectItem>
+              <SelectItem value={BOX_STATUS.DANADA}>Dañada</SelectItem>
+              <SelectItem value={BOX_STATUS.RETIRADA}>Retirada</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Filtro por tipo */}
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => {
+              setTypeFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[180px] h-10">
+              <SelectValue placeholder="Filtrar por tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los tipos</SelectItem>
+              <SelectItem value={BOX_TYPES.PEQUEÑA}>Pequeña</SelectItem>
+              <SelectItem value={BOX_TYPES.NORMAL}>Normal</SelectItem>
+              <SelectItem value={BOX_TYPES.GRANDE}>Grande</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Filtro por bodega */}
+          <Select
+            value={warehouseFilter}
+            onValueChange={(value) => {
+              setWarehouseFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[180px] h-10">
+              <SelectValue placeholder="Filtrar por bodega" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las bodegas</SelectItem>
+              <SelectItem value="assigned">Con bodega asignada</SelectItem>
+              <SelectItem value="unassigned">Sin bodega asignada</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Toggle Vista Grid/Tabla */}
+          <div className="flex gap-1 border border-border rounded-md p-1">
           <Button
             variant={viewMode === "grid" ? "secondary" : "ghost"}
             size="sm"
@@ -341,6 +387,7 @@ export function BoxesView() {
             <List className="h-4 w-4" />
             <span className="hidden sm:inline">Tabla</span>
           </Button>
+          </div>
         </div>
       </div>
 
@@ -348,7 +395,7 @@ export function BoxesView() {
       {!loading && totalBoxes > 0 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <p>
-            Mostrando {boxes.length} de {totalBoxes} caja(s)
+            Mostrando {filteredBoxes.length} de {totalBoxes} caja(s)
           </p>
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
@@ -383,8 +430,8 @@ export function BoxesView() {
       {/* Listado de cajas */}
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-      ) : boxes.length === 0 ? (
-        <EmptyState message="No se encontraron cajas" />
+      ) : filteredBoxes.length === 0 ? (
+        <EmptyState message="No se encontraron cajas con los filtros seleccionados" />
       ) : (
         // 👇 Aquí entra Framer Motion para animar el cambio grid ↔ tabla
         <div className="relative min-h-[200px]">
@@ -398,7 +445,7 @@ export function BoxesView() {
                 transition={{ duration: 0.18 }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               >
-                {boxes.map((box) => (
+                {filteredBoxes.map((box) => (
   <Card
     key={box.id}
     className="shadow-sm hover:shadow-md transition-shadow"
@@ -526,7 +573,7 @@ export function BoxesView() {
                 <Card>
                   <CardContent className="p-0">
                     <BoxesTable
-                      boxes={boxes}
+                      boxes={filteredBoxes}
                       canEdit={canEdit}
                       onViewDetail={goToDetail}
                       onEdit={openEditDialog}

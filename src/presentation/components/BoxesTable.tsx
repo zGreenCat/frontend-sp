@@ -1,6 +1,7 @@
 /**
  * BoxesTable - Tabla de cajas para vista desktop
  * Sigue el patrón de UsersView con responsive design
+ * Acciones separadas: Ver detalle, Cambiar estado, Mover bodega, Editar datos
  */
 
 "use client";
@@ -85,52 +86,31 @@ export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit, onMove, onCha
                 </p>
               </td>
 
-              {/* Estado - clickeable para cambiar */}
+              {/* Estado - solo lectura */}
               <td className="py-4 px-4 text-center">
-                <button
-                  onClick={() => canEdit && onChangeStatus && onChangeStatus(box)}
-                  disabled={!canEdit || !onChangeStatus}
-                  className={cn(
-                    "transition-opacity",
-                    canEdit && onChangeStatus && "cursor-pointer hover:opacity-80"
-                  )}
-                >
-                  <EntityBadge status={box.status} />
-                </button>
+                <EntityBadge status={box.status} />
               </td>
 
-              {/* Bodega - con botón para mover */}
+              {/* Bodega - solo información */}
               <td className="py-4 px-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    {box.warehouseName || box.warehouse?.name ? (
-                      <span className="text-sm text-foreground font-medium truncate">
-                        {box.warehouseName || box.warehouse?.name}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground italic">
-                        Sin bodega
-                      </span>
-                    )}
-                  </div>
-                  {canEdit && onMove && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onMove(box)}
-                      className="h-7 px-2 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                      title="Mover a otra bodega"
-                    >
-                      <TruckIcon className="h-3.5 w-3.5" />
-                    </Button>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  {box.warehouseName || box.warehouse?.name ? (
+                    <span className="text-sm text-foreground font-medium truncate">
+                      {box.warehouseName || box.warehouse?.name}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground italic">
+                      Sin bodega
+                    </span>
                   )}
                 </div>
               </td>
 
-              {/* Acciones */}
+              {/* Acciones - Patrón: [Ver] + 3 botones solo-icono */}
               <td className="py-4 px-4">
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-1.5">
+                  {/* Botón principal: Ver detalle */}
                   <Button
                     variant="outline"
                     size="sm"
@@ -140,16 +120,50 @@ export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit, onMove, onCha
                     <Eye className="h-4 w-4" />
                     Ver
                   </Button>
+
+                  {/* Botones solo-icono (solo si canEdit) */}
                   {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEdit(box)}
-                      className="h-8 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Editar
-                    </Button>
+                    <>
+                      {/* 1. Cambiar estado */}
+                      {onChangeStatus && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onChangeStatus(box)}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                          title="Cambiar estado"
+                          aria-label="Cambiar estado de la caja"
+                        >
+                          <ToggleLeft className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* 2. Mover bodega */}
+                      {onMove && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onMove(box)}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                          title="Mover a otra bodega"
+                          aria-label="Mover caja a otra bodega"
+                        >
+                          <TruckIcon className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* 3. Editar datos maestros */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEdit(box)}
+                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                        title="Editar datos de la caja"
+                        aria-label="Editar datos maestros de la caja"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </td>

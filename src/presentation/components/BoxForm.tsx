@@ -89,7 +89,7 @@ export function BoxForm({
               </FormControl>
               <FormDescription className="text-xs">
                 {mode === "edit"
-                  ? "⚠️ El código QR no puede modificarse después de la creación"
+                  ? "* El código QR no puede modificarse después de la creación"
                   : "Identificador único de la caja (solo letras, números, guiones y guiones bajos)"}
               </FormDescription>
               <FormMessage />
