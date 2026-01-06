@@ -15,11 +15,14 @@ import {
   Calendar,
   User,
   FileText,
+  Eye,
 } from "lucide-react";
 import { useWarehouseById } from "@/hooks/useWarehouses";
 import { useWarehouseMovements } from "@/hooks/useWarehouseMovements";
+import { useBoxes } from "@/hooks/useBoxes";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { WarehouseDialog } from "@/presentation/components/WarehouseDialog";
+import { EmptyState } from "@/presentation/components/EmptyState";
 import { useUpdateWarehouse } from "@/hooks/useWarehouses";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +73,11 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
     currentPage,
     limit
   );
+  const { data: boxesData, isLoading: loadingBoxes } = useBoxes({
+    warehouseId,
+    page: 1,
+    limit: 100, // Mostrar todas las cajas de la bodega
+  });
 
   const updateWarehouseMutation = useUpdateWarehouse();
 
@@ -163,10 +171,14 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="info">
             <Package className="h-4 w-4 mr-2" />
             Información General
+          </TabsTrigger>
+          <TabsTrigger value="boxes">
+            <Package className="h-4 w-4 mr-2" />
+            Cajas
           </TabsTrigger>
           <TabsTrigger value="history">
             <History className="h-4 w-4 mr-2" />
@@ -215,6 +227,97 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Cajas */}
+        <TabsContent value="boxes" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Cajas en esta Bodega</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingBoxes ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : !boxesData || boxesData.data.length === 0 ? (
+                <EmptyState message="Esta bodega aún no tiene cajas asociadas" />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
+                          Código QR
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
+                          Tipo
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
+                          Peso (Kg)
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
+                          Estado
+                        </th>
+                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
+                          Creada
+                        </th>
+                        <th className="py-3 px-4 text-right text-sm font-medium text-muted-foreground">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {boxesData.data.map((box) => (
+                        <tr
+                          key={box.id}
+                          className="border-b hover:bg-secondary/20 transition-colors"
+                        >
+                          <td className="py-4 px-4">
+                            <button
+                              onClick={() => router.push(`/boxes/${box.id}`)}
+                              className="font-mono text-sm font-medium text-primary hover:underline"
+                            >
+                              {box.qrCode}
+                            </button>
+                          </td>
+                          <td className="py-4 px-4">
+                            <EntityBadge status={box.type} />
+                          </td>
+                          <td className="py-4 px-4 text-foreground">
+                            {box.currentWeightKg?.toLocaleString() || 0}
+                          </td>
+                          <td className="py-4 px-4">
+                            <EntityBadge status={box.status} />
+                          </td>
+                          <td className="py-4 px-4 text-sm text-muted-foreground">
+                            {box.createdAt
+                              ? format(new Date(box.createdAt), "dd MMM yyyy", { locale: es })
+                              : "-"}
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/boxes/${box.id}`)}
+                              className="gap-2"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Ver detalle
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Total: {boxesData.total} {boxesData.total === 1 ? "caja" : "cajas"}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

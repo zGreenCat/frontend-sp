@@ -105,6 +105,7 @@ export class ApiBoxRepository implements IBoxRepository {
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.search) params.append('search', filters.search);
     if (filters?.status) params.append('status', filters.status);
+    if (filters?.warehouseId) params.append('warehouseId', filters.warehouseId); // ✅ Filtro por bodega
 
     const response = await apiClient.get<BackendBoxListResponse>(
       `/boxes?${params.toString()}`

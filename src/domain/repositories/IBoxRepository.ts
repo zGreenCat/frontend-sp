@@ -5,6 +5,7 @@ export interface BoxListFilters {
   limit?: number;
   search?: string; // Busca por qrCode
   status?: string; // Filtro por estado
+  warehouseId?: string; // ✅ Filtro por bodega
 }
 
 export interface BoxListResponse {
