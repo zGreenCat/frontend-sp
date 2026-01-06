@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,6 +57,7 @@ const getMovementTypeBadge = (type: string) => {
 
 export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { can } = usePermissions();
   const { toast } = useToast();
 
@@ -65,6 +66,21 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
   const limit = 10;
 
   const canEdit = can("warehouses:edit");
+  
+  // Leer returnUrl de la query string
+  const returnUrl = searchParams.get("returnUrl");
+  
+  // Función para manejar la navegación de regreso
+  const handleBack = () => {
+    if (returnUrl) {
+      router.push(returnUrl);
+    } else {
+      router.push("/warehouses");
+    }
+  };
+  
+  // Texto dinámico del botón de volver
+  const backButtonText = returnUrl ? "Volver al Área" : "Volver a Bodegas";
 
   // Queries
   const { data: warehouse, isLoading: loadingWarehouse } = useWarehouseById(warehouseId);
@@ -137,11 +153,11 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/warehouses")}
+            onClick={handleBack}
             className="gap-2 mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Volver a Bodegas
+            {backButtonText}
           </Button>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold text-foreground">{warehouse.name}</h1>

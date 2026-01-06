@@ -403,7 +403,7 @@ export function AreaDetailView({ areaId }: AreaDetailViewProps) {
                     <div
                       key={warehouse.id}
                       className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer relative"
-                      onClick={() => router.push(`/warehouses/${warehouse.id}`)}
+                      onClick={() => router.push(`/warehouses/${warehouse.id}?returnUrl=/areas/${area.id}`)}
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
