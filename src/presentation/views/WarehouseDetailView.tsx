@@ -131,7 +131,7 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header con breadcrumbs y acciones */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
           <Button
@@ -169,70 +169,77 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
-          <TabsTrigger value="info">
-            <Package className="h-4 w-4 mr-2" />
-            Información General
+      {/* Card de información general - Siempre visible */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Datos de la Bodega
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Nombre</p>
+              <p className="font-medium">{warehouse.name}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Capacidad Máxima</p>
+              <p className="font-medium">
+                {(warehouse.maxCapacityKg || warehouse.capacityKg || 0).toLocaleString()} Kg
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Estado</p>
+              <div className="mt-1">
+                <EntityBadge
+                  status={
+                    typeof warehouse.status === "string"
+                      ? warehouse.status
+                      : warehouse.isEnabled
+                      ? "ACTIVO"
+                      : "INACTIVO"
+                  }
+                />
+              </div>
+            </div>
+            {warehouse.createdAt && (
+              <div>
+                <p className="text-sm text-muted-foreground">Fecha de Creación</p>
+                <p className="font-medium">
+                  {format(new Date(warehouse.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                </p>
+              </div>
+            )}
+            {warehouse.areaName && (
+              <div>
+                <p className="text-sm text-muted-foreground">Área Asignada</p>
+                <p className="font-medium">{warehouse.areaName}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm text-muted-foreground">ID de la Bodega</p>
+              <p className="font-mono text-xs">{warehouse.id}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabs para contenido dinámico */}
+      <Tabs defaultValue="boxes" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="boxes" className="gap-2">
+            <Package className="h-4 w-4" />
+            Cajas ({boxesData?.total || 0})
           </TabsTrigger>
-          <TabsTrigger value="boxes">
-            <Package className="h-4 w-4 mr-2" />
-            Cajas
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            <History className="h-4 w-4 mr-2" />
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
             Historial
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab: Información General */}
-        <TabsContent value="info" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Datos de la Bodega</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Nombre</p>
-                  <p className="text-lg font-semibold">{warehouse.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Capacidad Máxima</p>
-                  <p className="text-lg font-semibold">
-                    {(warehouse.maxCapacityKg || warehouse.capacityKg || 0).toLocaleString()} Kg
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Estado</p>
-                  <div className="mt-1">
-                    <EntityBadge
-                      status={
-                        typeof warehouse.status === "string"
-                          ? warehouse.status
-                          : warehouse.isEnabled
-                          ? "ACTIVO"
-                          : "INACTIVO"
-                      }
-                    />
-                  </div>
-                </div>
-                {warehouse.createdAt && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Fecha de Creación</p>
-                    <p className="text-lg">
-                      {format(new Date(warehouse.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Tab: Cajas */}
-        <TabsContent value="boxes" className="space-y-4">
+        <TabsContent value="boxes">
           <Card>
             <CardHeader>
               <CardTitle>Cajas en esta Bodega</CardTitle>
@@ -246,72 +253,56 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
                 <EmptyState message="Esta bodega aún no tiene cajas asociadas" />
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
-                          Código QR
-                        </th>
-                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
-                          Tipo
-                        </th>
-                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
-                          Peso (Kg)
-                        </th>
-                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
-                          Estado
-                        </th>
-                        <th className="py-3 px-4 text-left text-sm font-medium text-muted-foreground">
-                          Creada
-                        </th>
-                        <th className="py-3 px-4 text-right text-sm font-medium text-muted-foreground">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {boxesData.data.map((box) => (
-                        <tr
-                          key={box.id}
-                          className="border-b hover:bg-secondary/20 transition-colors"
-                        >
-                          <td className="py-4 px-4">
-                            <button
-                              onClick={() => router.push(`/boxes/${box.id}`)}
-                              className="font-mono text-sm font-medium text-primary hover:underline"
-                            >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {boxesData.data.map((box) => (
+                      <div
+                        key={box.id}
+                        className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/boxes/${box.id}`)}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono text-sm font-medium text-primary">
                               {box.qrCode}
-                            </button>
-                          </td>
-                          <td className="py-4 px-4">
-                            <EntityBadge status={box.type} />
-                          </td>
-                          <td className="py-4 px-4 text-foreground">
-                            {box.currentWeightKg?.toLocaleString() || 0}
-                          </td>
-                          <td className="py-4 px-4">
+                            </p>
                             <EntityBadge status={box.status} />
-                          </td>
-                          <td className="py-4 px-4 text-sm text-muted-foreground">
-                            {box.createdAt
-                              ? format(new Date(box.createdAt), "dd MMM yyyy", { locale: es })
-                              : "-"}
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => router.push(`/boxes/${box.id}`)}
-                              className="gap-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                              Ver detalle
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Tipo:</span>
+                              <EntityBadge status={box.type} />
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Peso:</span>
+                              <span className="font-medium">
+                                {box.currentWeightKg?.toLocaleString() || 0} Kg
+                              </span>
+                            </div>
+                            {box.createdAt && (
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Creada:</span>
+                                <span>
+                                  {format(new Date(box.createdAt), "dd MMM yyyy", { locale: es })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full gap-2 mt-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/boxes/${box.id}`);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                            Ver detalle
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
                   <p className="text-sm text-muted-foreground mt-4">
                     Total: {boxesData.total} {boxesData.total === 1 ? "caja" : "cajas"}
@@ -323,10 +314,13 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
         </TabsContent>
 
         {/* Tab: Historial */}
-        <TabsContent value="history" className="space-y-4">
+        <TabsContent value="history">
           <Card>
             <CardHeader>
-              <CardTitle>Historial de Movimientos</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Historial de Movimientos
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {loadingMovements ? (
@@ -334,16 +328,14 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : !movementsData || movementsData.data.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No hay movimientos registrados para esta bodega
-                </div>
+                <EmptyState message="Esta bodega aún no tiene movimientos registrados" />
               ) : (
                 <>
                   <div className="space-y-4">
                     {movementsData.data.map((movement) => (
                       <div
                         key={movement.id}
-                        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 border rounded-lg hover:bg-secondary/20 transition-colors"
+                        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                       >
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2">
