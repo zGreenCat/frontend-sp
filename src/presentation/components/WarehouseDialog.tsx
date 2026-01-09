@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,10 @@ import { CreateWarehouseInput } from "@/shared/schemas";
 interface WarehouseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: CreateWarehouseInput) => Promise<void>;
+  onSubmit: (
+    data: CreateWarehouseInput,
+    assignments?: { areaId?: string; supervisorId?: string }
+  ) => Promise<void>;
   defaultValues?: Partial<CreateWarehouseInput>;
   isLoading?: boolean;
   mode?: "create" | "edit";
@@ -27,12 +31,26 @@ export function WarehouseDialog({
   isLoading = false,
   mode = "create",
 }: WarehouseDialogProps) {
+  const [pendingAssignments, setPendingAssignments] = useState<{
+    areaId?: string;
+    supervisorId?: string;
+  }>();
+
   const handleCancel = () => {
     onOpenChange(false);
+    setPendingAssignments(undefined);
   };
 
   const handleSubmit = async (data: CreateWarehouseInput) => {
-    await onSubmit(data);
+    await onSubmit(data, pendingAssignments);
+    setPendingAssignments(undefined);
+  };
+
+  const handleAssignmentsSelected = (assignments: {
+    areaId?: string;
+    supervisorId?: string;
+  }) => {
+    setPendingAssignments(assignments);
   };
 
   return (
@@ -54,6 +72,8 @@ export function WarehouseDialog({
           onCancel={handleCancel}
           defaultValues={defaultValues}
           isLoading={isLoading}
+          mode={mode}
+          onAssignmentsSelected={handleAssignmentsSelected}
         />
       </DialogContent>
     </Dialog>

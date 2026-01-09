@@ -9,7 +9,17 @@ import { Plus, Search, Edit } from "lucide-react";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { WarehouseDialog } from "@/presentation/components/WarehouseDialog";
-import { useWarehouses, useCreateWarehouse, useUpdateWarehouse } from "@/hooks/useWarehouses";
+import {
+  useWarehouses,
+  useCreateWarehouse,
+  useUpdateWarehouse,
+} from "@/hooks/useWarehouses";
+import {
+  useAssignWarehouseToArea,
+  useAssignSupervisorToWarehouse,
+} from "@/hooks/useAssignments";
+import { useAreas } from "@/hooks/useAreas";
+import { useUsers } from "@/hooks/useUsers";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { CreateWarehouseInput } from "@/shared/schemas";
@@ -25,6 +35,14 @@ export function WarehousesView() {
   const { data: warehouses = [], isLoading: loading } = useWarehouses();
   const createWarehouseMutation = useCreateWarehouse();
   const updateWarehouseMutation = useUpdateWarehouse();
+  const assignWarehouseToAreaMutation = useAssignWarehouseToArea();
+  const assignSupervisorToWarehouseMutation = useAssignSupervisorToWarehouse();
+  
+  // Data for assignments
+  const { data: areas = [] } = useAreas();
+  const usersQuery = useUsers();
+  const usersData = usersQuery.data;
+  const users = Array.isArray(usersData) ? usersData : (usersData?.data || []);
 
   // Permisos y toasts
   const { can } = usePermissions();
@@ -37,14 +55,99 @@ export function WarehousesView() {
     w.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = async (data: CreateWarehouseInput) => {
+  const handleCreate = async (
+    data: CreateWarehouseInput,
+    assignments?: { areaId?: string; supervisorId?: string }
+  ) => {
     try {
       const createdWarehouse = await createWarehouseMutation.mutateAsync(data);
 
-      toast({
-        title: "✅ Bodega creada",
-        description: `La bodega "${createdWarehouse.name}" ha sido creada exitosamente con capacidad de ${createdWarehouse.maxCapacityKg} Kg.`,
-      });
+      // Track assignment results
+      const assignmentResults: {
+        area: boolean;
+        supervisor: boolean;
+        areaName?: string;
+        supervisorName?: string;
+      } = {
+        area: false,
+        supervisor: false,
+      };
+
+      // Attempt area assignment if provided
+      if (assignments?.areaId) {
+        try {
+          await assignWarehouseToAreaMutation.mutateAsync({
+            areaId: assignments.areaId,
+            warehouseId: createdWarehouse.id,
+          });
+          assignmentResults.area = true;
+          const area = areas.find((a) => a.id === assignments.areaId);
+          assignmentResults.areaName = area?.name;
+        } catch (error) {
+          console.error("Error al asignar bodega al área:", error);
+        }
+      }
+
+      // Attempt supervisor assignment if provided
+      if (assignments?.supervisorId) {
+        try {
+          await assignSupervisorToWarehouseMutation.mutateAsync({
+            warehouseId: createdWarehouse.id,
+            supervisorId: assignments.supervisorId,
+          });
+          assignmentResults.supervisor = true;
+          const supervisor = users.find((u) => u.id === assignments.supervisorId);
+          assignmentResults.supervisorName = supervisor ? `${supervisor.name} ${supervisor.lastName}` : undefined;
+        } catch (error) {
+          console.error("Error al asignar supervisor a la bodega:", error);
+        }
+      }
+
+      // Build toast message based on results
+      const hasAssignments =
+        assignments?.areaId || assignments?.supervisorId;
+      const allAssignmentsSucceeded =
+        (!assignments?.areaId || assignmentResults.area) &&
+        (!assignments?.supervisorId || assignmentResults.supervisor);
+
+      if (!hasAssignments) {
+        // No assignments attempted
+        toast({
+          title: "✅ Bodega creada",
+          description: `La bodega "${createdWarehouse.name}" ha sido creada exitosamente con capacidad de ${createdWarehouse.maxCapacityKg} Kg.`,
+        });
+      } else if (allAssignmentsSucceeded) {
+        // All assignments succeeded
+        const assignmentParts: string[] = [];
+        if (assignmentResults.area && assignmentResults.areaName) {
+          assignmentParts.push(`asignada al área "${assignmentResults.areaName}"`);
+        }
+        if (assignmentResults.supervisor && assignmentResults.supervisorName) {
+          assignmentParts.push(
+            `con supervisor "${assignmentResults.supervisorName}"`
+          );
+        }
+
+        toast({
+          title: "✅ Bodega creada y asignada",
+          description: `La bodega "${createdWarehouse.name}" ha sido creada exitosamente ${assignmentParts.join(" y ")}.`,
+        });
+      } else {
+        // Partial failure: warehouse created but some assignments failed
+        const failedAssignments: string[] = [];
+        if (assignments?.areaId && !assignmentResults.area) {
+          failedAssignments.push("área");
+        }
+        if (assignments?.supervisorId && !assignmentResults.supervisor) {
+          failedAssignments.push("supervisor");
+        }
+
+        toast({
+          title: "⚠️ Bodega creada con advertencias",
+          description: `La bodega "${createdWarehouse.name}" se creó correctamente, pero no se pudieron registrar las asignaciones de: ${failedAssignments.join(", ")}. Puedes asignarlas manualmente desde los módulos correspondientes.`,
+          variant: "default",
+        });
+      }
 
       setDialogOpen(false);
       setSelectedWarehouse(null);
@@ -52,7 +155,9 @@ export function WarehousesView() {
       console.error("Error al crear bodega:", error);
       toast({
         title: "❌ Error al crear bodega",
-        description: error?.message || "No se pudo crear la bodega. Intenta nuevamente.",
+        description:
+          error?.message ||
+          "No se pudo crear la bodega. Intenta nuevamente.",
         variant: "destructive",
       });
     }
@@ -88,11 +193,14 @@ export function WarehousesView() {
     }
   };
 
-  const handleSubmit = async (data: CreateWarehouseInput) => {
+  const handleSubmit = async (
+    data: CreateWarehouseInput,
+    assignments?: { areaId?: string; supervisorId?: string }
+  ) => {
     if (selectedWarehouse) {
       await handleEdit(data);
     } else {
-      await handleCreate(data);
+      await handleCreate(data, assignments);
     }
   };
 
