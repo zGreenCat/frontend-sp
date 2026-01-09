@@ -5,21 +5,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit } from "lucide-react";
+import { Plus, Search, Edit, Link2 } from "lucide-react";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { WarehouseDialog } from "@/presentation/components/WarehouseDialog";
+import { WarehouseAssignmentsDialog } from "@/presentation/components/WarehouseAssignmentsDialog";
 import {
   useWarehouses,
   useCreateWarehouse,
   useUpdateWarehouse,
+  useWarehouseSupervisors,
 } from "@/hooks/useWarehouses";
-import {
-  useAssignWarehouseToArea,
-  useAssignSupervisorToWarehouse,
-} from "@/hooks/useAssignments";
-import { useAreas } from "@/hooks/useAreas";
-import { useUsers } from "@/hooks/useUsers";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { CreateWarehouseInput } from "@/shared/schemas";
@@ -29,20 +25,21 @@ export function WarehousesView() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [assignmentsDialogOpen, setAssignmentsDialogOpen] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
+  const [warehouseForAssignments, setWarehouseForAssignments] = useState<Warehouse | null>(null);
 
   // React Query hooks
   const { data: warehouses = [], isLoading: loading } = useWarehouses();
   const createWarehouseMutation = useCreateWarehouse();
   const updateWarehouseMutation = useUpdateWarehouse();
-  const assignWarehouseToAreaMutation = useAssignWarehouseToArea();
-  const assignSupervisorToWarehouseMutation = useAssignSupervisorToWarehouse();
   
-  // Data for assignments
-  const { data: areas = [] } = useAreas();
-  const usersQuery = useUsers();
-  const usersData = usersQuery.data;
-  const users = Array.isArray(usersData) ? usersData : (usersData?.data || []);
+  // Obtener supervisores del warehouse seleccionado para asignaciones
+  const { data: supervisorsData } = useWarehouseSupervisors(
+    warehouseForAssignments?.id || '',
+    1,
+    100, // Obtener todos los supervisores
+  );
 
   // Permisos y toasts
   const { can } = usePermissions();
@@ -55,99 +52,14 @@ export function WarehousesView() {
     w.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = async (
-    data: CreateWarehouseInput,
-    assignments?: { areaId?: string; supervisorId?: string }
-  ) => {
+  const handleCreate = async (data: CreateWarehouseInput) => {
     try {
       const createdWarehouse = await createWarehouseMutation.mutateAsync(data);
 
-      // Track assignment results
-      const assignmentResults: {
-        area: boolean;
-        supervisor: boolean;
-        areaName?: string;
-        supervisorName?: string;
-      } = {
-        area: false,
-        supervisor: false,
-      };
-
-      // Attempt area assignment if provided
-      if (assignments?.areaId) {
-        try {
-          await assignWarehouseToAreaMutation.mutateAsync({
-            areaId: assignments.areaId,
-            warehouseId: createdWarehouse.id,
-          });
-          assignmentResults.area = true;
-          const area = areas.find((a) => a.id === assignments.areaId);
-          assignmentResults.areaName = area?.name;
-        } catch (error) {
-          console.error("Error al asignar bodega al área:", error);
-        }
-      }
-
-      // Attempt supervisor assignment if provided
-      if (assignments?.supervisorId) {
-        try {
-          await assignSupervisorToWarehouseMutation.mutateAsync({
-            warehouseId: createdWarehouse.id,
-            supervisorId: assignments.supervisorId,
-          });
-          assignmentResults.supervisor = true;
-          const supervisor = users.find((u) => u.id === assignments.supervisorId);
-          assignmentResults.supervisorName = supervisor ? `${supervisor.name} ${supervisor.lastName}` : undefined;
-        } catch (error) {
-          console.error("Error al asignar supervisor a la bodega:", error);
-        }
-      }
-
-      // Build toast message based on results
-      const hasAssignments =
-        assignments?.areaId || assignments?.supervisorId;
-      const allAssignmentsSucceeded =
-        (!assignments?.areaId || assignmentResults.area) &&
-        (!assignments?.supervisorId || assignmentResults.supervisor);
-
-      if (!hasAssignments) {
-        // No assignments attempted
-        toast({
-          title: "✅ Bodega creada",
-          description: `La bodega "${createdWarehouse.name}" ha sido creada exitosamente con capacidad de ${createdWarehouse.maxCapacityKg} Kg.`,
-        });
-      } else if (allAssignmentsSucceeded) {
-        // All assignments succeeded
-        const assignmentParts: string[] = [];
-        if (assignmentResults.area && assignmentResults.areaName) {
-          assignmentParts.push(`asignada al área "${assignmentResults.areaName}"`);
-        }
-        if (assignmentResults.supervisor && assignmentResults.supervisorName) {
-          assignmentParts.push(
-            `con supervisor "${assignmentResults.supervisorName}"`
-          );
-        }
-
-        toast({
-          title: "✅ Bodega creada y asignada",
-          description: `La bodega "${createdWarehouse.name}" ha sido creada exitosamente ${assignmentParts.join(" y ")}.`,
-        });
-      } else {
-        // Partial failure: warehouse created but some assignments failed
-        const failedAssignments: string[] = [];
-        if (assignments?.areaId && !assignmentResults.area) {
-          failedAssignments.push("área");
-        }
-        if (assignments?.supervisorId && !assignmentResults.supervisor) {
-          failedAssignments.push("supervisor");
-        }
-
-        toast({
-          title: "⚠️ Bodega creada con advertencias",
-          description: `La bodega "${createdWarehouse.name}" se creó correctamente, pero no se pudieron registrar las asignaciones de: ${failedAssignments.join(", ")}. Puedes asignarlas manualmente desde los módulos correspondientes.`,
-          variant: "default",
-        });
-      }
+      toast({
+        title: "✅ Bodega creada",
+        description: `La bodega "${createdWarehouse.name}" ha sido creada exitosamente con capacidad de ${createdWarehouse.maxCapacityKg} Kg.`,
+      });
 
       setDialogOpen(false);
       setSelectedWarehouse(null);
@@ -193,14 +105,11 @@ export function WarehousesView() {
     }
   };
 
-  const handleSubmit = async (
-    data: CreateWarehouseInput,
-    assignments?: { areaId?: string; supervisorId?: string }
-  ) => {
+  const handleSubmit = async (data: CreateWarehouseInput) => {
     if (selectedWarehouse) {
       await handleEdit(data);
     } else {
-      await handleCreate(data, assignments);
+      await handleCreate(data);
     }
   };
 
@@ -212,6 +121,11 @@ export function WarehousesView() {
   const openEditDialog = (warehouse: Warehouse) => {
     setSelectedWarehouse(warehouse);
     setDialogOpen(true);
+  };
+
+  const openAssignmentsDialog = (warehouse: Warehouse) => {
+    setWarehouseForAssignments(warehouse);
+    setAssignmentsDialogOpen(true);
   };
 
   return (
@@ -306,15 +220,26 @@ export function WarehousesView() {
                       </td>
                       {canEdit && (
                         <td className="py-4 px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(warehouse)}
-                            className="h-8 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Editar
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(warehouse)}
+                              className="h-8 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                            >
+                              <Edit className="h-4 w-4" />
+                              Editar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openAssignmentsDialog(warehouse)}
+                              className="h-8 w-8 p-0 text-primary hover:text-primary/80 hover:bg-primary/10"
+                              title="Gestionar asignaciones"
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -343,6 +268,25 @@ export function WarehousesView() {
         isLoading={createWarehouseMutation.isPending || updateWarehouseMutation.isPending}
         mode={selectedWarehouse ? "edit" : "create"}
       />
+
+      {/* Dialog para gestionar asignaciones */}
+      {warehouseForAssignments && (
+        <WarehouseAssignmentsDialog
+          open={assignmentsDialogOpen}
+          onOpenChange={setAssignmentsDialogOpen}
+          warehouseId={warehouseForAssignments.id}
+          warehouseName={warehouseForAssignments.name}
+          currentAreaId={warehouseForAssignments.areaId}
+          currentAreaAssignmentId={warehouseForAssignments.assignmentId}
+          currentSupervisors={
+            supervisorsData?.data?.map((s) => ({
+              userId: s.id,
+              fullName: s.fullName,
+              assignmentId: s.assignmentId || '',
+            })) || []
+          }
+        />
+      )}
     </div>
   );
 }

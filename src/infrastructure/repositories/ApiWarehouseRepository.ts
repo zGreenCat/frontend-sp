@@ -1,5 +1,7 @@
-import { IWarehouseRepository } from '@/domain/repositories/IWarehouseRepository';
+import { IWarehouseRepository, PaginatedResponse } from '@/domain/repositories/IWarehouseRepository';
 import { Warehouse } from '@/domain/entities/Warehouse';
+import { WarehouseSupervisor } from '@/domain/entities/WarehouseSupervisor';
+import { Result, success, failure } from '@/shared/types/Result';
 import { apiClient } from '@/infrastructure/api/apiClient';
 
 interface BackendWarehouse {
@@ -133,6 +135,48 @@ export class ApiWarehouseRepository implements IWarehouseRepository {
     } catch (error) {
       console.error('Error updating warehouse:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Lista los supervisores asignados a una bodega
+   * GET /warehouses/{warehouseId}/supervisors?page=1&limit=10
+   */
+  async listWarehouseSupervisors(
+    warehouseId: string,
+    params: { page: number; limit: number }
+  ): Promise<Result<PaginatedResponse<WarehouseSupervisor>>> {
+    try {
+      const queryParams = new URLSearchParams({
+        page: params.page.toString(),
+        limit: params.limit.toString(),
+      }).toString();
+      
+      const response = await apiClient.get<any>(
+        `/warehouses/${warehouseId}/supervisors?${queryParams}`,
+        true
+      );
+
+      // Estructura esperada del backend:
+      // {
+      //   data: [...],
+      //   page, limit, totalPages, total, hasNext, hasPrev
+      // }
+      
+      const paginatedData: PaginatedResponse<WarehouseSupervisor> = {
+        data: response.data || [],
+        page: response.page || params.page,
+        limit: response.limit || params.limit,
+        totalPages: response.totalPages || 0,
+        total: response.total || 0,
+        hasNext: response.hasNext || false,
+        hasPrev: response.hasPrev || false,
+      };
+
+      return success(paginatedData);
+    } catch (error: any) {
+      console.error('Error fetching warehouse supervisors:', error);
+      return failure(error?.message || 'Error al obtener supervisores de la bodega');
     }
   }
 }

@@ -16,12 +16,17 @@ import {
   User,
   FileText,
   Eye,
+  Link2,
+  Building2,
+  Users,
 } from "lucide-react";
-import { useWarehouseById } from "@/hooks/useWarehouses";
+import { useWarehouseById, useWarehouseSupervisors } from "@/hooks/useWarehouses";
 import { useWarehouseMovements } from "@/hooks/useWarehouseMovements";
 import { useBoxes } from "@/hooks/useBoxes";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { WarehouseDialog } from "@/presentation/components/WarehouseDialog";
+import { WarehouseAssignmentsDialog } from "@/presentation/components/WarehouseAssignmentsDialog";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { useUpdateWarehouse } from "@/hooks/useWarehouses";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -62,8 +67,11 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
   const { toast } = useToast();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [assignmentsDialogOpen, setAssignmentsDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [supervisorsPage, setSupervisorsPage] = useState(1);
   const limit = 10;
+  const supervisorsLimit = 10;
 
   const canEdit = can("warehouses:edit");
   
@@ -94,6 +102,11 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
     page: 1,
     limit: 100, // Mostrar todas las cajas de la bodega
   });
+  const { data: supervisorsData, isLoading: loadingSupervisors } = useWarehouseSupervisors(
+    warehouseId,
+    supervisorsPage,
+    supervisorsLimit
+  );
 
   const updateWarehouseMutation = useUpdateWarehouse();
 
@@ -171,15 +184,26 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
               }
             />
             {canEdit && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditDialogOpen(true)}
-                className="gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Editar
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAssignmentsDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Link2 className="h-4 w-4" />
+                  Gestionar asignaciones
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -194,48 +218,78 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Nombre</p>
-              <p className="font-medium">{warehouse.name}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Capacidad Máxima</p>
-              <p className="font-medium">
-                {(warehouse.maxCapacityKg || warehouse.capacityKg || 0).toLocaleString()} Kg
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Estado</p>
-              <div className="mt-1">
-                <EntityBadge
-                  status={
-                    typeof warehouse.status === "string"
-                      ? warehouse.status
-                      : warehouse.isEnabled
-                      ? "ACTIVO"
-                      : "INACTIVO"
-                  }
-                />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Columna izquierda */}
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Nombre</p>
+                <p className="font-medium">{warehouse.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Estado</p>
+                <div className="mt-1">
+                  <EntityBadge
+                    status={
+                      typeof warehouse.status === "string"
+                        ? warehouse.status
+                        : warehouse.isEnabled
+                        ? "ACTIVO"
+                        : "INACTIVO"
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Área asignada
+                </p>
+                {warehouse.areaName ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-secondary/60 px-3 py-1">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      {warehouse.areaName}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    Sin área asignada
+                  </p>
+                )}
               </div>
             </div>
-            {warehouse.createdAt && (
+
+            {/* Columna derecha */}
+            <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Fecha de Creación</p>
+                <p className="text-sm text-muted-foreground">
+                  Capacidad Máxima
+                </p>
                 <p className="font-medium">
-                  {format(new Date(warehouse.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                  {(
+                    warehouse.maxCapacityKg ||
+                    warehouse.capacityKg ||
+                    0
+                  ).toLocaleString()}{" "}
+                  Kg
                 </p>
               </div>
-            )}
-            {warehouse.areaName && (
+              {warehouse.createdAt && (
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Fecha de Creación
+                  </p>
+                  <p className="font-medium">
+                    {format(new Date(warehouse.createdAt), "dd MMM yyyy, HH:mm", {
+                      locale: es,
+                    })}
+                  </p>
+                </div>
+              )}
+              {/* Supervisores ahora están en un tab independiente */}
               <div>
-                <p className="text-sm text-muted-foreground">Área Asignada</p>
-                <p className="font-medium">{warehouse.areaName}</p>
+                <p className="text-sm text-muted-foreground">ID de la Bodega</p>
+                <p className="font-mono text-xs">{warehouse.id}</p>
               </div>
-            )}
-            <div>
-              <p className="text-sm text-muted-foreground">ID de la Bodega</p>
-              <p className="font-mono text-xs">{warehouse.id}</p>
             </div>
           </div>
         </CardContent>
@@ -243,10 +297,14 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
 
       {/* Tabs para contenido dinámico */}
       <Tabs defaultValue="boxes" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="boxes" className="gap-2">
             <Package className="h-4 w-4" />
             Cajas ({boxesData?.total || 0})
+          </TabsTrigger>
+          <TabsTrigger value="supervisors" className="gap-2">
+            <Users className="h-4 w-4" />
+            Supervisores ({supervisorsData?.total || 0})
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
@@ -324,6 +382,126 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
                     Total: {boxesData.total} {boxesData.total === 1 ? "caja" : "cajas"}
                   </p>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Supervisores */}
+        <TabsContent value="supervisors">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Supervisores Asignados</CardTitle>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAssignmentsDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Link2 className="h-4 w-4" />
+                  Gestionar Supervisores
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {loadingSupervisors ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-28" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !supervisorsData || supervisorsData.data.length === 0 ? (
+                <EmptyState message="Esta bodega no tiene supervisores asignados" />
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {supervisorsData.data.map((sup) => (
+                      <div
+                        key={sup.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{sup.fullName}</p>
+                            <p className="text-sm text-muted-foreground">{sup.email}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-muted-foreground">{sup.role}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Asignado el {format(new Date(sup.assignedAt), "dd MMM yyyy", { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Paginación de supervisores */}
+                  {supervisorsData.totalPages > 1 && (
+                    <div className="mt-6">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setSupervisorsPage((p) => Math.max(1, p - 1))}
+                              className={
+                                supervisorsPage === 1
+                                  ? "pointer-events-none opacity-50"
+                                  : "cursor-pointer"
+                              }
+                            />
+                          </PaginationItem>
+
+                          {Array.from({ length: supervisorsData.totalPages }, (_, i) => i + 1).map(
+                            (page) => (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  onClick={() => setSupervisorsPage(page)}
+                                  isActive={supervisorsPage === page}
+                                  className="cursor-pointer"
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          )}
+
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() =>
+                                setSupervisorsPage((p) =>
+                                  Math.min(supervisorsData.totalPages, p + 1)
+                                )
+                              }
+                              className={
+                                supervisorsPage === supervisorsData.totalPages
+                                  ? "pointer-events-none opacity-50"
+                                  : "cursor-pointer"
+                              }
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+
+                      <p className="text-center text-sm text-muted-foreground mt-2">
+                        Mostrando {supervisorsData.data.length} de {supervisorsData.total} supervisores
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -468,6 +646,25 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
           }}
           isLoading={updateWarehouseMutation.isPending}
           mode="edit"
+        />
+      )}
+
+      {/* Assignments Dialog */}
+      {warehouse && (
+        <WarehouseAssignmentsDialog
+          open={assignmentsDialogOpen}
+          onOpenChange={setAssignmentsDialogOpen}
+          warehouseId={warehouse.id}
+          warehouseName={warehouse.name}
+          currentAreaId={warehouse.areaId}
+          currentAreaAssignmentId={warehouse.assignmentId}
+          currentSupervisors={
+            supervisorsData?.data?.map((s) => ({
+              userId: s.id,
+              fullName: s.fullName,
+              assignmentId: s.assignmentId || '',
+            })) || []
+          }
         />
       )}
     </div>

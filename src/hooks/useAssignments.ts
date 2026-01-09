@@ -1,11 +1,12 @@
-// src/hooks/useAssignments.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRepositories } from "@/presentation/providers/RepositoryProvider";
 import { areaKeys } from "./useAreas";
+import { warehouseKeys, warehouseSupervisorKeys } from "./useWarehouses";
+import { userKeys } from "./useUsers";
 import { AssignManagerToArea } from "@/application/usecases/assignment/AssignManagerToArea";
 import { RemoveManagerToArea } from "@/application/usecases/assignment/RemoveManagerToArea";
 import { AssignWarehouseToArea } from "@/application/usecases/assignment/AssignWarehouseToArea";
-import { RemoveWarehouseFromArea } from "@/application/usecases/assignment/RemoveWarehouseToArea";
+import { RemoveWarehouseToArea } from "@/application/usecases/assignment/RemoveWarehouseToArea";
 import { AssignSupervisorToWarehouse } from "@/application/usecases/assignment/AssignSupervisorToWarehouse";
 import { RemoveSupervisorToWarehouse } from "@/application/usecases/assignment/RemoveSupervisorToWarehouse";
 import { RemoveAssignment } from "@/application/usecases/assignment/RemoveAssignment";
@@ -22,9 +23,11 @@ export const useRemoveAssignment = () => {
     mutationFn: async ({
       assignmentId,
       areaId,
+      warehouseId,
     }: {
       assignmentId: string;
       areaId?: string; // Optional for invalidation
+      warehouseId?: string; // Optional for invalidation
     }) => {
       const useCase = new RemoveAssignment(assignmentRepo);
       const result = await useCase.execute(assignmentId);
@@ -41,6 +44,17 @@ export const useRemoveAssignment = () => {
         queryClient.invalidateQueries({ queryKey: areaKeys.all });
         queryClient.invalidateQueries({
           queryKey: areaKeys.detail(variables.areaId),
+        });
+      }
+      // Invalidate warehouse queries if warehouseId is provided
+      if (variables.warehouseId) {
+        queryClient.invalidateQueries({ queryKey: warehouseKeys.all });
+        queryClient.invalidateQueries({
+          queryKey: warehouseKeys.detail(variables.warehouseId),
+        });
+        // Invalidar lista de supervisores de la bodega (todas las páginas)
+        queryClient.invalidateQueries({
+          queryKey: ['warehouse-supervisors', undefined, variables.warehouseId],
         });
       }
       // Always invalidate general queries
@@ -175,7 +189,7 @@ export const useRemoveWarehouseFromArea = () => {
       areaId: string;
       warehouseId: string;
     }) => {
-      const useCase = new RemoveWarehouseFromArea(assignmentRepo);
+      const useCase = new RemoveWarehouseToArea(assignmentRepo);
       const result = await useCase.execute(areaId, warehouseId);
 
       if (!result.ok) {
@@ -224,11 +238,13 @@ export const useAssignSupervisorToWarehouse = () => {
       return null;
     },
     onSuccess: (_, variables) => {
-      // Aquí probablemente te interese invalidar:
-      // - detalle de la bodega (si tienes warehouseKeys)
-      // - alguna lista de supervisores o usuarios
-      // queryClient.invalidateQueries({ queryKey: warehouseKeys.all });
-      // queryClient.invalidateQueries({ queryKey: warehouseKeys.detail(variables.warehouseId) });
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.all });
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.detail(variables.warehouseId) });
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+      // Invalidar lista de supervisores de la bodega (todas las páginas)
+      queryClient.invalidateQueries({
+        queryKey: ['warehouse-supervisors', undefined, variables.warehouseId],
+      });
     },
   });
 };
