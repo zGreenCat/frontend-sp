@@ -18,7 +18,6 @@ import {
   Eye,
   Edit,
   Search,
-  QrCode,
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
@@ -35,10 +34,15 @@ import { BoxesTable } from "@/presentation/components/BoxesTable";
 import { MoveBoxDialog } from "@/presentation/components/MoveBoxDialog";
 import { ChangeBoxStatusDialog } from "@/presentation/components/ChangeBoxStatusDialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   useBoxes,
   useCreateBox,
   useUpdateBox,
-  useFindBoxByQr,
 } from "@/hooks/useBoxes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +107,6 @@ export function BoxesView() {
 
   const createBoxMutation = useCreateBox();
   const updateBoxMutation = useUpdateBox();
-  const findBoxByQrMutation = useFindBoxByQr();
 
   // Permisos y toasts
   const { can } = usePermissions();
@@ -175,42 +178,6 @@ export function BoxesView() {
     }
   };
 
-  const handleSearchByQr = async () => {
-    if (!searchTerm.trim()) {
-      toast({
-        title: "⚠️ Campo vacío",
-        description: "Ingresa un código QR para buscar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const box = await findBoxByQrMutation.mutateAsync(searchTerm.trim());
-
-      if (box) {
-        toast({
-          title: "✅ Caja encontrada",
-          description: `Redirigiendo al detalle de "${box.qrCode}"...`,
-        });
-        router.push(`/boxes/${box.id}`);
-      } else {
-        toast({
-          title: "❌ No encontrada",
-          description: `No se encontró ninguna caja con el código QR "${searchTerm}".`,
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error("Error al buscar por QR:", error);
-      toast({
-        title: "❌ Error en búsqueda",
-        description: error?.message || "No se pudo buscar la caja.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const openCreateDialog = () => {
     setSelectedBox(null);
     setDialogOpen(true);
@@ -244,6 +211,7 @@ export function BoxesView() {
   };
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -266,36 +234,18 @@ export function BoxesView() {
 
       {/* Filtros y búsqueda unificada */}
       <div className="flex flex-col gap-3">
-        {/* Primera fila: Búsqueda y botón QR */}
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por código, descripción o tipo de caja..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && e.ctrlKey) handleSearchByQr();
-                }}
-                className="h-10 pl-9"
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handleSearchByQr}
-            disabled={findBoxByQrMutation.isPending}
-            variant="outline"
-            className="h-10 gap-2"
-            title="Buscar por código QR exacto"
-            aria-label="Buscar caja por código QR exacto"
-          >
-            <QrCode className="h-4 w-4" />
-            Buscar QR
-          </Button>
+        {/* Primera fila: Búsqueda unificada */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por código QR, descripción o tipo de caja..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 pl-9"
+          />
         </div>
 
         {/* Segunda fila: Filtros y toggle vista */}
@@ -499,50 +449,64 @@ export function BoxesView() {
         </div>
       </div>
 
-      {/* Acciones: Ver + rail de 3 iconos */}
       {/* Acciones: iconos + Ver Detalle en una sola fila */}
 <div className="flex items-center justify-between pt-2 gap-2">
   {/* Rail de acciones rápidas */}
   {canEdit && (
     <div className="flex items-center gap-1.5">
       {/* Cambiar estado */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => openStatusDialog(box)}
-        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
-                   dark:text-blue-400 dark:hover:bg-blue-950"
-        title="Cambiar estado"
-        aria-label="Cambiar estado de la caja"
-      >
-        <ToggleLeft className="h-4 w-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openStatusDialog(box)}
+            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
+                       dark:text-blue-400 dark:hover:bg-blue-950"
+          >
+            <ToggleLeft className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Cambiar estado de la caja</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Mover bodega */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => openMoveDialog(box)}
-        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
-                   dark:text-blue-400 dark:hover:bg-blue-950"
-        title="Mover a otra bodega"
-        aria-label="Mover caja a otra bodega"
-      >
-        <TruckIcon className="h-4 w-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openMoveDialog(box)}
+            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
+                       dark:text-blue-400 dark:hover:bg-blue-950"
+          >
+            <TruckIcon className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Cambiar bodega asignada</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Editar datos maestros */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => openEditDialog(box)}
-        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
-                   dark:text-blue-400 dark:hover:bg-blue-950"
-        title="Editar datos de la caja"
-        aria-label="Editar datos de la caja"
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEditDialog(box)}
+            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50
+                       dark:text-blue-400 dark:hover:bg-blue-950"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Editar datos de la caja</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   )}
 
@@ -631,5 +595,6 @@ export function BoxesView() {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }

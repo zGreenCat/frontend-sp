@@ -8,6 +8,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Eye, Edit, MapPin, TruckIcon, ToggleLeft } from "lucide-react";
 import { Box } from "@/domain/entities/Box";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
@@ -24,6 +25,7 @@ interface BoxesTableProps {
 
 export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit, onMove, onChangeStatus }: BoxesTableProps) {
   return (
+    <TooltipProvider>
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
@@ -126,43 +128,61 @@ export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit, onMove, onCha
                     <>
                       {/* 1. Cambiar estado */}
                       {onChangeStatus && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onChangeStatus(box)}
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                          title="Cambiar estado"
-                          aria-label="Cambiar estado de la caja"
-                        >
-                          <ToggleLeft className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onChangeStatus(box)}
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                              aria-label="Cambiar estado de la caja"
+                            >
+                              <ToggleLeft className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Cambiar estado</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
 
                       {/* 2. Mover bodega */}
                       {onMove && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onMove(box)}
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                          title="Mover a otra bodega"
-                          aria-label="Mover caja a otra bodega"
-                        >
-                          <TruckIcon className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onMove(box)}
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                              aria-label="Mover caja a otra bodega"
+                            >
+                              <TruckIcon className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Mover a otra bodega</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
 
                       {/* 3. Editar datos maestros */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEdit(box)}
-                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                        title="Editar datos de la caja"
-                        aria-label="Editar datos maestros de la caja"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(box)}
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                            aria-label="Editar datos maestros de la caja"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>Editar datos de la caja</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </>
                   )}
                 </div>
@@ -172,5 +192,6 @@ export function BoxesTable({ boxes, canEdit, onViewDetail, onEdit, onMove, onCha
         </tbody>
       </table>
     </div>
+    </TooltipProvider>
   );
 }
