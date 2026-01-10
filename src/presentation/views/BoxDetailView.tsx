@@ -88,7 +88,6 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
       const updatedBox = await updateBoxMutation.mutateAsync({
         id: box.id,
         data: {
-          id: box.id,
           description: data.description,
           type: data.type,
           status: data.status,

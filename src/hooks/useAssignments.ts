@@ -6,7 +6,7 @@ import { userKeys } from "./useUsers";
 import { AssignManagerToArea } from "@/application/usecases/assignment/AssignManagerToArea";
 import { RemoveManagerToArea } from "@/application/usecases/assignment/RemoveManagerToArea";
 import { AssignWarehouseToArea } from "@/application/usecases/assignment/AssignWarehouseToArea";
-import { RemoveWarehouseToArea } from "@/application/usecases/assignment/RemoveWarehouseToArea";
+import { RemoveWarehouseFromArea } from "@/application/usecases/assignment/RemoveWarehouseToArea";
 import { AssignSupervisorToWarehouse } from "@/application/usecases/assignment/AssignSupervisorToWarehouse";
 import { RemoveSupervisorToWarehouse } from "@/application/usecases/assignment/RemoveSupervisorToWarehouse";
 import { RemoveAssignment } from "@/application/usecases/assignment/RemoveAssignment";
@@ -189,7 +189,7 @@ export const useRemoveWarehouseFromArea = () => {
       areaId: string;
       warehouseId: string;
     }) => {
-      const useCase = new RemoveWarehouseToArea(assignmentRepo);
+      const useCase = new RemoveWarehouseFromArea(assignmentRepo);
       const result = await useCase.execute(areaId, warehouseId);
 
       if (!result.ok) {
