@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,10 @@ import {
   Link2,
   Building2,
   Users,
+  Download,
 } from "lucide-react";
 import { useWarehouseById, useWarehouseSupervisors } from "@/hooks/useWarehouses";
-import { useWarehouseMovements } from "@/hooks/useWarehouseMovements";
+import { useWarehouseMovements, useAllWarehouseMovements } from "@/hooks/useWarehouseMovements";
 import { useBoxes } from "@/hooks/useBoxes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
@@ -34,6 +35,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CreateWarehouseInput } from "@/shared/schemas";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { exportToCsv } from "@/lib/exportCsv";
+import { WarehouseMovement } from "@/domain/entities/WarehouseMovement";
 import {
   Pagination,
   PaginationContent,
@@ -70,6 +73,8 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
   const [assignmentsDialogOpen, setAssignmentsDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [supervisorsPage, setSupervisorsPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+  const [enableExportQuery, setEnableExportQuery] = useState(false);
   const limit = 10;
   const supervisorsLimit = 10;
 
@@ -108,6 +113,12 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
     supervisorsLimit
   );
 
+  // Query para exportación (se activa manualmente)
+  const { data: allMovementsData, isLoading: loadingAllMovements } = useAllWarehouseMovements(
+    warehouseId,
+    enableExportQuery
+  );
+
   const updateWarehouseMutation = useUpdateWarehouse();
 
   const handleEdit = async (data: CreateWarehouseInput) => {
@@ -138,6 +149,96 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
       });
     }
   };
+
+  /**
+   * Handler para exportar el historial de movimientos a CSV
+   */
+  const handleExportCSV = async () => {
+    if (!warehouse) return;
+
+    try {
+      setIsExporting(true);
+      setEnableExportQuery(true);
+    } catch (error: any) {
+      console.error("Error al exportar CSV:", error);
+      toast({
+        title: "❌ Error al exportar",
+        description: error?.message || "No se pudo exportar el historial. Intenta nuevamente.",
+        variant: "destructive",
+      });
+      setIsExporting(false);
+      setEnableExportQuery(false);
+    }
+  };
+
+  /**
+   * Efecto para procesar la exportación cuando los datos estén disponibles
+   */
+  useEffect(() => {
+    if (enableExportQuery && allMovementsData && !loadingAllMovements) {
+      try {
+        // Mapear movimientos a formato para CSV
+        const movementsForExport = allMovementsData.data.map((movement: WarehouseMovement) => {
+          // Obtener etiqueta del tipo de movimiento
+          const movementTypeLabels: Record<string, string> = {
+            ADJUSTMENT: 'Ajuste',
+            IN: 'Entrada',
+            OUT: 'Salida',
+            TRANSFER: 'Transferencia',
+            INVENTORY: 'Inventario',
+          };
+
+          return {
+            fecha: format(new Date(movement.occurredAt), "dd/MM/yyyy HH:mm", { locale: es }),
+            tipoMovimiento: movementTypeLabels[movement.movementType] || movement.movementType,
+            codigoCaja: movement.boxCode || 'N/A',
+            cantidadKg: movement.quantity.toString(),
+            documentoReferencia: movement.referenceDocument || '',
+            notas: movement.notes || '',
+            realizadoPor: movement.performedByName,
+            bodega: movement.warehouseName,
+          };
+        });
+
+        // Definir encabezados del CSV
+        const headers = {
+          fecha: 'Fecha',
+          tipoMovimiento: 'Tipo de Movimiento',
+          codigoCaja: 'Código de Caja',
+          cantidadKg: 'Cantidad (Kg)',
+          documentoReferencia: 'Documento de Referencia',
+          notas: 'Notas',
+          realizadoPor: 'Realizado Por',
+          bodega: 'Bodega',
+        };
+
+        // Generar nombre de archivo con timestamp
+        const warehouseSlug = warehouse?.name
+          ? warehouse.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+          : 'bodega';
+        const timestamp = format(new Date(), "yyyyMMdd-HHmm");
+        const fileName = `historial-bodega-${warehouseSlug}-${timestamp}`;
+
+        // Exportar CSV
+        exportToCsv(fileName, movementsForExport, headers);
+
+        toast({
+          title: "✅ Exportación exitosa",
+          description: `Se han exportado ${movementsForExport.length} movimientos a CSV.`,
+        });
+      } catch (error: any) {
+        console.error("Error al generar CSV:", error);
+        toast({
+          title: "❌ Error al generar CSV",
+          description: error?.message || "No se pudo generar el archivo CSV.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsExporting(false);
+        setEnableExportQuery(false);
+      }
+    }
+  }, [enableExportQuery, allMovementsData, loadingAllMovements, warehouse, toast]);
 
   if (loadingWarehouse) {
     return (
@@ -510,11 +611,30 @@ export function WarehouseDetailView({ warehouseId }: WarehouseDetailViewProps) {
         {/* Tab: Historial */}
         <TabsContent value="history">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle className="flex items-center gap-2">
                 <History className="h-5 w-5" />
                 Historial de Movimientos
               </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                disabled={isExporting || loadingMovements || !movementsData || movementsData.total === 0}
+                className="gap-2"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Exportar CSV
+                  </>
+                )}
+              </Button>
             </CardHeader>
             <CardContent>
               {loadingMovements ? (

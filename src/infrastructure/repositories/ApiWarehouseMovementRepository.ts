@@ -25,4 +25,31 @@ export class ApiWarehouseMovementRepository implements IWarehouseMovementReposit
       throw error;
     }
   }
+
+  /**
+   * Obtiene todos los movimientos de una bodega sin paginación (para exportación)
+   * @param warehouseId - ID de la bodega
+   * @param limit - Límite máximo de registros (default 10000 para exportación masiva)
+   */
+  async getAllMovements(
+    warehouseId: string,
+    limit: number = 10000
+  ): Promise<WarehouseMovementsResponse> {
+    try {
+      const queryParams = new URLSearchParams({
+        page: '1',
+        limit: limit.toString(),
+      });
+
+      const response = await apiClient.get<WarehouseMovementsResponse>(
+        `/warehouses/${warehouseId}/movements?${queryParams.toString()}`,
+        true
+      );
+
+      return response;
+    } catch (error) {
+      console.error('Error fetching all warehouse movements:', error);
+      throw error;
+    }
+  }
 }
