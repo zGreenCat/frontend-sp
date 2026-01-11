@@ -2,12 +2,13 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authService } from "@/infrastructure/services/authService";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
 function GoogleCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { loginWithCode } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,12 +16,6 @@ function GoogleCallbackContent() {
       console.log('═══════════════════════════════════════════════');
       console.log('🔄 GOOGLE CALLBACK - INICIANDO FLUJO');
       console.log('═══════════════════════════════════════════════');
-      
-      // ✅ CRÍTICO: Limpiar localStorage ANTES de obtener el nuevo perfil
-      // Esto previene conflictos entre datos antiguos y la nueva sesión OAuth
-      if (typeof window !== 'undefined') {
-        authService.clearUser();
-      }
       
       try {
         // Verificar si hay un error en los parámetros
@@ -41,15 +36,22 @@ function GoogleCallbackContent() {
           return;
         }
 
+        // Obtener el código de autorización
+        const code = searchParams.get("code");
         
-        // El backend ya estableció la cookie httpOnly con el JWT
-        // getProfile() enviará la cookie automáticamente y guardará el usuario
-        const user = await authService.getProfile();
+        if (!code) {
+          console.error('❌ No se recibió código de autorización');
+          setError("No se recibió código de autorización");
+          setTimeout(() => router.push("/login"), 3000);
+          return;
+        }
+
+        console.log('✅ Código recibido, intercambiando por tokens...');
         
-        console.log('Usuario autenticado correctamente');
-        console.log(`   Email: ${user.email}`);
-        console.log(`   Nombre: ${user.firstName} ${user.lastName}`);
+        // Intercambiar código por tokens usando el hook
+        await loginWithCode(code);
         
+        console.log('✅ Autenticación completada exitosamente');
         
         router.push("/dashboard");
         
@@ -61,7 +63,7 @@ function GoogleCallbackContent() {
     };
 
     handleCallback();
-  }, [searchParams, router]);
+  }, [searchParams, router, loginWithCode]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-hero">

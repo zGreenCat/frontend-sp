@@ -108,7 +108,8 @@ export class ApiBoxRepository implements IBoxRepository {
     if (filters?.warehouseId) params.append('warehouseId', filters.warehouseId); // ✅ Filtro por bodega
 
     const response = await apiClient.get<BackendBoxListResponse>(
-      `/boxes?${params.toString()}`
+      `/boxes?${params.toString()}`,
+      true // ✅ Auth: Requiere Bearer token
     );
 
     return {
@@ -121,7 +122,7 @@ export class ApiBoxRepository implements IBoxRepository {
 
   async findById(id: string, tenantId: string): Promise<Box | null> {
     try {
-      const response = await apiClient.get<BackendBox>(`/boxes/${id}`);
+      const response = await apiClient.get<BackendBox>(`/boxes/${id}`, true); // ✅ Auth: Requiere Bearer token
       return this.mapBackendBox(response);
     } catch (error: any) {
       if (error?.statusCode === 404) {
@@ -133,7 +134,7 @@ export class ApiBoxRepository implements IBoxRepository {
 
   async findByQrCode(qrCode: string, tenantId: string): Promise<Box | null> {
     try {
-      const response = await apiClient.get<BackendBox>(`/boxes/qr/${qrCode}`);
+      const response = await apiClient.get<BackendBox>(`/boxes/qr/${qrCode}`, true); // ✅ Auth: Requiere Bearer token
       return this.mapBackendBox(response);
     } catch (error: any) {
       if (error?.statusCode === 404) {
@@ -144,27 +145,27 @@ export class ApiBoxRepository implements IBoxRepository {
   }
 
   async create(data: CreateBoxDTO, tenantId: string): Promise<Box> {
-    const response = await apiClient.post<BackendBox>('/boxes', data);
+    const response = await apiClient.post<BackendBox>('/boxes', data, true); // ✅ Auth: Requiere Bearer token
     return this.mapBackendBox(response);
   }
 
   async update(id: string, data: UpdateBoxDTO, tenantId: string): Promise<Box> {
-    const response = await apiClient.patch<BackendBox>(`/boxes/${id}`, data);
+    const response = await apiClient.patch<BackendBox>(`/boxes/${id}`, data, true); // ✅ Auth: Requiere Bearer token
     return this.mapBackendBox(response);
   }
 
   async move(id: string, data: MoveBoxDTO, tenantId: string): Promise<Box> {
-    const response = await apiClient.patch<BackendBox>(`/boxes/${id}/move`, data);
+    const response = await apiClient.patch<BackendBox>(`/boxes/${id}/move`, data, true); // ✅ Auth: Requiere Bearer token
     return this.mapBackendBox(response);
   }
 
   async changeStatus(id: string, data: ChangeStatusDTO, tenantId: string): Promise<Box> {
-    const response = await apiClient.patch<BackendBox>(`/boxes/${id}/status`, data);
+    const response = await apiClient.patch<BackendBox>(`/boxes/${id}/status`, data, true); // ✅ Auth: Requiere Bearer token
     return this.mapBackendBox(response);
   }
 
   async deactivate(id: string, tenantId: string): Promise<Box> {
-    const response = await apiClient.patch<BackendBox>(`/boxes/${id}/deactivate`, {});
+    const response = await apiClient.patch<BackendBox>(`/boxes/${id}/deactivate`, {}, true); // ✅ Auth: Requiere Bearer token
     return this.mapBackendBox(response);
   }
 
@@ -176,7 +177,8 @@ export class ApiBoxRepository implements IBoxRepository {
     if (filters?.eventType) params.append('eventType', filters.eventType);
 
     const response = await apiClient.get<BackendHistoryResponse>(
-      `/boxes/${id}/history?${params.toString()}`
+      `/boxes/${id}/history?${params.toString()}`,
+      true // ✅ Auth: Requiere Bearer token
     );
 
     return {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/infrastructure/services/authService";
 import { User, LoginRequest, RegisterRequest, ApiError } from "@/shared/types/auth.types";
 import { useToast } from "@/hooks/use-toast";
+import { hasTokens } from "@/lib/auth-storage";
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (data: LoginRequest) => Promise<void>;
   loginWithGoogle: () => void;
+  loginWithCode: (code: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -28,48 +30,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   // Cargar usuario al iniciar
-useEffect(() => {
-  const initAuth = async () => {
-    console.log('═══════════════════════════════════════════════');
-    console.log('🔐 useAuth - INICIALIZANDO AUTENTICACIÓN');
-    console.log('═══════════════════════════════════════════════');
+  useEffect(() => {
+    const initAuth = async () => {
+      console.log('═══════════════════════════════════════════════');
+      console.log('🔐 useAuth - INICIALIZANDO AUTENTICACIÓN');
+      console.log('═══════════════════════════════════════════════');
 
-    try {
-      // 1) Ver si hay usuario cacheado en localStorage (solo para evitar parpadeos de UI)
-      const cachedUser = authService.getUser();
-      if (cachedUser) {
-        setUser(cachedUser);
-      }
+      try {
+        // 1) Ver si hay tokens y usuario en localStorage
+        const cachedUser = authService.getUser();
+        const hasAuth = hasTokens();
 
-      // 2) Si estoy en página pública, limpiar cualquier sesión anterior
-      // IMPORTANTE: Excluir /auth/google/callback porque es donde se GUARDA la sesión
-      const isPublicPage =
-        typeof window !== 'undefined' &&
-        (window.location.pathname === '/login' ||
-          window.location.pathname === '/register' ||
-          window.location.pathname === '/auth/error');
+        if (cachedUser && hasAuth) {
+          // Hidratar estado con usuario cacheado para evitar parpadeos
+          setUser(cachedUser);
+        }
 
-      if (isPublicPage) {
-        // ✅ Limpiar localStorage para evitar conflictos con cookies viejas
-        authService.clearUser();
+        // 2) Si estoy en página pública, limpiar cualquier sesión anterior
+        const isPublicPage =
+          typeof window !== 'undefined' &&
+          (window.location.pathname === '/login' ||
+            window.location.pathname === '/register' ||
+            window.location.pathname === '/auth/error');
+
+        if (isPublicPage) {
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        // 3) Si no hay tokens, no hay sesión válida
+        if (!hasAuth) {
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        // 4) Verificar que la sesión sea válida con /users/me
+        try {
+          const currentUser = await authService.getProfile();
+          setUser(currentUser);
+        } catch (error) {
+          // Token inválido o expirado
+          console.error("Token inválido, limpiando sesión:", error);
+          setUser(null);
+          authService.logout();
+        }
+      } catch (error) {
+        console.error("Error inicializando auth:", error);
         setUser(null);
+      } finally {
         setIsLoading(false);
-        return;
       }
+    };
 
-      // 3) /users/me es la fuente de verdad -> si funciona, hay sesión válida
-      const currentUser = await authService.getProfile();
-      setUser(currentUser);
-    } catch (error) {
-      setUser(null);
-      authService.clearUser(); // limpia localStorage
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  initAuth();
-}, []);
+    initAuth();
+  }, []);
 
 
 
@@ -91,6 +107,29 @@ useEffect(() => {
       toast({
         title: "Error al iniciar sesión",
         description: apiError.message || "Verifica tus credenciales",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithCode = async (code: string) => {
+    try {
+      setIsLoading(true);
+      const user = await authService.exchangeCode(code);
+      setUser(user);
+      toast({
+        title: "¡Bienvenido!",
+        description: `Hola ${user.firstName || user.email}`,
+        variant: "default",
+      });
+    } catch (error) {
+      const apiError = error as ApiError;
+      toast({
+        title: "Error al autenticar",
+        description: apiError.message || "No se pudo completar la autenticación",
         variant: "destructive",
       });
       throw error;
@@ -173,6 +212,7 @@ useEffect(() => {
         isAuthenticated: !!user,
         login,
         loginWithGoogle,
+        loginWithCode,
         register,
         logout,
         refreshUser,

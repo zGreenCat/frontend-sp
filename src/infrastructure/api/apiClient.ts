@@ -1,4 +1,5 @@
 import { ApiError } from "@/shared/types/auth.types";
+import { getAccessToken, clearAuth } from "@/lib/auth-storage";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not set");
@@ -11,22 +12,17 @@ export class ApiClient {
     this.baseURL = API_URL;
   }
 
-  private getToken(): string | null {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("token");
-    }
-    return null;
-  }
-
   private getHeaders(includeAuth: boolean = false): HeadersInit {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
 
-    // NO incluir Authorization header - usar solo cookie httpOnly
-    // El backend espera la cookie accessToken, no el header Authorization
+    // Incluir Authorization header con Bearer token
     if (includeAuth) {
-      console.log('🍪 Usando cookie httpOnly para autenticación');
+      const accessToken = getAccessToken();
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
     }
 
     return headers;
@@ -92,13 +88,11 @@ private handleSessionExpired(): void {
     return;
   }
 
-  // ⚠️ Nuevo: si no había usuario almacenado, NO es una sesión expirada,
-  // probablemente es simplemente que no está logueado (o primera carga post OAuth).
-  const hasStoredUser =
-    localStorage.getItem("user") || localStorage.getItem("kreatech_user");
-  if (!hasStoredUser) {
+  // Verificar si hay token almacenado
+  const hasToken = getAccessToken();
+  if (!hasToken) {
     console.log(
-      "⚠️ 401 sin usuario previo en storage → no se redirige como sesión expirada"
+      "⚠️ 401 sin token almacenado → no se redirige como sesión expirada"
     );
     return;
   }
@@ -111,7 +105,7 @@ private handleSessionExpired(): void {
 
     if (timeSinceLoad < 3000) {
       console.log(
-        "⏱️ Página recién cargada, dando tiempo para verificar cookie OAuth..."
+        "⏱️ Página recién cargada, dando tiempo para verificar autenticación..."
       );
       return;
     }
@@ -119,11 +113,8 @@ private handleSessionExpired(): void {
 
   ApiClient.isRedirecting = true;
 
-  // Limpiar almacenamiento local
-  localStorage.removeItem("user");
-  localStorage.removeItem("kreatech_user");
-  localStorage.removeItem("token");
-  sessionStorage.clear();
+  // Limpiar almacenamiento usando el helper centralizado
+  clearAuth();
 
   const event = new CustomEvent("session-expired", {
     detail: {
@@ -145,7 +136,6 @@ private handleSessionExpired(): void {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "GET",
       headers: this.getHeaders(requiresAuth),
-      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -160,7 +150,6 @@ private handleSessionExpired(): void {
       method: "POST",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
-      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -175,7 +164,6 @@ private handleSessionExpired(): void {
       method: "PUT",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
-      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -190,7 +178,6 @@ private handleSessionExpired(): void {
       method: "PATCH",
       headers: this.getHeaders(requiresAuth),
       body: JSON.stringify(data),
-      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -203,7 +190,6 @@ private handleSessionExpired(): void {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "DELETE",
       headers: this.getHeaders(requiresAuth),
-      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);

@@ -1,22 +1,28 @@
 // Utilidades de debugging para autenticación
 // Ejecuta estas funciones en la consola del navegador (F12)
 
+import { getAccessToken, clearAuth } from './auth-storage';
+
 // Ver token actual
 export function debugToken() {
-  const token = localStorage.getItem('token');
+  const token = getAccessToken();
   
   if (token) {
+    console.log('✅ Token found:', token.substring(0, 20) + '...');
     
     // Intentar decodificar JWT (solo la parte payload, sin verificar)
     try {
       const parts = token.split('.');
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1]));
+        console.log('📦 Payload:', payload);
         
         if (payload.exp) {
           const expDate = new Date(payload.exp * 1000);
           const now = new Date();
           const isExpired = expDate < now;
+          console.log('⏰ Expires:', expDate.toLocaleString());
+          console.log(isExpired ? '❌ Token EXPIRED' : '✅ Token valid');
         }
       }
     } catch (e) {
@@ -29,11 +35,12 @@ export function debugToken() {
 
 // Ver usuario actual
 export function debugUser() {
-  const userStr = localStorage.getItem('user');
+  const userStr = localStorage.getItem('smartpack:user');
   
   if (userStr) {
     try {
       const user = JSON.parse(userStr);
+      console.log('✅ User found:', user);
     } catch (e) {
       console.log('❌ Invalid user JSON:', e);
     }
@@ -42,17 +49,20 @@ export function debugUser() {
   }
 }
 
-// Probar request con el token actual
+// Probar request con el token actual (Auth: usa apiClient para garantizar Authorization Bearer)
 export async function testAuthRequest() {
-  const token = localStorage.getItem('token');
+  const token = getAccessToken();
   
   if (!token) {
+    console.log('❌ No token found');
     return;
   }
   
+  console.log('🔄 Testing authenticated request...');
   
   try {
-    const response = await fetch('http://localhost:3000/users', {
+    // Auth: Usando fetch directo SOLO para debugging, en producción usar apiClient
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -60,12 +70,14 @@ export async function testAuthRequest() {
       }
     });
     
+    console.log('📡 Response status:', response.status);
     
     if (response.ok) {
       const data = await response.json();
       console.log('✅ Request successful:', data);
     } else {
       const errorText = await response.text();
+      console.log('❌ Request failed:', response.status, errorText);
     }
   } catch (error) {
     console.log('❌ Network error:', error);
@@ -73,13 +85,16 @@ export async function testAuthRequest() {
 }
 
 // Limpiar autenticación
-export function clearAuth() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+export function clearAuthDebug() {
+  clearAuth();
+  console.log('✅ Auth cleared');
 }
 
 // Información completa
 export function debugAll() {
+  console.log('=========================');
+  console.log('🔐 AUTH DEBUG INFO');
+  console.log('=========================');
   debugToken();
   console.log('');
   debugUser();
@@ -92,7 +107,7 @@ if (typeof window !== 'undefined') {
     token: debugToken,
     user: debugUser,
     test: testAuthRequest,
-    clear: clearAuth,
+    clear: clearAuthDebug,
     all: debugAll,
   };
   

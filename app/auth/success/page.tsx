@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { authService } from "@/infrastructure/services/authService";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
-export default function AuthSuccessPage() {
+function AuthSuccessContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { loginWithCode } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const hasRun = useRef(false);
 
@@ -16,9 +18,20 @@ export default function AuthSuccessPage() {
 
     const handleAuthSuccess = async () => {
       try {
-        // El backend ya estableció la cookie httpOnly con el JWT
-        // getProfile() enviará la cookie automáticamente y guardará el usuario
-        await authService.getProfile();
+        // Obtener el código de autorización de la URL
+        const code = searchParams.get('code');
+        
+        if (!code) {
+          console.error("❌ No se recibió código de autorización");
+          setError("No se recibió código de autorización");
+          setTimeout(() => router.push("/login"), 3000);
+          return;
+        }
+
+        console.log("✅ Código recibido, intercambiando por tokens...");
+        
+        // Intercambiar código por tokens
+        await loginWithCode(code);
         
         // Pequeña pausa para que el usuario vea el mensaje de éxito
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -33,7 +46,7 @@ export default function AuthSuccessPage() {
     };
 
     handleAuthSuccess();
-  }, [router]);
+  }, [router, searchParams, loginWithCode]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background">
@@ -60,5 +73,17 @@ export default function AuthSuccessPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    }>
+      <AuthSuccessContent />
+    </Suspense>
   );
 }

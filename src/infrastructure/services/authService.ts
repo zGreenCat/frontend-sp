@@ -6,54 +6,34 @@ import {
   User,
 } from "@/shared/types/auth.types";
 import { mapBackendRoleToFrontend } from "@/shared/constants";
+import { 
+  setTokens, 
+  clearAuth, 
+  setUser as saveUserToStorage, 
+  getUser as getUserFromStorage,
+  hasTokens 
+} from "@/lib/auth-storage";
 
-const USER_KEY = "auth_user"; // 🔑 usa una sola key consistente
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not set");
 
 export class AuthService {
   // ---------- Helpers de storage ----------
 
-   private saveUser(user: User) {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-  }
-
-  clearUser() {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem("token"); // por si en algún flujo lo usas
-  }
-
   getUser(): User | null {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem(USER_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as User;
-    } catch {
-      return null;
-    }
+    return getUserFromStorage<User>();
   }
 
   isAuthenticated(): boolean {
-    return !!this.getUser();
+    return hasTokens() && !!this.getUser();
   }
 
   /**
-   * Guardar auth localmente.
-   * Para login tradicional puedes guardar token,
-   * para Google OAuth puedes pasar `null` en token y solo guardas el user.
+   * Guardar autenticación completa (tokens + usuario)
    */
-  private saveAuth(user: User, token?: string | null) {
-    this.saveUser(user);
-    if (typeof window === "undefined") return;
-
-    if (token) {
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("token");
-    }
+  private saveAuth(user: User, tokens: { accessToken: string; refreshToken?: string }) {
+    setTokens(tokens);
+    saveUserToStorage(user);
   }
 
   // ---------- Normalizadores de backend -> frontend ----------
@@ -152,21 +132,21 @@ export class AuthService {
       false
     );
 
-    const token =
-      response.token || response.access_token || response.accessToken;
+    const accessToken = response.accessToken || response.token || response.access_token;
+    const refreshToken = response.refreshToken || response.refresh_token;
     const backendUser = response.user;
 
-    if (!token || !backendUser) {
+    if (!accessToken || !backendUser) {
       console.error("❌ Invalid register response:", Object.keys(response));
       throw new Error("Respuesta de registro inválida");
     }
 
     const user = this.mapBackendUserToFrontend(backendUser);
 
-    // Guardar user + token (si lo usas para login tradicional)
-    this.saveAuth(user, token);
+    // Guardar tokens + usuario
+    this.saveAuth(user, { accessToken, refreshToken });
 
-    return { token, user };
+    return { token: accessToken, user };
   }
 
   // ---------- Flujo de login (email/password) ----------
@@ -178,10 +158,11 @@ export class AuthService {
       false
     );
 
-    const token = response.accessToken;
+    const accessToken = response.accessToken;
+    const refreshToken = response.refreshToken;
     const backendUser = response.user;
 
-    if (!token) {
+    if (!accessToken) {
       console.error("❌ No token found in response:", Object.keys(response));
       throw new Error("No se recibió token de autenticación");
     }
@@ -199,13 +180,12 @@ export class AuthService {
     }
 
     const user = this.mapBackendUserToFrontend(backendUser);
-    console.log("✅ User response:", response);
-    console.log("🔍 Mapped user areas:", user.areas);
+    console.log("✅ User login successful:", user.email);
 
-    // Guardar user + token
-    this.saveAuth(user, token);
+    // Guardar tokens + usuario
+    this.saveAuth(user, { accessToken, refreshToken });
 
-    return { token, user };
+    return { token: accessToken, user };
   }
 
   // ---------- Perfil actual (fuente de verdad) ----------
@@ -216,50 +196,89 @@ export class AuthService {
     console.log("═══════════════════════════════════════════════");
 
     try {
-      // Usa cookie httpOnly (credentials: 'include' ya lo maneja apiClient)
+      // Usar Authorization header (apiClient lo manejará automáticamente)
       const response = await apiClient.get<any>("/users/me", true);
 
       const user = this.mapBackendUserToFrontend(response);
 
-
-      // Guardar solo usuario; el token ya viene por cookie
-      this.saveUser(user);
+      // Guardar usuario actualizado (tokens ya están en storage)
+      saveUserToStorage(user);
 
       return user;
     } catch (error) {
       console.error("❌ Error obteniendo perfil:", error);
-      this.clearUser();
+      clearAuth();
       throw error;
     }
   }
 
-  // ---------- Google OAuth ----------
+  // ---------- Google OAuth - Intercambio de código ----------
+
+  /**
+   * Intercambia el código de autorización por tokens de acceso
+   * Este método se llama desde /auth/success después del callback de Google
+   */
+  async exchangeCode(code: string): Promise<User> {
+    console.log("═══════════════════════════════════════════════");
+    console.log("🔄 EXCHANGE CODE - Intercambiando código por tokens");
+    console.log("═══════════════════════════════════════════════");
+
+    try {
+      const response = await apiClient.post<any>(
+        "/auth/exchange",
+        { code },
+        false
+      );
+
+      const accessToken = response.accessToken;
+      const refreshToken = response.refreshToken;
+      const backendUser = response.user;
+
+      if (!accessToken) {
+        console.error("❌ No accessToken in exchange response:", Object.keys(response));
+        throw new Error("No se recibió token de acceso");
+      }
+
+      if (!backendUser) {
+        console.error("❌ No user in exchange response:", Object.keys(response));
+        throw new Error("No se recibió información del usuario");
+      }
+
+      const user = this.mapBackendUserToFrontend(backendUser);
+      console.log("✅ Exchange successful for user:", user.email);
+
+      // Guardar tokens + usuario
+      this.saveAuth(user, { accessToken, refreshToken });
+
+      return user;
+    } catch (error) {
+      console.error("❌ Error en exchangeCode:", error);
+      clearAuth();
+      throw error;
+    }
+  }
+
+  // ---------- Google OAuth - Inicio de flujo ----------
 
   loginWithGoogle(): void {
-    
     window.location.href = `${API_URL}/auth/google`;
   }
 
   // ---------- Logout ----------
 
   async logout(): Promise<void> {
+    console.log("👋 Cerrando sesión...");
 
     try {
-      // Primero llamar al backend para limpiar cookie httpOnly
-      await fetch(`${API_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-      console.log("✅ Cookie httpOnly limpiada en el backend");
+      // Llamar al backend para invalidar el token (opcional)
+      await apiClient.post("/auth/logout", {}, true);
+      console.log("✅ Token invalidado en el backend");
     } catch (error) {
-      console.error("⚠️ Error al limpiar cookie en backend:", error);
+      console.error("⚠️ Error al invalidar token en backend:", error);
     } finally {
-      // Siempre limpiar storage local, incluso si el backend falla
-      if (typeof window !== "undefined") {
-        this.clearUser(); // Limpia USER_KEY y token
-        sessionStorage.clear();
-        console.log("✅ localStorage y sessionStorage completamente limpiados");
-      }
+      // Siempre limpiar storage local
+      clearAuth();
+      console.log("✅ Tokens y usuario limpiados del localStorage");
     }
   }
 }
