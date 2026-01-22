@@ -1,3 +1,6 @@
+import { BoxEquipment } from './BoxEquipment';
+import { BoxMaterial } from './BoxMaterial';
+
 // Box Status según backend real
 export type BoxStatus = 'DISPONIBLE' | 'EN_REPARACION' | 'DANADA' | 'RETIRADA';
 
@@ -34,6 +37,8 @@ export interface Box {
   warehouseId: string | null; // Bodega actual (puede ser null)
   warehouseName?: string | null; // Nombre de la bodega (viene del backend)
   warehouse?: Warehouse; // Información completa de la bodega (solo en detalle)
+  equipments?: BoxEquipment[]; // Equipos asignados a la caja
+  materials?: BoxMaterial[]; // Materiales asignados a la caja
   history?: HistoryEvent[]; // Historial de eventos
   tenantId: string;
   isActive: boolean; // Estado de activación
