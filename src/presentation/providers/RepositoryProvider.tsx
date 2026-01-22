@@ -11,6 +11,7 @@ import { ApiAssignmentRepository } from '@/infrastructure/repositories/ApiAssign
 import { ApiAuditLogRepository } from '@/infrastructure/repositories/ApiAuditLogRepository';
 import { ApiUserEnablementHistoryRepository } from '@/infrastructure/repositories/ApiUserEnablementHistoryRepository';
 import { ApiBoxRepository } from '@/infrastructure/repositories/ApiBoxRepository';
+import { ApiProductRepository } from '@/infrastructure/repositories/ApiProductRepository';
 // Mock Repositories (mantener para módulos no conectados)
 import { MockProductRepository } from '@/infrastructure/repositories/MockProductRepository';
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
@@ -25,6 +26,7 @@ import { IAssignmentRepository } from '@/domain/repositories/IAssignmentReposito
 import { IAuditLogRepository } from '@/domain/repositories/IAuditLogRepository';
 import { IUserEnablementHistoryRepository } from '@/domain/repositories/IUserEnablementHistoryRepository';
 import { IBoxRepository } from '@/domain/repositories/IBoxRepository';
+import { IProductRepository } from '@/domain/repositories/IProductRepository';
 
 interface Repositories {
   userRepo: IUserRepository;
@@ -32,7 +34,7 @@ interface Repositories {
   warehouseRepo: IWarehouseRepository;
   warehouseMovementRepo: IWarehouseMovementRepository;
   boxRepo: IBoxRepository;
-  productRepo: MockProductRepository;
+  productRepo: IProductRepository;
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
   assignmentHistoryRepo: IAssignmentHistoryRepository;
@@ -55,8 +57,9 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     auditLogRepo: new ApiAuditLogRepository(),
     userEnablementHistoryRepo: new ApiUserEnablementHistoryRepository(),
     boxRepo: new ApiBoxRepository(), // ✅ AHORA USA API REAL
+    // Repositorios conectados al backend real
+    productRepo: new ApiProductRepository(), // ✅ CONECTADO AL BACKEND
     // Repositorios Mock (pendientes de conectar)
-    productRepo: new MockProductRepository(),
     providerRepo: new MockProviderRepository(),
     projectRepo: new MockProjectRepository(),
   };
