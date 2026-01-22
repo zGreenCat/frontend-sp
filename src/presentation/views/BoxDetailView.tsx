@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Edit, Package, History, Loader2, Calendar, User, TruckIcon, ToggleLeft, XCircle } from "lucide-react";
+import { ArrowLeft, Edit, Package, History, Loader2, Calendar, User, TruckIcon, ToggleLeft, XCircle, PackagePlus } from "lucide-react";
 import { useBoxById, useBoxHistory, useUpdateBox } from "@/hooks/useBoxes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,9 @@ import { BoxDialog } from "@/presentation/components/BoxDialog";
 import { MoveBoxDialog } from "@/presentation/components/MoveBoxDialog";
 import { ChangeBoxStatusDialog } from "@/presentation/components/ChangeBoxStatusDialog";
 import { DeactivateBoxDialog } from "@/presentation/components/DeactivateBoxDialog";
+import { BoxInventoryTab } from "@/presentation/components/BoxInventoryTab";
+import { AddEquipmentDialog } from "@/presentation/components/AddEquipmentDialog";
+import { AddMaterialDialog } from "@/presentation/components/AddMaterialDialog";
 import { CreateBoxInput } from "@/shared/schemas";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -40,6 +43,8 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [addEquipmentDialogOpen, setAddEquipmentDialogOpen] = useState(false);
+  const [addMaterialDialogOpen, setAddMaterialDialogOpen] = useState(false);
 
   // Filtros para historial
   const [historyEventType, setHistoryEventType] = useState<string>("all");
@@ -201,10 +206,14 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="info">
             <Package className="h-4 w-4 mr-2" />
             Información General
+          </TabsTrigger>
+          <TabsTrigger value="inventory">
+            <PackagePlus className="h-4 w-4 mr-2" />
+            Inventario
           </TabsTrigger>
           <TabsTrigger value="history">
             <History className="h-4 w-4 mr-2" />
@@ -272,6 +281,35 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Tab: Inventario */}
+        <TabsContent value="inventory" className="space-y-4">
+          <div className="flex justify-end gap-2 mb-4">
+            {canEdit && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddEquipmentDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <PackagePlus className="h-4 w-4" />
+                  Agregar Equipo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddMaterialDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <PackagePlus className="h-4 w-4" />
+                  Agregar Material
+                </Button>
+              </>
+            )}
+          </div>
+          <BoxInventoryTab box={box} />
         </TabsContent>
 
         {/* Tab: Historial */}
@@ -427,6 +465,20 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
             boxQrCode={box.qrCode}
             open={deactivateDialogOpen}
             onOpenChange={setDeactivateDialogOpen}
+          />
+
+          <AddEquipmentDialog
+            boxId={box.id}
+            boxQrCode={box.qrCode}
+            open={addEquipmentDialogOpen}
+            onOpenChange={setAddEquipmentDialogOpen}
+          />
+
+          <AddMaterialDialog
+            boxId={box.id}
+            boxQrCode={box.qrCode}
+            open={addMaterialDialogOpen}
+            onOpenChange={setAddMaterialDialogOpen}
           />
         </>
       )}
