@@ -1,4 +1,6 @@
 import { Box, HistoryEvent } from '../entities/Box';
+import { BoxEquipment } from '../entities/BoxEquipment';
+import { BoxMaterial } from '../entities/BoxMaterial';
 
 export interface BoxListFilters {
   page?: number;
@@ -78,4 +80,16 @@ export interface IBoxRepository {
   
   // Obtener historial
   getHistory(id: string, tenantId: string, filters?: HistoryFilters): Promise<HistoryResponse>;
+
+  // Inventario: Agregar equipo
+  addEquipment(boxId: string, input: { equipmentId: string; quantity: number; reason?: string }, tenantId: string): Promise<BoxEquipment>;
+  
+  // Inventario: Agregar material
+  addMaterial(boxId: string, input: { materialId: string; quantity: number; reason?: string }, tenantId: string): Promise<BoxMaterial>;
+  
+  // Inventario: Remover equipo
+  removeEquipment(boxId: string, assignmentId: string, tenantId: string, reason?: string): Promise<void>;
+  
+  // Inventario: Remover material
+  removeMaterial(boxId: string, assignmentId: string, tenantId: string, reason?: string): Promise<void>;
 }

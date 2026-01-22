@@ -11,8 +11,49 @@ import {
   ChangeStatusDTO
 } from '@/domain/repositories/IBoxRepository';
 import { Box, HistoryEvent } from '@/domain/entities/Box';
+import { BoxEquipment, BoxEquipmentSparePart } from '@/domain/entities/BoxEquipment';
+import { BoxMaterial } from '@/domain/entities/BoxMaterial';
 
 // Tipos del backend
+interface BackendBoxEquipmentSparePart {
+  id: string;
+  sparePartId: string;
+  name: string;
+  quantity: number;
+  category: string;
+  description?: string;
+  monetaryValue?: number;
+  currency?: string;
+  isActive: boolean;
+}
+
+interface BackendBoxEquipment {
+  id: string;
+  equipmentId: string;
+  name: string;
+  model: string;
+  quantity: number;
+  description?: string;
+  monetaryValue?: number;
+  currency?: string;
+  isActive: boolean;
+  spareParts?: BackendBoxEquipmentSparePart[];
+}
+
+interface BackendBoxMaterial {
+  id: string;
+  materialId: string;
+  name: string;
+  quantity: number;
+  unitOfMeasure: string;
+  description?: string;
+  monetaryValue?: number;
+  currency?: string;
+  isHazardous: boolean;
+  categories?: string[];
+  isActive: boolean;
+}
+
 interface BackendBox {
   id: string;
   qrCode: string;
@@ -27,6 +68,8 @@ interface BackendBox {
     name: string;
     capacityKg: number;
   };
+  equipments?: BackendBoxEquipment[];
+  materials?: BackendBoxMaterial[];
   tenantId: string;
   isActive: boolean;
   createdAt: string;
@@ -60,6 +103,54 @@ interface BackendHistoryResponse {
 }
 
 export class ApiBoxRepository implements IBoxRepository {
+  // Mapear BoxEquipmentSparePart del backend al dominio
+  private mapBackendSparePart(backendSparePart: BackendBoxEquipmentSparePart): BoxEquipmentSparePart {
+    return {
+      id: backendSparePart.id,
+      sparePartId: backendSparePart.sparePartId,
+      name: backendSparePart.name,
+      quantity: backendSparePart.quantity,
+      category: backendSparePart.category,
+      description: backendSparePart.description,
+      monetaryValue: backendSparePart.monetaryValue,
+      currency: backendSparePart.currency,
+      isActive: backendSparePart.isActive,
+    };
+  }
+
+  // Mapear BoxEquipment del backend al dominio
+  private mapBackendEquipment(backendEquipment: BackendBoxEquipment): BoxEquipment {
+    return {
+      id: backendEquipment.id,
+      equipmentId: backendEquipment.equipmentId,
+      name: backendEquipment.name,
+      model: backendEquipment.model,
+      quantity: backendEquipment.quantity,
+      description: backendEquipment.description,
+      monetaryValue: backendEquipment.monetaryValue,
+      currency: backendEquipment.currency,
+      isActive: backendEquipment.isActive,
+      spareParts: backendEquipment.spareParts?.map(sp => this.mapBackendSparePart(sp)),
+    };
+  }
+
+  // Mapear BoxMaterial del backend al dominio
+  private mapBackendMaterial(backendMaterial: BackendBoxMaterial): BoxMaterial {
+    return {
+      id: backendMaterial.id,
+      materialId: backendMaterial.materialId,
+      name: backendMaterial.name,
+      quantity: backendMaterial.quantity,
+      unitOfMeasure: backendMaterial.unitOfMeasure,
+      description: backendMaterial.description,
+      monetaryValue: backendMaterial.monetaryValue,
+      currency: backendMaterial.currency,
+      isHazardous: backendMaterial.isHazardous,
+      categories: backendMaterial.categories,
+      isActive: backendMaterial.isActive,
+    };
+  }
+
   // Mapear Box del backend al dominio
   private mapBackendBox(backendBox: BackendBox): Box {
     return {
@@ -76,6 +167,8 @@ export class ApiBoxRepository implements IBoxRepository {
         name: backendBox.warehouse.name,
         capacityKg: backendBox.warehouse.capacityKg,
       } : undefined,
+      equipments: backendBox.equipments?.map(eq => this.mapBackendEquipment(eq)),
+      materials: backendBox.materials?.map(mat => this.mapBackendMaterial(mat)),
       history: backendBox.history?.map(this.mapBackendHistoryEvent),
       tenantId: backendBox.tenantId,
       isActive: backendBox.isActive,
@@ -187,5 +280,59 @@ export class ApiBoxRepository implements IBoxRepository {
       page: response.page,
       limit: response.limit,
     };
+  }
+
+  // ========== MÉTODOS DE INVENTARIO ==========
+
+  async addEquipment(
+    boxId: string,
+    input: { equipmentId: string; quantity: number; reason?: string },
+    tenantId: string
+  ): Promise<BoxEquipment> {
+    const response = await apiClient.post<BackendBoxEquipment>(
+      `/boxes/${boxId}/equipments`,
+      input,
+      true // ✅ Auth: Requiere Bearer token
+    );
+    return this.mapBackendEquipment(response);
+  }
+
+  async addMaterial(
+    boxId: string,
+    input: { materialId: string; quantity: number; reason?: string },
+    tenantId: string
+  ): Promise<BoxMaterial> {
+    const response = await apiClient.post<BackendBoxMaterial>(
+      `/boxes/${boxId}/materials`,
+      input,
+      true // ✅ Auth: Requiere Bearer token
+    );
+    return this.mapBackendMaterial(response);
+  }
+
+  async removeEquipment(
+    boxId: string,
+    assignmentId: string,
+    tenantId: string,
+    reason?: string
+  ): Promise<void> {
+    await apiClient.delete<void>(
+      `/boxes/${boxId}/equipments/${assignmentId}`,
+      reason ? { reason } : undefined,
+      true // ✅ Auth: Requiere Bearer token
+    );
+  }
+
+  async removeMaterial(
+    boxId: string,
+    assignmentId: string,
+    tenantId: string,
+    reason?: string
+  ): Promise<void> {
+    await apiClient.delete<void>(
+      `/boxes/${boxId}/materials/${assignmentId}`,
+      reason ? { reason } : undefined,
+      true // ✅ Auth: Requiere Bearer token
+    );
   }
 }

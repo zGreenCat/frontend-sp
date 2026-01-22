@@ -183,13 +183,15 @@ private handleSessionExpired(): void {
     return this.handleResponse<T>(response);
   }
 
-  async delete<T>(
+  async delete<T, D = unknown>(
     endpoint: string,
+    data?: D,
     requiresAuth: boolean = true
   ): Promise<T> {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "DELETE",
       headers: this.getHeaders(requiresAuth),
+      body: data ? JSON.stringify(data) : undefined,
     });
 
     return this.handleResponse<T>(response);
