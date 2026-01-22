@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   Eye,
   TrendingUp,
   PackagePlus,
+  AlertTriangle,
 } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { useAreas } from "@/hooks/useAreas";
@@ -25,32 +27,28 @@ import { BOX_STATUS } from "@/shared/constants";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+function safeTotal(data: any) {
+  return (
+    data?.total ??
+    (Array.isArray(data?.data) ? data.data.length : Array.isArray(data) ? data.length : 0)
+  );
+}
+
 export function DashboardView() {
   const router = useRouter();
 
-  // Queries para KPIs principales
+  // Base queries
   const { data: usersData, isLoading: loadingUsers } = useUsers();
   const { data: areasData, isLoading: loadingAreas } = useAreas();
   const { data: warehousesData, isLoading: loadingWarehouses } = useWarehouses();
   const { data: boxesData, isLoading: loadingBoxes } = useBoxes({ page: 1, limit: 1 });
 
-  // Totales defensivos (sirve tanto si viene paginado como array suelto)
-  const usersTotal =
-    (usersData as any)?.total ??
-    (Array.isArray((usersData as any)?.data) ? (usersData as any).data.length : 0);
-
-  const areasTotal = Array.isArray(areasData)
-    ? areasData.length
-    : (areasData as any)?.total ?? 0;
-
+  const usersTotal = safeTotal(usersData);
+  const areasTotal = safeTotal(areasData);
   const warehousesTotal = warehousesData?.length ?? 0;
-  const boxesTotal =
-    (boxesData as any)?.total ??
-    (Array.isArray((boxesData as any)?.data)
-      ? (boxesData as any).data.length
-      : 0);
+  const boxesTotal = safeTotal(boxesData);
 
-  // Queries para resumen de cajas por estado
+  // Boxes by status (counts)
   const { data: boxesDisponible } = useBoxes({
     status: BOX_STATUS.DISPONIBLE,
     page: 1,
@@ -72,230 +70,282 @@ export function DashboardView() {
     limit: 1,
   });
 
-  // Query para actividad reciente de cajas (últimas 5)
-  const {
-    data: recentBoxesData,
-    isLoading: loadingRecentBoxes,
-  } = useBoxes({ page: 1, limit: 5 });
+  const disponibleCount = boxesDisponible?.total ?? 0;
+  const reparacionCount = boxesEnReparacion?.total ?? 0;
+  const danadaCount = boxesDanada?.total ?? 0;
+  const retiradaCount = boxesRetirada?.total ?? 0;
 
-  const metrics = [
+  const incidentCount = reparacionCount + danadaCount;
+  const availabilityPct = useMemo(() => {
+    if (!boxesTotal) return 0;
+    return Math.round((disponibleCount / boxesTotal) * 100);
+  }, [boxesTotal, disponibleCount]);
+
+  // Recent boxes
+  const { data: recentBoxesData, isLoading: loadingRecentBoxes } = useBoxes({ page: 1, limit: 5 });
+
+  // NOTE: sin endpoint real para “sin bodega”, usamos muestra de las últimas 5.
+  const recentNoWarehouse = useMemo(() => {
+    const list = recentBoxesData?.data ?? [];
+    return list.filter((b: any) => !b.warehouseName).length;
+  }, [recentBoxesData]);
+
+  // Executive KPIs (operación)
+  const kpis = [
     {
-      title: "Usuarios",
-      value: usersTotal,
-      icon: Users,
-      color: "text-blue-600",
-      route: "/users",
-      loading: loadingUsers,
+      title: "Cajas totales",
+      value: boxesTotal,
+      icon: Package,
+      tone: "text-[#2196F3]",
+      helper: "Inventario total de cajas",
+      loading: loadingBoxes,
+      onClick: () => router.push("/boxes"),
     },
     {
-      title: "Áreas",
-      value: areasTotal,
-      icon: Building2,
-      color: "text-green-600",
-      route: "/areas",
-      loading: loadingAreas,
+      title: "Disponibles",
+      value: disponibleCount,
+      icon: Package,
+      tone: "text-[#4CAF50]",
+      helper: "Listas para uso/operación",
+      loading: false,
+      onClick: () => router.push("/boxes"),
+    },
+    {
+      title: "Incidencias",
+      value: incidentCount,
+      icon: AlertTriangle,
+      tone: "text-[#333333]",
+      helper: "Dañadas + en reparación",
+      loading: false,
+      onClick: () => router.push("/boxes"),
+    },
+    {
+      title: "Disponibilidad",
+      value: `${availabilityPct}%`,
+      icon: TrendingUp,
+      tone: "text-[#2196F3]",
+      helper: "Disponibles / Total",
+      loading: loadingBoxes,
+      onClick: () => router.push("/boxes"),
     },
     {
       title: "Bodegas",
       value: warehousesTotal,
       icon: Warehouse,
-      color: "text-orange-600",
-      route: "/warehouses",
+      tone: "text-[#333333]",
+      helper: "Bodegas registradas",
       loading: loadingWarehouses,
+      onClick: () => router.push("/warehouses"),
     },
     {
-      title: "Cajas",
-      value: boxesTotal,
-      icon: Package,
-      color: "text-purple-600",
-      route: "/boxes",
-      loading: loadingBoxes,
+      title: "Áreas",
+      value: areasTotal,
+      icon: Building2,
+      tone: "text-[#333333]",
+      helper: "Áreas operativas",
+      loading: loadingAreas,
+      onClick: () => router.push("/areas"),
     },
   ];
 
-  const boxStatusSummary = [
-    {
-      label: "Disponible",
-      count: boxesDisponible?.total ?? 0,
-      status: BOX_STATUS.DISPONIBLE,
-      icon: Package,
-    },
-    {
-      label: "En Reparación",
-      count: boxesEnReparacion?.total ?? 0,
-      status: BOX_STATUS.EN_REPARACION,
-      icon: TrendingUp,
-    },
-    {
-      label: "Dañada",
-      count: boxesDanada?.total ?? 0,
-      status: BOX_STATUS.DANADA,
-      icon: Package,
-    },
-    {
-      label: "Retirada",
-      count: boxesRetirada?.total ?? 0,
-      status: BOX_STATUS.RETIRADA,
-      icon: Package,
-    },
+  const statusRows = [
+    { label: "Disponible", count: disponibleCount, status: BOX_STATUS.DISPONIBLE },
+    { label: "En reparación", count: reparacionCount, status: BOX_STATUS.EN_REPARACION },
+    { label: "Dañada", count: danadaCount, status: BOX_STATUS.DANADA },
+    { label: "Retirada", count: retiradaCount, status: BOX_STATUS.RETIRADA },
   ];
+
+  const totalForBars = Math.max(1, disponibleCount + reparacionCount + danadaCount + retiradaCount);
+
+  const alerts = [
+    {
+      title: "Cajas con incidencias",
+      value: incidentCount,
+      desc: "Requieren revisión o gestión",
+      show: incidentCount > 0,
+      action: () => router.push("/boxes"),
+    },
+    {
+      title: "Cajas retiradas",
+      value: retiradaCount,
+      desc: "Histórico de retiro",
+      show: retiradaCount > 0,
+      action: () => router.push("/boxes"),
+    },
+    {
+      title: "Sin bodega (muestra)",
+      value: recentNoWarehouse,
+      desc: "Detectado en las últimas 5 registradas",
+      show: recentNoWarehouse > 0,
+      action: () => router.push("/boxes"),
+      // TODO: reemplazar cuando backend permita filtrar por warehouseId null / unassigned
+    },
+  ].filter((a) => a.show);
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Panel de control logístico</p>
+    <div className="space-y-6">
+      {/* Header + acciones */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">Visión ejecutiva de operación logística</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            className="gap-2"
+            onClick={() => router.push("/boxes")}
+          >
+            <Plus className="h-4 w-4" />
+            Crear Caja
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => router.push("/warehouses")}
+          >
+            <Warehouse className="h-4 w-4" />
+            Crear Bodega
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => router.push("/areas")}
+          >
+            <Building2 className="h-4 w-4" />
+            Ver Áreas
+          </Button>
+        </div>
       </div>
 
-      {/* KPIs principales - Cards clickeables */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {metrics.map((metric) => (
+      {/* KPIs ejecutivos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {kpis.map((kpi) => (
           <Card
-            key={metric.title}
+            key={kpi.title}
             className="shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => router.push(metric.route)}
+            onClick={kpi.onClick}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {metric.title}
-              </CardTitle>
-              <metric.icon className={`h-5 w-5 ${metric.color}`} />
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {kpi.title}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">{kpi.helper}</p>
+              </div>
+              <kpi.icon className={`h-5 w-5 ${kpi.tone}`} />
             </CardHeader>
             <CardContent>
-              {metric.loading ? (
-                <Skeleton className="h-9 w-20 mb-1" />
+              {kpi.loading ? (
+                <Skeleton className="h-9 w-24" />
               ) : (
-                <div className="text-3xl font-bold text-foreground mb-1">
-                  {metric.value.toLocaleString()}
+                <div className="text-3xl font-bold text-foreground">
+                  {typeof kpi.value === "number" ? kpi.value.toLocaleString() : kpi.value}
                 </div>
               )}
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1 text-xs p-0 h-auto hover:bg-transparent"
+                className="gap-1 text-xs p-0 h-auto mt-2 hover:bg-transparent"
                 onClick={(e) => {
                   e.stopPropagation();
-                  router.push(metric.route);
+                  kpi.onClick();
                 }}
               >
-                Ver todos
-                <ArrowRight className="h-3 w-3" />
+                Ver detalle <ArrowRight className="h-3 w-3" />
               </Button>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Resumen de Cajas por Estado */}
-        <Card className="shadow-sm">
+      {/* Paneles de decisión */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Estado de cajas (más visual, sin espacio muerto) */}
+        <Card className="shadow-sm lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Resumen de Cajas
+              Estado de Cajas
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {boxStatusSummary.map((item) => (
+          <CardContent className="space-y-3">
+            {statusRows.map((row) => {
+              const pct = Math.round((row.count / totalForBars) * 100);
+              return (
                 <div
-                  key={item.status}
-                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                  key={row.status}
+                  className="rounded-lg border bg-background p-3 hover:bg-secondary/30 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-foreground">
-                      {item.label}
-                    </span>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-medium text-foreground truncate">{row.label}</span>
+                      <EntityBadge status={row.status} />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-muted-foreground">{pct}%</span>
+                      <span className="text-xl font-bold text-foreground">{row.count}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl font-bold text-foreground">
-                      {item.count}
-                    </span>
-                    <EntityBadge status={item.status} />
+
+                  <div className="mt-2 h-2 w-full rounded-full bg-[#E0E0E0] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#2196F3]"
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+
             <Button
               variant="outline"
-              className="w-full mt-4 gap-2"
+              className="w-full mt-2 gap-2"
               onClick={() => router.push("/boxes")}
             >
               <Eye className="h-4 w-4" />
-              Ver todas las cajas
+              Ver gestión de cajas
             </Button>
           </CardContent>
         </Card>
 
-        {/* Actividad reciente de cajas */}
+        {/* Alertas (exception-driven) */}
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Últimas Cajas Registradas
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/boxes")}
-                className="gap-1"
-              >
-                Ver todas
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-[#333333]" />
+              Alertas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingRecentBoxes ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-20 w-full" />
-                ))}
-              </div>
-            ) : !recentBoxesData || recentBoxesData.data.length === 0 ? (
-              <div className="py-8">
-                <EmptyState message="Aún no hay cajas registradas" />
-                <Button
-                  className="w-full mt-4 gap-2"
-                  onClick={() => router.push("/boxes")}
-                >
-                  <Plus className="h-4 w-4" />
-                  Crear primera caja
-                </Button>
+            {alerts.length === 0 ? (
+              <div className="py-6">
+                <EmptyState message="Sin alertas por ahora ✅" />
               </div>
             ) : (
               <div className="space-y-3">
-                {recentBoxesData.data.map((box) => (
+                {alerts.map((a) => (
                   <div
-                    key={box.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/boxes/${box.id}`)}
+                    key={a.title}
+                    className="rounded-lg border p-3 hover:bg-secondary/30 transition-colors"
                   >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="flex flex-col gap-1">
-                        <p className="font-mono text-sm font-medium text-primary">
-                          {box.qrCode}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {box.warehouseName || "Sin bodega asignada"}
-                        </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground truncate">{a.title}</p>
+                        <p className="text-xs text-muted-foreground">{a.desc}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-foreground">{a.value}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right hidden sm:block">
-                        <p className="text-xs text-muted-foreground">
-                          {box.createdAt
-                            ? format(new Date(box.createdAt), "dd MMM yyyy", {
-                                locale: es,
-                              })
-                            : "-"}
-                        </p>
-                      </div>
-                      <EntityBadge status={box.status} />
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 p-0 h-auto text-xs"
+                      onClick={a.action}
+                    >
+                      Ver <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -304,64 +354,71 @@ export function DashboardView() {
         </Card>
       </div>
 
-      {/* Panel de Atajos Rápidos */}
+      {/* Actividad reciente */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Atajos Rápidos</CardTitle>
+          <CardTitle className="text-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Últimas Cajas Registradas
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => router.push("/boxes")} className="gap-1">
+              Ver todas <ArrowRight className="h-4 w-4" />
+            </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button
-              variant="outline"
-              className="h-auto py-6 flex-col gap-2 hover:bg-primary/10 hover:border-primary"
-              onClick={() => router.push("/boxes")}
-            >
-              <PackagePlus className="h-6 w-6" />
-              <div className="text-center">
-                <p className="font-semibold">Crear Caja</p>
-                <p className="text-xs text-muted-foreground">
-                  Nueva caja en sistema
-                </p>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-6 flex-col gap-2 hover:bg-primary/10 hover:border-primary"
-              onClick={() => router.push("/warehouses")}
-            >
-              <Warehouse className="h-6 w-6" />
-              <div className="text-center">
-                <p className="font-semibold">Crear Bodega</p>
-                <p className="text-xs text-muted-foreground">Nueva bodega</p>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-6 flex-col gap-2 hover:bg-primary/10 hover:border-primary"
-              onClick={() => router.push("/areas")}
-            >
-              <Building2 className="h-6 w-6" />
-              <div className="text-center">
-                <p className="font-semibold">Ver Áreas</p>
-                <p className="text-xs text-muted-foreground">Gestionar áreas</p>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-6 flex-col gap-2 hover:bg-primary/10 hover:border-primary"
-              onClick={() => router.push("/users")}
-            >
-              <Users className="h-6 w-6" />
-              <div className="text-center">
-                <p className="font-semibold">Ver Usuarios</p>
-                <p className="text-xs text-muted-foreground">
-                  Gestionar usuarios
-                </p>
-              </div>
-            </Button>
-          </div>
+          {loadingRecentBoxes ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : !recentBoxesData || recentBoxesData.data.length === 0 ? (
+            <div className="py-8">
+              <EmptyState message="Aún no hay cajas registradas" />
+              <Button className="w-full mt-4 gap-2" onClick={() => router.push("/boxes")}>
+                <Plus className="h-4 w-4" />
+                Crear primera caja
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentBoxesData.data.map((box: any) => (
+                <div
+                  key={box.id}
+                  className="flex items-center justify-between p-4 rounded-lg border bg-background hover:bg-secondary/30 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/boxes/${box.id}`)}
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <p className="font-mono text-sm font-medium text-[#2196F3] truncate">
+                        {box.qrCode}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {box.warehouseName || "Sin bodega asignada"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-xs text-muted-foreground">
+                        {box.createdAt
+                          ? format(new Date(box.createdAt), "dd MMM yyyy", { locale: es })
+                          : "-"}
+                      </p>
+                    </div>
+                    <EntityBadge status={box.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Bloque “corporativo” eliminado: Atajos Rápidos ya están arriba */}
     </div>
   );
 }
