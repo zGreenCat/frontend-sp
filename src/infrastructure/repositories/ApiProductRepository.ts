@@ -1,7 +1,8 @@
-import { IProductRepository, ListProductsParams } from '@/domain/repositories/IProductRepository';
+import { IProductRepository, ListProductsParams, CreateProductInput } from '@/domain/repositories/IProductRepository';
 import { Product, ProductKind } from '@/domain/entities/Product';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
 import { apiClient } from '@/infrastructure/api/apiClient';
+import { TENANT_ID } from '@/shared/constants';
 
 // ====== Tipos del Backend ======
 
@@ -147,6 +148,37 @@ export class ApiProductRepository implements IProductRepository {
     }
   }
 
+  /**
+   * Crea un nuevo producto
+   * Enruta al endpoint correcto según el tipo de producto
+   */
+  async create(input: CreateProductInput): Promise<Product> {
+    try {
+      const endpoint = this.getEndpointForKind(input.kind);
+      
+      // Preparar payload según el tipo de producto
+      const payload = this.mapInputToBackendPayload(input);
+      
+      console.log(`[ApiProductRepository] Creating ${input.kind}:`, endpoint, payload);
+      
+      const response = await apiClient.post<any>(endpoint, payload, true);
+
+      if (!response) {
+        throw new Error('No response from server');
+      }
+
+      // Mapear respuesta a Product unificado
+      const product = this.mapSingleToProduct(response, input.kind);
+      
+      console.log(`[ApiProductRepository] Product created successfully:`, product.id);
+      
+      return product;
+    } catch (error) {
+      console.error('[ApiProductRepository] Error creating product:', error);
+      throw error;
+    }
+  }
+
   // ====== Métodos privados de mapeo ======
 
   private getEndpointForKind(kind: ProductKind): string {
@@ -246,5 +278,47 @@ export class ApiProductRepository implements IProductRepository {
       createdAt: sparePart.createdAt,
       updatedAt: sparePart.updatedAt,
     };
+  }
+
+  /**
+   * Mapea el input de creación al formato esperado por el backend
+   * Cada tipo de producto tiene su propio formato
+   */
+  private mapInputToBackendPayload(input: CreateProductInput): any {
+    // Campos comunes a todos los tipos
+    const basePayload = {
+      name: input.name,
+      sku: input.sku,
+      description: input.description || '',
+      currency: input.currency,
+      isActive: input.isActive,
+      tenantId: TENANT_ID,
+    };
+
+    switch (input.kind) {
+      case 'EQUIPMENT':
+        return {
+          ...basePayload,
+          model: input.model || '',
+        };
+
+      case 'MATERIAL':
+        return {
+          ...basePayload,
+          unitOfMeasure: input.unitOfMeasure || 'UNIT',
+          isHazardous: input.isHazardous || false,
+          // categories se manejarían después de crear el material si el backend lo requiere
+        };
+
+      case 'SPARE_PART':
+        return {
+          ...basePayload,
+          model: input.model || '',
+          category: 'SPARE', // Valor por defecto según backend
+        };
+
+      default:
+        throw new Error(`Unknown product kind: ${input.kind}`);
+    }
   }
 }

@@ -164,20 +164,78 @@ export type ChangeBoxStatusInput = z.infer<typeof changeBoxStatusSchema>;
 // PRODUCT SCHEMAS
 // ────────────────────────────────────────────────────────────────
 
-export const createProductSchema = z.object({
-  sku: z.string().min(1, 'SKU es requerido').max(50),
-  description: z.string().min(5, 'Descripción debe tener al menos 5 caracteres').max(500),
-  type: z.enum([PRODUCT_TYPES.EQUIPO, PRODUCT_TYPES.MATERIAL, PRODUCT_TYPES.REPUESTO]),
-  status: z.string().default('ACTIVO'),
-  uom: z.string().optional(), // Unit of measure
-  unitCost: z.number().min(0).optional(),
-  currency: z.enum([CURRENCIES.CLP, CURRENCIES.USD, CURRENCIES.EUR]).optional(),
+// ────────────────────────────────────────────────────────────────
+// PRODUCT SCHEMAS (Actualizado para entidad Product unificada)
+// ────────────────────────────────────────────────────────────────
+
+// Schema base sin validaciones condicionales
+const productSchemaBase = z.object({
+  kind: z.enum(['EQUIPMENT', 'MATERIAL', 'SPARE_PART'], {
+    required_error: 'El tipo de producto es requerido',
+  }),
+  name: z.string()
+    .min(1, 'El nombre es requerido')
+    .max(100, 'El nombre no puede exceder 100 caracteres')
+    .trim(),
+  sku: z.string()
+    .min(1, 'El código (SKU) es requerido')
+    .max(50, 'El código no puede exceder 50 caracteres')
+    .trim()
+    .toUpperCase(),
+  description: z.string()
+    .max(500, 'La descripción no puede exceder 500 caracteres')
+    .optional(),
+  currency: z.enum(['CLP', 'USD', 'EUR'], {
+    required_error: 'La moneda es requerida',
+  }),
+  isActive: z.boolean().default(true),
+  
+  // Campos específicos de EQUIPMENT y SPARE_PART
+  model: z.string()
+    .max(100, 'El modelo no puede exceder 100 caracteres')
+    .optional(),
+  
+  // Campos específicos de MATERIAL
+  unitOfMeasure: z.string()
+    .max(20, 'La unidad de medida no puede exceder 20 caracteres')
+    .optional(),
+  isHazardous: z.boolean().optional().default(false),
+  categories: z.array(z.string()).optional(),
+  
+  // Campos opcionales de negocio
   providerId: z.string().optional(),
   projectId: z.string().optional(),
-  tenantId: z.string().min(1),
 });
 
-export const updateProductSchema = createProductSchema.partial().extend({
+// Schema de creación con validaciones condicionales
+export const createProductSchema = productSchemaBase.refine(
+  (data) => {
+    // Validar que materiales tengan unitOfMeasure
+    if (data.kind === 'MATERIAL') {
+      return !!data.unitOfMeasure;
+    }
+    return true;
+  },
+  {
+    message: 'La unidad de medida es requerida para materiales',
+    path: ['unitOfMeasure'],
+  }
+).refine(
+  (data) => {
+    // Validar que equipos y repuestos tengan model
+    if (data.kind === 'EQUIPMENT' || data.kind === 'SPARE_PART') {
+      return !!data.model;
+    }
+    return true;
+  },
+  {
+    message: 'El modelo es requerido para equipos y repuestos',
+    path: ['model'],
+  }
+);
+
+// Schema de actualización (sin validaciones condicionales por ahora)
+export const updateProductSchema = productSchemaBase.partial().extend({
   id: z.string().min(1),
 });
 

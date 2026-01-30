@@ -16,9 +16,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Search, Loader2, Package2, AlertTriangle, CheckCircle2, Wrench, Settings, Plus } from "lucide-react";
-import { useMaterials, useEquipments, useSpareParts } from "@/hooks/useProducts";
+import { useMaterials, useEquipments, useSpareParts, useCreateProduct } from "@/hooks/useProducts";
 import { Product, ProductKind } from "@/domain/entities/Product";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { CreateProductDialog } from "@/presentation/components/CreateProductDialog";
+import { CreateProductInput } from "@/shared/schemas";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -30,6 +32,10 @@ export function ProductsView() {
   const { isAdmin, isManager } = usePermissions();
   
   const [activeTab, setActiveTab] = useState("materials");
+  
+  // Estado del diálogo de creación
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogKind, setCreateDialogKind] = useState<ProductKind>('MATERIAL');
   
   // Estados para tab de Materiales
   const [searchMaterials, setSearchMaterials] = useState("");
@@ -63,6 +69,9 @@ export function ProductsView() {
     limit,
     search: searchSpareParts || undefined,
   });
+
+  // Mutation para crear producto
+  const createProductMutation = useCreateProduct();
 
   // Manejo de errores con toast
   useEffect(() => {
@@ -115,30 +124,56 @@ export function ProductsView() {
     router.push(`/products/${kind.toLowerCase()}/${productId}`);
   };
 
-  // Handler para botón crear producto (placeholder)
-  const handleCreateProduct = () => {
-    toast({
-      title: "Funcionalidad en desarrollo",
-      description: "La creación de productos estará disponible próximamente",
-    });
+  // Handler para abrir diálogo de crear producto
+  const handleOpenCreateDialog = (kind: ProductKind) => {
+    setCreateDialogKind(kind);
+    setCreateDialogOpen(true);
+  };
+
+  // Handler para crear producto
+  const handleCreateProduct = async (data: CreateProductInput) => {
+    try {
+      const product = await createProductMutation.mutateAsync(data);
+      
+      toast({
+        title: "Producto creado correctamente",
+        description: `${product.name} ha sido agregado al catálogo`,
+      });
+      
+      setCreateDialogOpen(false);
+      
+      // Resetear paginación y búsqueda del tab correspondiente
+      switch (product.kind) {
+        case 'MATERIAL':
+          setPageMaterials(1);
+          setSearchMaterials("");
+          break;
+        case 'EQUIPMENT':
+          setPageEquipments(1);
+          setSearchEquipments("");
+          break;
+        case 'SPARE_PART':
+          setPageSpareParts(1);
+          setSearchSpareParts("");
+          break;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error al procesar la operación de producto",
+        description: (error as Error).message || "No se pudo crear el producto",
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Productos</h1>
-          <p className="text-muted-foreground mt-1">
-            Catálogo de materiales, equipos y repuestos logísticos
-          </p>
-        </div>
-        {canCreateProduct && (
-          <Button onClick={handleCreateProduct} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Crear producto
-          </Button>
-        )}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Productos</h1>
+        <p className="text-muted-foreground mt-1">
+          Catálogo de materiales, equipos y repuestos logísticos
+        </p>
       </div>
 
       {/* Tabs principales */}
@@ -183,6 +218,15 @@ export function ProductsView() {
                   <Package2 className="h-5 w-5" />
                   Materiales ({totalMaterials})
                 </CardTitle>
+                {canCreateProduct && (
+                  <Button 
+                    onClick={() => handleOpenCreateDialog('MATERIAL')}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Crear material
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -352,6 +396,15 @@ export function ProductsView() {
                   <Wrench className="h-5 w-5" />
                   Equipos ({totalEquipments})
                 </CardTitle>
+                {canCreateProduct && (
+                  <Button 
+                    onClick={() => handleOpenCreateDialog('EQUIPMENT')}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Crear equipo
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -503,6 +556,15 @@ export function ProductsView() {
                   <Settings className="h-5 w-5" />
                   Repuestos ({totalSpareParts})
                 </CardTitle>
+                {canCreateProduct && (
+                  <Button 
+                    onClick={() => handleOpenCreateDialog('SPARE_PART')}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Crear repuesto
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -621,6 +683,15 @@ export function ProductsView() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Diálogo de creación de producto */}
+      <CreateProductDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        kind={createDialogKind}
+        onSubmit={handleCreateProduct}
+        isLoading={createProductMutation.isPending}
+      />
     </div>
   );
 }

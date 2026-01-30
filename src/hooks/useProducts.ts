@@ -1,7 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { ProductKind, Product } from '@/domain/entities/Product';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
+import { CreateProductInput } from '@/domain/repositories/IProductRepository';
+import { CreateProduct } from '@/application/usecases/product/CreateProduct';
 import { TENANT_ID } from '@/shared/constants';
 
 // Query Keys
@@ -112,3 +114,32 @@ export const useSpareParts = (params: UseSparePartsParams = {}) =>
 export const useSparePartById = (id: string | undefined) =>
   useProductDetail(id, 'SPARE_PART');
 
+// ====== Mutations (Create, Update, Delete) ======
+
+/**
+ * Mutation para crear un nuevo producto
+ * Invalida las queries del tipo de producto creado
+ */
+export const useCreateProduct = () => {
+  const { productRepo } = useRepositories();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateProductInput): Promise<Product> => {
+      const useCase = new CreateProduct(productRepo);
+      const result = await useCase.execute(input);
+      
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+      
+      return result.value;
+    },
+    onSuccess: (product) => {
+      // Invalidar queries del tipo de producto creado
+      queryClient.invalidateQueries({ 
+        queryKey: productKeys.all(product.kind, undefined) 
+      });
+    },
+  });
+};

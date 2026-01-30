@@ -1,4 +1,4 @@
-import { Product, ProductKind } from '../entities/Product';
+import { Product, ProductKind, Currency } from '../entities/Product';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
 
 /**
@@ -13,11 +13,39 @@ export interface ListProductsParams {
 }
 
 /**
+ * Input para crear un producto
+ * Campos obligatorios y opcionales según el tipo de producto
+ */
+export interface CreateProductInput {
+  // Campos obligatorios para todos los productos
+  kind: ProductKind;
+  name: string;
+  sku: string; // Código del producto
+  currency: Currency;
+  isActive: boolean;
+  
+  // Campos opcionales comunes
+  description?: string;
+  
+  // Campos específicos de EQUIPMENT y SPARE_PART
+  model?: string;
+  
+  // Campos específicos de MATERIAL
+  unitOfMeasure?: string; // 'KG' | 'LT' | 'UNIT' | etc.
+  isHazardous?: boolean;
+  categories?: string[]; // IDs de categorías
+  
+  // Campos opcionales de negocio
+  providerId?: string;
+  projectId?: string;
+}
+
+/**
  * Repositorio de productos unificado
  * Actúa como fachada sobre los endpoints reales del backend:
- * - GET /equipments
- * - GET /materials
- * - GET /spare-parts
+ * - POST/GET /equipment
+ * - POST/GET /materials
+ * - POST/GET /spare-parts
  */
 export interface IProductRepository {
   /**
@@ -34,4 +62,11 @@ export interface IProductRepository {
    * @returns Producto encontrado o null si no existe
    */
   findById(id: string, kind: ProductKind): Promise<Product | null>;
+
+  /**
+   * Crea un nuevo producto
+   * @param input - Datos del producto a crear
+   * @returns Producto creado con ID asignado por el backend
+   */
+  create(input: CreateProductInput): Promise<Product>;
 }
