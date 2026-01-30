@@ -30,13 +30,15 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-import { useProductDetail, useUpdateProduct } from "@/hooks/useProducts";
+import { useProductDetail, useUpdateProduct, useProductHistory } from "@/hooks/useProducts";
 import { ProductKind, Product } from "@/domain/entities/Product";
+import { ProductHistoryFilters } from "@/domain/entities/ProductHistory";
 import { UpdateProductInput } from "@/shared/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { EditProductDialog } from "@/presentation/components/EditProductDialog";
+import { ProductHistoryTable } from "@/presentation/components/ProductHistoryTable";
 
 interface ProductDetailViewProps {
   productId: string;
@@ -85,6 +87,20 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
   const [activeTab, setActiveTab] = useState("general");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+
+  // Estado para historial
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyFilters, setHistoryFilters] = useState<ProductHistoryFilters>({
+    page: 1,
+    limit: 10,
+  });
+
+  // Query de historial
+  const {
+    data: historyData,
+    isLoading: isLoadingHistory,
+    error: historyError,
+  } = useProductHistory(productId, kind, historyFilters);
 
   // Permisos para editar/eliminar
   const canEdit = isAdmin() || isManager();
@@ -245,6 +261,24 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
         description: (error as Error).message,
       });
     }
+  };
+
+  // Handler para cambiar página del historial
+  const handleHistoryPageChange = (newPage: number) => {
+    setHistoryPage(newPage);
+    setHistoryFilters({
+      ...historyFilters,
+      page: newPage,
+    });
+  };
+
+  // Handler para exportar CSV (opcional, preparado para futuro)
+  const handleExportHistoryCsv = () => {
+    // TODO: Implementar exportación a CSV
+    toast({
+      title: "Función en desarrollo",
+      description: "La exportación a CSV estará disponible próximamente.",
+    });
   };
 
   return (
@@ -449,10 +483,68 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
         <TabsContent value="history">
           <Card>
             <CardHeader>
-              <CardTitle>Historial</CardTitle>
+              <CardTitle>Historial de Cambios</CardTitle>
             </CardHeader>
             <CardContent>
-              <EmptyState message="Historial de producto en desarrollo" />
+              {/* Loading */}
+              {isLoadingHistory && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center space-y-3">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Cargando historial...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Error: Backend no implementado */}
+              {historyError && (historyError as Error).message === 'PRODUCT_HISTORY_NOT_IMPLEMENTED' && (
+                <div className="py-12 text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                    <History className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">Historial no disponible</h3>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      El módulo de historial de productos está en desarrollo.
+                      Esta funcionalidad estará disponible próximamente cuando el backend
+                      exponga los endpoints necesarios.
+                    </p>
+                  </div>
+                  <div className="bg-muted/50 border border-border rounded-md p-4 max-w-md mx-auto">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Nota técnica:</strong> Los endpoints esperados son:
+                      <br />
+                      <code className="text-xs">GET /equipment/:id/history</code>
+                      <br />
+                      <code className="text-xs">GET /materials/:id/history</code>
+                      <br />
+                      <code className="text-xs">GET /spare-parts/:id/history</code>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Otros errores */}
+              {historyError && (historyError as Error).message !== 'PRODUCT_HISTORY_NOT_IMPLEMENTED' && (
+                <div className="py-8">
+                  <EmptyState message="Error al cargar historial del producto" />
+                </div>
+              )}
+
+              {/* Sin errores: Mostrar datos */}
+              {!historyError && !isLoadingHistory && historyData && (
+                <ProductHistoryTable
+                  events={historyData.data}
+                  page={historyData.page}
+                  limit={historyData.limit}
+                  total={historyData.total}
+                  totalPages={historyData.totalPages || 0}
+                  onPageChange={handleHistoryPageChange}
+                  onExportCsv={handleExportHistoryCsv}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

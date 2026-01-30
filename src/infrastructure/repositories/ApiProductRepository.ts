@@ -1,5 +1,6 @@
 import { IProductRepository, ListProductsParams, CreateProductInput, UpdateProductInput } from '@/domain/repositories/IProductRepository';
 import { Product, ProductKind } from '@/domain/entities/Product';
+import { ProductHistoryEvent, ProductHistoryFilters } from '@/domain/entities/ProductHistory';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
 import { apiClient } from '@/infrastructure/api/apiClient';
 import { TENANT_ID } from '@/shared/constants';
@@ -378,4 +379,117 @@ export class ApiProductRepository implements IProductRepository {
 
     return basePayload;
   }
+
+  /**
+   * Obtiene el historial de cambios de un producto
+   * 
+   * NOTA IMPORTANTE: El backend actualmente NO expone endpoints de historial para productos individuales.
+   * Los únicos endpoints de historial disponibles son para movimientos en cajas:
+   * - GET /boxes/:id/equipment-history
+   * - GET /boxes/:id/material-history
+   * - GET /boxes/:id/spare-part-history
+   * 
+   * Este método está preparado para cuando el backend implemente:
+   * - GET /equipment/:id/history
+   * - GET /materials/:id/history
+   * - GET /spare-parts/:id/history
+   * 
+   * Por ahora, lanza un error controlado para informar que la funcionalidad no está disponible.
+   */
+  async getHistory(
+    id: string,
+    kind: ProductKind,
+    filters?: ProductHistoryFilters
+  ): Promise<PaginatedResponse<ProductHistoryEvent>> {
+    // TODO: Implementar cuando el backend exponga los endpoints de historial
+    // Los endpoints esperados serían:
+    // - GET /equipment/:id/history
+    // - GET /materials/:id/history
+    // - GET /spare-parts/:id/history
+    
+    throw new Error('PRODUCT_HISTORY_NOT_IMPLEMENTED: El backend aún no expone endpoints de historial para productos individuales. Esta funcionalidad estará disponible próximamente.');
+
+    /* Implementación futura cuando el backend esté listo:
+    
+    try {
+      const { page = 1, limit = 10, from, to, eventType, performedBy } = filters || {};
+      
+      // Construir query params
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', limit.toString());
+      if (from) queryParams.append('from', from);
+      if (to) queryParams.append('to', to);
+      if (eventType) queryParams.append('eventType', eventType);
+      if (performedBy) queryParams.append('performedBy', performedBy);
+      
+      // Determinar endpoint según el tipo
+      const endpoint = this.getHistoryEndpointForKind(kind, id);
+      const url = `${endpoint}?${queryParams.toString()}`;
+      
+      console.log(`[ApiProductRepository] Fetching history for ${kind} ${id}:`, url);
+      
+      const response = await apiClient.get<BackendPaginatedResponse<any>>(url, true);
+      
+      // Mapear respuesta del backend a entidades del dominio
+      const events = response.data.map(item => this.mapBackendHistoryToEvent(item, kind));
+      
+      return {
+        data: events,
+        total: response.total,
+        page: response.page,
+        limit: response.limit,
+        totalPages: response.totalPages || Math.ceil(response.total / response.limit),
+      };
+    } catch (error) {
+      console.error(`[ApiProductRepository] Error fetching history for ${kind}:`, error);
+      throw error;
+    }
+    */
+  }
+
+  /**
+   * Helper para obtener el endpoint de historial según el tipo de producto
+   * @private
+   */
+  /* Descomentar cuando se implemente
+  private getHistoryEndpointForKind(kind: ProductKind, id: string): string {
+    switch (kind) {
+      case 'EQUIPMENT':
+        return `/equipments/${id}/history`;
+      case 'MATERIAL':
+        return `/materials/${id}/history`;
+      case 'SPARE_PART':
+        return `/spare-parts/${id}/history`;
+      default:
+        throw new Error(`Unknown product kind: ${kind}`);
+    }
+  }
+  */
+
+  /**
+   * Mapea el historial del backend a la entidad de dominio
+   * @private
+   */
+  /* Descomentar cuando se implemente
+  private mapBackendHistoryToEvent(data: any, kind: ProductKind): ProductHistoryEvent {
+    return {
+      id: data.id,
+      productId: data.productId || data.equipmentId || data.materialId || data.sparePartId,
+      kind,
+      eventType: data.eventType || data.actionType || 'OTHER',
+      performedBy: data.performedBy ? {
+        id: data.performedBy.id || data.performedByUserId,
+        name: data.performedBy.name || data.performedBy.fullName || 'Usuario Desconocido',
+        email: data.performedBy.email || '',
+      } : null,
+      performedAt: data.performedAt || data.occurredAt || data.createdAt,
+      previousValue: data.previousValue,
+      newValue: data.newValue,
+      justification: data.justification || data.reason,
+      metadata: data.metadata,
+    };
+  }
+  */
 }
+

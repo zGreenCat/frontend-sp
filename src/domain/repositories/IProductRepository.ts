@@ -1,4 +1,5 @@
 import { Product, ProductKind, Currency } from '../entities/Product';
+import { ProductHistoryEvent, ProductHistoryFilters } from '../entities/ProductHistory';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
 
 /**
@@ -101,4 +102,23 @@ export interface IProductRepository {
    * @returns Producto actualizado
    */
   update(id: string, kind: ProductKind, input: UpdateProductInput): Promise<Product>;
+
+  /**
+   * Obtiene el historial de cambios de un producto
+   * @param id - ID del producto
+   * @param kind - Tipo de producto (para enrutar al endpoint correcto)
+   * @param filters - Filtros opcionales (paginación, rango de fechas, tipo de evento)
+   * @returns Historial paginado de eventos del producto
+   * 
+   * Nota: Actualmente el backend no expone este endpoint.
+   * Cuando se implemente, el endpoint esperado sería:
+   * - GET /equipment/:id/history
+   * - GET /materials/:id/history
+   * - GET /spare-parts/:id/history
+   */
+  getHistory(
+    id: string,
+    kind: ProductKind,
+    filters?: ProductHistoryFilters
+  ): Promise<PaginatedResponse<ProductHistoryEvent>>;
 }

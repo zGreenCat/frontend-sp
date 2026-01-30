@@ -1,16 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { ProductKind, Product } from '@/domain/entities/Product';
+import { ProductHistoryEvent, ProductHistoryFilters } from '@/domain/entities/ProductHistory';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
 import { CreateProductInput, UpdateProductInput } from '@/domain/repositories/IProductRepository';
 import { CreateProduct } from '@/application/usecases/product/CreateProduct';
 import { UpdateProduct } from '@/application/usecases/product/UpdateProduct';
+import { GetProductHistory } from '@/application/usecases/product/GetProductHistory';
 import { TENANT_ID } from '@/shared/constants';
 
 // Query Keys
 export const productKeys = {
   all: (kind?: ProductKind, filters?: any) => ['products', TENANT_ID, kind, filters] as const,
   detail: (id: string, kind: ProductKind) => ['products', TENANT_ID, kind, id] as const,
+  history: (id: string, kind: ProductKind, filters?: ProductHistoryFilters) => 
+    ['products', TENANT_ID, kind, id, 'history', filters] as const,
 };
 
 export interface UseProductsParams {
@@ -183,5 +187,49 @@ export const useUpdateProduct = () => {
         queryKey: productKeys.all(product.kind, undefined) 
       });
     },
+  });
+};
+
+/**
+ * Hook para obtener el historial de cambios de un producto
+ * @param id - ID del producto
+ * @param kind - Tipo de producto (EQUIPMENT, MATERIAL, SPARE_PART)
+ * @param filters - Filtros opcionales (paginación, rango de fechas, tipo de evento)
+ * 
+ * NOTA: Actualmente el backend no expone endpoints de historial para productos.
+ * Este hook manejará el error de forma controlada mostrando un mensaje al usuario.
+ */
+export const useProductHistory = (
+  id: string | undefined,
+  kind: ProductKind,
+  filters?: ProductHistoryFilters
+) => {
+  const { productRepo } = useRepositories();
+
+  return useQuery({
+    queryKey: productKeys.history(id || '', kind, filters),
+    queryFn: async (): Promise<PaginatedResponse<ProductHistoryEvent>> => {
+      if (!id) {
+        return {
+          data: [],
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0,
+        };
+      }
+
+      const useCase = new GetProductHistory(productRepo);
+      const result = await useCase.execute(id, kind, filters);
+      
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+      
+      return result.value;
+    },
+    enabled: !!id, // Solo ejecutar si hay ID
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    retry: false, // No reintentar si falla (especialmente para PRODUCT_HISTORY_NOT_IMPLEMENTED)
   });
 };
