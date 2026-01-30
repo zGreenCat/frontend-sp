@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   Loader2,
   Edit,
@@ -20,11 +30,13 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-import { useProductDetail } from "@/hooks/useProducts";
+import { useProductDetail, useUpdateProduct } from "@/hooks/useProducts";
 import { ProductKind, Product } from "@/domain/entities/Product";
+import { UpdateProductInput } from "@/shared/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { EditProductDialog } from "@/presentation/components/EditProductDialog";
 
 interface ProductDetailViewProps {
   productId: string;
@@ -68,7 +80,11 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
     refetch,
   } = useProductDetail(productId, kind);
 
+  const updateProductMutation = useUpdateProduct();
+
   const [activeTab, setActiveTab] = useState("general");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
 
   // Permisos para editar/eliminar
   const canEdit = isAdmin() || isManager();
@@ -156,6 +172,81 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
 
   const kindLabel = getProductKindLabel(kind);
 
+  // Handler para editar producto
+  const handleEditProduct = async (input: UpdateProductInput) => {
+    if (!product) return;
+    
+    // Validación de permisos adicional
+    if (!canEdit) {
+      toast({
+        variant: "destructive",
+        title: "Permiso denegado",
+        description: "No tienes permisos para editar productos.",
+      });
+      return;
+    }
+
+    try {
+      await updateProductMutation.mutateAsync({
+        id: productId,
+        kind,
+        input,
+      });
+
+      toast({
+        title: "Producto actualizado correctamente",
+        description: `${product.name} ha sido actualizado exitosamente.`,
+      });
+
+      setEditDialogOpen(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error al procesar la operación de producto",
+        description: (error as Error).message,
+      });
+    }
+  };
+
+  // Handler para dar de baja (cambiar isActive a false)
+  const handleDeactivateProduct = async () => {
+    if (!product) return;
+    
+    // Validación de permisos adicional
+    if (!canEdit) {
+      toast({
+        variant: "destructive",
+        title: "Permiso denegado",
+        description: "No tienes permisos para dar de baja productos.",
+      });
+      return;
+    }
+
+    try {
+      await updateProductMutation.mutateAsync({
+        id: productId,
+        kind,
+        input: {
+          id: productId,
+          isActive: false,
+        },
+      });
+
+      toast({
+        title: "Producto dado de baja correctamente",
+        description: `${product.name} ha sido desactivado.`,
+      });
+
+      setDeactivateDialogOpen(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error al procesar la operación de producto",
+        description: (error as Error).message,
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header con breadcrumbs y acciones */}
@@ -180,14 +271,9 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    // TODO: Implementar edición
-                    toast({
-                      title: "Función en desarrollo",
-                      description: "La edición de productos estará disponible próximamente.",
-                    });
-                  }}
+                  onClick={() => setEditDialogOpen(true)}
                   className="gap-2"
+                  disabled={updateProductMutation.isPending}
                 >
                   <Edit className="h-4 w-4" />
                   Editar
@@ -195,14 +281,9 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    // TODO: Implementar desactivación/baja
-                    toast({
-                      title: "Función en desarrollo",
-                      description: "La desactivación de productos estará disponible próximamente.",
-                    });
-                  }}
+                  onClick={() => setDeactivateDialogOpen(true)}
                   className="gap-2"
+                  disabled={updateProductMutation.isPending || !product.isActive}
                 >
                   <Trash2 className="h-4 w-4" />
                   Dar de baja
@@ -376,6 +457,50 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para editar producto */}
+      {product && (
+        <EditProductDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          product={product}
+          onSubmit={handleEditProduct}
+          isLoading={updateProductMutation.isPending}
+        />
+      )}
+
+      {/* AlertDialog para confirmar dar de baja */}
+      <AlertDialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está seguro de dar de baja este producto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Si el producto está asociado a cajas o movimientos de inventario, puede impactar
+              en la operación. El producto quedará como "Inactivo" y no podrá ser utilizado
+              en nuevas operaciones.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateProductMutation.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeactivateProduct}
+              disabled={updateProductMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {updateProductMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                "Confirmar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

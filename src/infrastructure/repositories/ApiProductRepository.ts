@@ -1,4 +1,4 @@
-import { IProductRepository, ListProductsParams, CreateProductInput } from '@/domain/repositories/IProductRepository';
+import { IProductRepository, ListProductsParams, CreateProductInput, UpdateProductInput } from '@/domain/repositories/IProductRepository';
 import { Product, ProductKind } from '@/domain/entities/Product';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
 import { apiClient } from '@/infrastructure/api/apiClient';
@@ -320,5 +320,62 @@ export class ApiProductRepository implements IProductRepository {
       default:
         throw new Error(`Unknown product kind: ${input.kind}`);
     }
+  }
+
+  /**
+   * Actualiza un producto existente
+   */
+  async update(id: string, kind: ProductKind, input: UpdateProductInput): Promise<Product> {
+    try {
+      const endpoint = this.getDetailEndpointForKind(kind, id);
+      const payload = this.mapUpdateInputToBackendPayload(input, kind);
+
+      console.log(`[ApiProductRepository] Updating ${kind} ${id}:`, payload);
+
+      const response = await apiClient.patch<any>(endpoint, payload, true);
+
+      console.log(`[ApiProductRepository] Updated ${kind}:`, response);
+
+      return this.mapSingleToProduct(response, kind);
+    } catch (error) {
+      console.error(`[ApiProductRepository] Error updating ${kind}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mapea el input de actualización al formato esperado por el backend
+   * Similar a mapInputToBackendPayload pero sin campos obligatorios y sin tenantId
+   */
+  private mapUpdateInputToBackendPayload(input: UpdateProductInput, kind: ProductKind): any {
+    // Campos comunes opcionales (solo enviar si están presentes)
+    const basePayload: any = {};
+    
+    if (input.name !== undefined) basePayload.name = input.name;
+    if (input.sku !== undefined) basePayload.sku = input.sku;
+    if (input.description !== undefined) basePayload.description = input.description;
+    if (input.currency !== undefined) basePayload.currency = input.currency;
+    if (input.isActive !== undefined) basePayload.isActive = input.isActive;
+
+    switch (kind) {
+      case 'EQUIPMENT':
+        if (input.model !== undefined) basePayload.model = input.model;
+        break;
+
+      case 'MATERIAL':
+        if (input.unitOfMeasure !== undefined) basePayload.unitOfMeasure = input.unitOfMeasure;
+        if (input.isHazardous !== undefined) basePayload.isHazardous = input.isHazardous;
+        // TODO: categories cuando backend lo soporte
+        break;
+
+      case 'SPARE_PART':
+        if (input.model !== undefined) basePayload.model = input.model;
+        break;
+    }
+
+    // TODO: Agregar justification cuando backend lo soporte
+    // if (input.justification) basePayload.justification = input.justification;
+
+    return basePayload;
   }
 }

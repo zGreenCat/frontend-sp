@@ -41,6 +41,29 @@ export interface CreateProductInput {
 }
 
 /**
+ * Input para actualizar un producto
+ * Todos los campos son opcionales excepto el ID
+ * kind no puede cambiar (inmutable)
+ */
+export interface UpdateProductInput {
+  id: string;
+  name?: string;
+  sku?: string; // Opcional, pero será readonly en UI
+  currency?: Currency;
+  isActive?: boolean;
+  description?: string;
+  model?: string;
+  unitOfMeasure?: string;
+  isHazardous?: boolean;
+  categories?: string[];
+  providerId?: string;
+  projectId?: string;
+  
+  // TODO: Agregar cuando backend lo soporte
+  // justification?: string; // Justificación para cambios sensibles
+}
+
+/**
  * Repositorio de productos unificado
  * Actúa como fachada sobre los endpoints reales del backend:
  * - POST/GET /equipment
@@ -69,4 +92,13 @@ export interface IProductRepository {
    * @returns Producto creado con ID asignado por el backend
    */
   create(input: CreateProductInput): Promise<Product>;
+
+  /**
+   * Actualiza un producto existente
+   * @param id - ID del producto a actualizar
+   * @param kind - Tipo de producto (para enrutar al endpoint correcto)
+   * @param input - Datos del producto a actualizar (campos opcionales)
+   * @returns Producto actualizado
+   */
+  update(id: string, kind: ProductKind, input: UpdateProductInput): Promise<Product>;
 }

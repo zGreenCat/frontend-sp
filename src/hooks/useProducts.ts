@@ -2,8 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { ProductKind, Product } from '@/domain/entities/Product';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
-import { CreateProductInput } from '@/domain/repositories/IProductRepository';
+import { CreateProductInput, UpdateProductInput } from '@/domain/repositories/IProductRepository';
 import { CreateProduct } from '@/application/usecases/product/CreateProduct';
+import { UpdateProduct } from '@/application/usecases/product/UpdateProduct';
 import { TENANT_ID } from '@/shared/constants';
 
 // Query Keys
@@ -137,6 +138,47 @@ export const useCreateProduct = () => {
     },
     onSuccess: (product) => {
       // Invalidar queries del tipo de producto creado
+      queryClient.invalidateQueries({ 
+        queryKey: productKeys.all(product.kind, undefined) 
+      });
+    },
+  });
+};
+
+/**
+ * Mutation para actualizar un producto existente
+ * Invalida las queries de detalle y listado del tipo de producto actualizado
+ */
+export const useUpdateProduct = () => {
+  const { productRepo } = useRepositories();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      kind, 
+      input 
+    }: { 
+      id: string; 
+      kind: ProductKind; 
+      input: UpdateProductInput 
+    }): Promise<Product> => {
+      const useCase = new UpdateProduct(productRepo);
+      const result = await useCase.execute(id, kind, input);
+      
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+      
+      return result.value;
+    },
+    onSuccess: (product) => {
+      // Invalidar query de detalle del producto actualizado
+      queryClient.invalidateQueries({ 
+        queryKey: productKeys.detail(product.id, product.kind) 
+      });
+      
+      // Invalidar queries de listado del tipo de producto actualizado
       queryClient.invalidateQueries({ 
         queryKey: productKeys.all(product.kind, undefined) 
       });
