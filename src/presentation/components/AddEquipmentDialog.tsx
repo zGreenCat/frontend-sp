@@ -59,27 +59,20 @@ export function AddEquipmentDialog({
       setQuantity("1");
       setReason("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const loadEquipments = async () => {
     setLoadingEquipments(true);
     try {
       const useCase = new ListProducts(productRepo);
-      const result = await useCase.execute(TENANT_ID);
+      const response = await useCase.execute({ 
+        kind: "EQUIPMENT", 
+        status: "ACTIVO" 
+      });
 
-      if (result.ok) {
-        // Filtrar solo equipos activos
-        const filtered = result.value.filter(
-          (p) => p.type === "EQUIPO" && p.status === "ACTIVO"
-        );
-        setEquipments(filtered);
-      } else {
-        toast({
-          title: "❌ Error al cargar equipos",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
+      // La respuesta ahora es PaginatedResponse<Product>
+      setEquipments(response.data);
     } catch (error: any) {
       toast({
         title: "❌ Error al cargar equipos",

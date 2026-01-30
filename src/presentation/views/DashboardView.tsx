@@ -215,6 +215,14 @@ export function DashboardView() {
             <Building2 className="h-4 w-4" />
             Ver Áreas
           </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => router.push("/products")}
+          >
+            <Package className="h-4 w-4" />
+            Ver Productos
+          </Button>
         </div>
       </div>
 

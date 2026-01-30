@@ -13,7 +13,6 @@ import { ApiUserEnablementHistoryRepository } from '@/infrastructure/repositorie
 import { ApiBoxRepository } from '@/infrastructure/repositories/ApiBoxRepository';
 import { ApiProductRepository } from '@/infrastructure/repositories/ApiProductRepository';
 // Mock Repositories (mantener para módulos no conectados)
-import { MockProductRepository } from '@/infrastructure/repositories/MockProductRepository';
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
 import { MockProjectRepository } from '@/infrastructure/repositories/MockProjectRepository';
 // Interfaces
@@ -28,13 +27,16 @@ import { IUserEnablementHistoryRepository } from '@/domain/repositories/IUserEna
 import { IBoxRepository } from '@/domain/repositories/IBoxRepository';
 import { IProductRepository } from '@/domain/repositories/IProductRepository';
 
+/**
+ * Repositorios disponibles en la aplicación
+ */
 interface Repositories {
   userRepo: IUserRepository;
   areaRepo: IAreaRepository;
   warehouseRepo: IWarehouseRepository;
   warehouseMovementRepo: IWarehouseMovementRepository;
   boxRepo: IBoxRepository;
-  productRepo: IProductRepository;
+  productRepo: IProductRepository; // ✅ Repositorio unificado de productos
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
   assignmentHistoryRepo: IAssignmentHistoryRepository;
@@ -56,9 +58,11 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     assignmentRepo: new ApiAssignmentRepository(),
     auditLogRepo: new ApiAuditLogRepository(),
     userEnablementHistoryRepo: new ApiUserEnablementHistoryRepository(),
-    boxRepo: new ApiBoxRepository(), // ✅ AHORA USA API REAL
-    // Repositorios conectados al backend real
-    productRepo: new ApiProductRepository(), // ✅ CONECTADO AL BACKEND
+    boxRepo: new ApiBoxRepository(),
+    
+    // ✅ Repositorio unificado de productos (fachada sobre equipments, materials, spare-parts)
+    productRepo: new ApiProductRepository(),
+    
     // Repositorios Mock (pendientes de conectar)
     providerRepo: new MockProviderRepository(),
     projectRepo: new MockProjectRepository(),

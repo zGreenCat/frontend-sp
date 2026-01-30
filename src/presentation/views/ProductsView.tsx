@@ -1,123 +1,525 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Upload } from "lucide-react";
-import { useRepositories } from "@/presentation/providers/RepositoryProvider";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Search, Loader2, Package2, AlertTriangle, CheckCircle2, Wrench, Settings } from "lucide-react";
+import { useMaterials, useEquipments, useSpareParts } from "@/hooks/useProducts";
 import { Product } from "@/domain/entities/Product";
-import { TENANT_ID } from "@/shared/constants";
-import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
-import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export function ProductsView() {
-  const { productRepo } = useRepositories();
-  const { toast } = useToast();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const hasLoaded = useRef(false);
+  const [activeTab, setActiveTab] = useState("materials");
+  
+  // Estados para tab de Materiales
+  const [searchMaterials, setSearchMaterials] = useState("");
+  const [pageMaterials, setPageMaterials] = useState(1);
+  
+  // Estados para tab de Equipos
+  const [searchEquipments, setSearchEquipments] = useState("");
+  const [pageEquipments, setPageEquipments] = useState(1);
+  
+  // Estados para tab de Repuestos
+  const [searchSpareParts, setSearchSpareParts] = useState("");
+  const [pageSpareParts, setPageSpareParts] = useState(1);
+  
+  const limit = 10;
 
-  useEffect(() => {
-    if (hasLoaded.current) return;
-    hasLoaded.current = true;
+  // Hooks para datos
+  const { data: materialsData, isLoading: loadingMaterials } = useMaterials({
+    page: pageMaterials,
+    limit,
+    search: searchMaterials || undefined,
+  });
 
-    const loadProducts = async () => {
-      setLoading(true);
-      const result = await productRepo.findAll(TENANT_ID);
-      setProducts(result);
-      setLoading(false);
-    };
+  const { data: equipmentsData, isLoading: loadingEquipments } = useEquipments({
+    page: pageEquipments,
+    limit,
+    search: searchEquipments || undefined,
+  });
 
-    loadProducts();
-  }, [productRepo]);
+  const { data: sparePartsData, isLoading: loadingSpareParts } = useSpareParts({
+    page: pageSpareParts,
+    limit,
+    search: searchSpareParts || undefined,
+  });
 
-  const handleImport = () => {
-    toast({
-      title: "Importar Excel",
-      description: "Funcionalidad de importación no implementada (demo)",
-    });
-  };
+  const materials: Product[] = materialsData?.data || [];
+  const totalMaterials = materialsData?.total || 0;
+  const totalPagesMaterials = materialsData?.totalPages || 0;
 
-  const filteredProducts = products.filter(p =>
-    p.sku.toLowerCase().includes(search.toLowerCase()) ||
-    p.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const equipments: Product[] = equipmentsData?.data || [];
+  const totalEquipments = equipmentsData?.total || 0;
+  const totalPagesEquipments = equipmentsData?.totalPages || 0;
+
+  const spareParts: Product[] = sparePartsData?.data || [];
+  const totalSpareParts = sparePartsData?.total || 0;
+  const totalPagesSpareParts = sparePartsData?.totalPages || 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Productos</h1>
-          <p className="text-muted-foreground">Catálogo de equipos, materiales y repuestos</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleImport} className="h-10 gap-2">
-            <Upload className="h-4 w-4" />
-            Importar Excel
-          </Button>
-          <Button className="bg-primary text-primary-foreground h-10 gap-2">
-            <Plus className="h-4 w-4" />
-            Nuevo Producto
-          </Button>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Productos</h1>
+        <p className="text-muted-foreground mt-1">
+          Catálogo de materiales, equipos y repuestos logísticos
+        </p>
       </div>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por SKU o descripción..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-10 bg-secondary/30"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-          ) : filteredProducts.length === 0 ? (
-            <EmptyState message="No se encontraron productos" />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">SKU</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Descripción</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Tipo</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Estado</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Costo Unitario</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b border-border hover:bg-secondary/20 transition-colors">
-                      <td className="py-4 px-4 font-mono text-sm text-foreground">{product.sku}</td>
-                      <td className="py-4 px-4 text-foreground">{product.description}</td>
-                      <td className="py-4 px-4">
-                        <EntityBadge status={product.type} />
-                      </td>
-                      <td className="py-4 px-4">
-                        <EntityBadge status={product.status} />
-                      </td>
-                      <td className="py-4 px-4 text-right font-medium text-foreground">
-                        {product.unitCost
-                          ? `${product.currency} $${product.unitCost.toLocaleString()}`
-                          : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Tabs principales */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="materials">Materiales</TabsTrigger>
+          <TabsTrigger value="equipments">Equipos</TabsTrigger>
+          <TabsTrigger value="spare-parts">Repuestos</TabsTrigger>
+        </TabsList>
+
+        {/* Tab de Materiales */}
+        <TabsContent value="materials" className="space-y-4">
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Filtros de Búsqueda
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full">
+                {/* Búsqueda */}
+                <Input
+                  placeholder="Buscar por nombre o descripción..."
+                  value={searchMaterials}
+                  onChange={(e) => {
+                    setSearchMaterials(e.target.value);
+                    setPageMaterials(1);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tabla de Materiales */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Package2 className="h-5 w-5" />
+                  Materiales ({totalMaterials})
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingMaterials ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : materials.length === 0 ? (
+                <EmptyState message="No se encontraron materiales" />
+              ) : (
+                <>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Descripción</TableHead>
+                          <TableHead>Unidad</TableHead>
+                          <TableHead className="text-center">Peligroso</TableHead>
+                          <TableHead>Moneda</TableHead>
+                          <TableHead className="text-center">Categorías</TableHead>
+                          <TableHead>Estado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {materials.map((material) => (
+                          <TableRow key={material.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{material.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ID: {material.id.substring(0, 8)}...
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground max-w-xs truncate">
+                                {material.description || "—"}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono">
+                                {material.unitOfMeasure}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {material.isHazardous ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                                  <span className="text-sm font-medium text-destructive">
+                                    Sí
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1">
+                                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">
+                                    No
+                                  </span>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <p className="font-medium">{material.currency || "—"}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Valor pendiente
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary">
+                                {material.categories?.length || 0}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={material.isActive ? "default" : "secondary"}
+                                className={
+                                  material.isActive
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : "bg-gray-100 text-gray-800 border-gray-300"
+                                }
+                              >
+                                {material.isActive ? "Activo" : "Inactivo"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPagesMaterials > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageMaterials(pageMaterials - 1)}
+                        disabled={pageMaterials === 1}
+                      >
+                        Anterior
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Página {pageMaterials} de {totalPagesMaterials}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageMaterials(pageMaterials + 1)}
+                        disabled={pageMaterials === totalPagesMaterials}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab de Equipos */}
+        <TabsContent value="equipments" className="space-y-4">
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Filtros de Búsqueda
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full">
+                <Input
+                  placeholder="Buscar por nombre, modelo o descripción..."
+                  value={searchEquipments}
+                  onChange={(e) => {
+                    setSearchEquipments(e.target.value);
+                    setPageEquipments(1);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tabla de Equipos */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5" />
+                  Equipos ({totalEquipments})
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingEquipments ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : equipments.length === 0 ? (
+                <EmptyState message="No se encontraron equipos" />
+              ) : (
+                <>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Modelo</TableHead>
+                          <TableHead>Descripción</TableHead>
+                          <TableHead>Moneda</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Creado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {equipments.map((equipment) => (
+                          <TableRow key={equipment.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{equipment.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ID: {equipment.id.substring(0, 8)}...
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono">
+                                {equipment.model}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground max-w-xs truncate">
+                                {equipment.description || "—"}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <p className="font-medium">{equipment.currency || "—"}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Valor pendiente
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={equipment.isActive ? "default" : "secondary"}
+                                className={
+                                  equipment.isActive
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : "bg-gray-100 text-gray-800 border-gray-300"
+                                }
+                              >
+                                {equipment.isActive ? "Activo" : "Inactivo"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(equipment.createdAt), "dd/MM/yyyy", { locale: es })}
+                              </p>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPagesEquipments > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageEquipments(pageEquipments - 1)}
+                        disabled={pageEquipments === 1}
+                      >
+                        Anterior
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Página {pageEquipments} de {totalPagesEquipments}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageEquipments(pageEquipments + 1)}
+                        disabled={pageEquipments === totalPagesEquipments}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab de Repuestos */}
+        <TabsContent value="spare-parts" className="space-y-4">
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Filtros de Búsqueda
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full">
+                <Input
+                  placeholder="Buscar por nombre, modelo o descripción..."
+                  value={searchSpareParts}
+                  onChange={(e) => {
+                    setSearchSpareParts(e.target.value);
+                    setPageSpareParts(1);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tabla de Repuestos */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Repuestos ({totalSpareParts})
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingSpareParts ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : spareParts.length === 0 ? (
+                <EmptyState message="No se encontraron repuestos" />
+              ) : (
+                <>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Modelo</TableHead>
+                          <TableHead>Descripción</TableHead>
+                          <TableHead>Moneda</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Creado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {spareParts.map((sparePart) => (
+                          <TableRow key={sparePart.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{sparePart.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ID: {sparePart.id.substring(0, 8)}...
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono">
+                                {sparePart.model || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground max-w-xs truncate">
+                                {sparePart.description || "—"}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <p className="font-medium">{sparePart.currency || "—"}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Valor pendiente
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={sparePart.isActive ? "default" : "secondary"}
+                                className={
+                                  sparePart.isActive
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : "bg-gray-100 text-gray-800 border-gray-300"
+                                }
+                              >
+                                {sparePart.isActive ? "Activo" : "Inactivo"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(sparePart.createdAt), "dd/MM/yyyy", { locale: es })}
+                              </p>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPagesSpareParts > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageSpareParts(pageSpareParts - 1)}
+                        disabled={pageSpareParts === 1}
+                      >
+                        Anterior
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Página {pageSpareParts} de {totalPagesSpareParts}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageSpareParts(pageSpareParts + 1)}
+                        disabled={pageSpareParts === totalPagesSpareParts}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

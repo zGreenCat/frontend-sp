@@ -59,27 +59,20 @@ export function AddMaterialDialog({
       setQuantity("1");
       setReason("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const loadMaterials = async () => {
     setLoadingMaterials(true);
     try {
       const useCase = new ListProducts(productRepo);
-      const result = await useCase.execute(TENANT_ID);
+      const response = await useCase.execute({ 
+        kind: "MATERIAL", 
+        status: "ACTIVO" 
+      });
 
-      if (result.ok) {
-        // Filtrar solo materiales activos
-        const filtered = result.value.filter(
-          (p) => p.type === "MATERIAL" && p.status === "ACTIVO"
-        );
-        setMaterials(filtered);
-      } else {
-        toast({
-          title: "❌ Error al cargar materiales",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
+      // La respuesta ahora es PaginatedResponse<Product>
+      setMaterials(response.data);
     } catch (error: any) {
       toast({
         title: "❌ Error al cargar materiales",

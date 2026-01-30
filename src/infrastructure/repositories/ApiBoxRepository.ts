@@ -289,12 +289,14 @@ export class ApiBoxRepository implements IBoxRepository {
     input: { equipmentId: string; quantity: number; reason?: string },
     tenantId: string
   ): Promise<BoxEquipment> {
-    const response = await apiClient.post<BackendBoxEquipment>(
+    const response = await apiClient.post<any>(
       `/boxes/${boxId}/equipments`,
       input,
       true // ✅ Auth: Requiere Bearer token
     );
-    return this.mapBackendEquipment(response);
+    // Manejar posibles estructuras de respuesta
+    const backendEquipment = response.data || response;
+    return this.mapBackendEquipment(backendEquipment);
   }
 
   async addMaterial(
@@ -302,12 +304,14 @@ export class ApiBoxRepository implements IBoxRepository {
     input: { materialId: string; quantity: number; reason?: string },
     tenantId: string
   ): Promise<BoxMaterial> {
-    const response = await apiClient.post<BackendBoxMaterial>(
+    const response = await apiClient.post<any>(
       `/boxes/${boxId}/materials`,
       input,
       true // ✅ Auth: Requiere Bearer token
     );
-    return this.mapBackendMaterial(response);
+    // Manejar posibles estructuras de respuesta
+    const backendMaterial = response.data || response;
+    return this.mapBackendMaterial(backendMaterial);
   }
 
   async removeEquipment(

@@ -1,16 +1,15 @@
-import { IProductRepository } from '@/domain/repositories/IProductRepository';
+import { IProductRepository, ListProductsParams } from '@/domain/repositories/IProductRepository';
 import { Product } from '@/domain/entities/Product';
-import { Result, success, failure } from '@/shared/types/Result';
+import { PaginatedResponse } from '@/shared/types/pagination.types';
 
+/**
+ * Caso de uso: Listar productos con filtros
+ */
 export class ListProducts {
   constructor(private productRepo: IProductRepository) {}
 
-  async execute(tenantId: string): Promise<Result<Product[]>> {
-    try {
-      const products = await this.productRepo.findAll(tenantId);
-      return success(products);
-    } catch {
-      return failure('Error al listar productos');
-    }
+  async execute(params: ListProductsParams): Promise<PaginatedResponse<Product>> {
+    return await this.productRepo.list(params);
   }
 }
+

@@ -1,135 +1,250 @@
-import { IProductRepository } from '@/domain/repositories/IProductRepository';
-import { Product, ProductType, ProductStatus, Currency } from '@/domain/entities/Product';
+import { IProductRepository, ListProductsParams } from '@/domain/repositories/IProductRepository';
+import { Product, ProductKind } from '@/domain/entities/Product';
+import { PaginatedResponse } from '@/shared/types/pagination.types';
 import { apiClient } from '@/infrastructure/api/apiClient';
 
-// Tipos del backend
-interface BackendProduct {
+// ====== Tipos del Backend ======
+
+interface BackendEquipment {
   id: string;
-  sku: string;
-  description: string;
-  type: string;
-  status: string;
-  uom?: string;
-  unitCost?: number;
+  name: string;
+  model?: string;
+  description?: string;
+  monetaryValue?: unknown; // Formato crudo { s, e, d }
   currency?: string;
-  providerId?: string;
-  projectId?: string;
-  tenantId: string;
-  createdAt?: string;
-  updatedAt?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface BackendProductListResponse {
-  data: BackendProduct[];
-  total?: number;
-  page?: number;
-  limit?: number;
+interface BackendMaterial {
+  id: string;
+  name: string;
+  description?: string;
+  unitOfMeasure: string; // LT, KG, UND, etc.
+  monetaryValue?: unknown; // Formato crudo { s, e, d }
+  currency?: string;
+  isHazardous: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  categories?: Array<{
+    id: string;
+    materialId: string;
+    categoryId: string;
+    isActive: boolean;
+  }>;
 }
 
+interface BackendSparePart {
+  id: string;
+  equipmentId?: string;
+  name: string;
+  model?: string;
+  description?: string;
+  category?: string; // COMPONENT | SPARE
+  monetaryValue?: unknown; // Formato crudo { s, e, d }
+  currency?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface BackendPaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages?: number;
+}
+
+/**
+ * Repositorio de productos unificado
+ * Actúa como fachada sobre los endpoints reales del backend
+ */
 export class ApiProductRepository implements IProductRepository {
-  // Mapear Product del backend al dominio
-  private mapBackendProduct(backendProduct: BackendProduct): Product {
+  
+  /**
+   * Lista productos según el tipo especificado
+   */
+  async list(params: ListProductsParams): Promise<PaginatedResponse<Product>> {
+    const { kind, page = 1, limit = 10, search, status } = params;
+
+    // Si no se especifica kind, retornamos error controlado
+    if (!kind) {
+      console.warn('[ApiProductRepository] Se requiere especificar kind (EQUIPMENT, MATERIAL o SPARE_PART)');
+      return {
+        data: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      };
+    }
+
+    try {
+      // Construir query params
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', limit.toString());
+      if (search) queryParams.append('search', search);
+      if (status) queryParams.append('status', status);
+
+      // Determinar endpoint según el tipo
+      const endpoint = this.getEndpointForKind(kind);
+      const url = `${endpoint}?${queryParams.toString()}`;
+
+      console.log(`[ApiProductRepository] Fetching ${kind}:`, url);
+
+      const response = await apiClient.get<BackendPaginatedResponse<any>>(url, true);
+
+      // Mapear según el tipo
+      const products = this.mapResponseToProducts(response.data || [], kind);
+
+      const totalPages = response.totalPages || Math.ceil((response.total || 0) / limit);
+
+      console.log(`[ApiProductRepository] Loaded ${products.length} ${kind}(s)`);
+
+      return {
+        data: products,
+        total: response.total || 0,
+        page: response.page || page,
+        limit: response.limit || limit,
+        totalPages,
+      };
+    } catch (error) {
+      console.error(`[ApiProductRepository] Error fetching ${kind}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Busca un producto por ID y tipo
+   */
+  async findById(id: string, kind: ProductKind): Promise<Product | null> {
+    try {
+      const endpoint = this.getDetailEndpointForKind(kind, id);
+      
+      console.log(`[ApiProductRepository] Fetching product detail:`, endpoint);
+      
+      const response = await apiClient.get<any>(endpoint, true);
+
+      if (!response) {
+        return null;
+      }
+
+      // Mapear según el tipo
+      return this.mapSingleToProduct(response, kind);
+    } catch (error: any) {
+      // Si es 404, retornar null
+      if (error?.status === 404 || error?.response?.status === 404) {
+        console.log('[ApiProductRepository] Product not found');
+        return null;
+      }
+      
+      console.error('[ApiProductRepository] Error fetching product detail:', error);
+      throw error;
+    }
+  }
+
+  // ====== Métodos privados de mapeo ======
+
+  private getEndpointForKind(kind: ProductKind): string {
+    switch (kind) {
+      case 'EQUIPMENT':
+        return '/equipment';
+      case 'MATERIAL':
+        return '/materials';
+      case 'SPARE_PART':
+        return '/spare-parts';
+      default:
+        throw new Error(`Unknown product kind: ${kind}`);
+    }
+  }
+
+  private getDetailEndpointForKind(kind: ProductKind, id: string): string {
+    switch (kind) {
+      case 'EQUIPMENT':
+        return `/equipments/${id}`;
+      case 'MATERIAL':
+        return `/materials/${id}`;
+      case 'SPARE_PART':
+        return `/spare-parts/${id}`;
+      default:
+        throw new Error(`Unknown product kind: ${kind}`);
+    }
+  }
+
+  private mapResponseToProducts(data: any[], kind: ProductKind): Product[] {
+    switch (kind) {
+      case 'EQUIPMENT':
+        return data.map(item => this.mapEquipmentToProduct(item as BackendEquipment));
+      case 'MATERIAL':
+        return data.map(item => this.mapMaterialToProduct(item as BackendMaterial));
+      case 'SPARE_PART':
+        return data.map(item => this.mapSparePartToProduct(item as BackendSparePart));
+      default:
+        return [];
+    }
+  }
+
+  private mapSingleToProduct(data: any, kind: ProductKind): Product {
+    switch (kind) {
+      case 'EQUIPMENT':
+        return this.mapEquipmentToProduct(data as BackendEquipment);
+      case 'MATERIAL':
+        return this.mapMaterialToProduct(data as BackendMaterial);
+      case 'SPARE_PART':
+        return this.mapSparePartToProduct(data as BackendSparePart);
+      default:
+        throw new Error(`Unknown product kind: ${kind}`);
+    }
+  }
+
+  private mapEquipmentToProduct(equipment: BackendEquipment): Product {
     return {
-      id: backendProduct.id,
-      sku: backendProduct.sku,
-      description: backendProduct.description,
-      type: backendProduct.type as ProductType,
-      status: backendProduct.status as ProductStatus,
-      uom: backendProduct.uom,
-      unitCost: backendProduct.unitCost,
-      currency: backendProduct.currency as Currency | undefined,
-      providerId: backendProduct.providerId,
-      projectId: backendProduct.projectId,
-      tenantId: backendProduct.tenantId,
+      id: equipment.id,
+      kind: 'EQUIPMENT',
+      name: equipment.name,
+      description: equipment.description,
+      model: equipment.model,
+      currency: equipment.currency,
+      monetaryValueRaw: equipment.monetaryValue,
+      isActive: equipment.isActive,
+      createdAt: equipment.createdAt,
+      updatedAt: equipment.updatedAt,
     };
   }
 
-  async findAll(tenantId: string): Promise<Product[]> {
-    try {
-      const response = await apiClient.get<any>('/products', true);
-      console.log('📥 GET /products response:', response);
-
-      // El backend puede devolver array directo o { data: [...] }
-      let backendProducts: BackendProduct[];
-
-      if (Array.isArray(response)) {
-        backendProducts = response;
-      } else if (response && Array.isArray(response.data)) {
-        backendProducts = response.data;
-      } else if (response && Array.isArray(response.products)) {
-        backendProducts = response.products;
-      } else {
-        console.error('❌ Unexpected response structure from /products:', response);
-        return [];
-      }
-
-      console.log('✅ Extracted', backendProducts.length, 'products');
-      return backendProducts.map(p => this.mapBackendProduct(p));
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      return [];
-    }
+  private mapMaterialToProduct(material: BackendMaterial): Product {
+    return {
+      id: material.id,
+      kind: 'MATERIAL',
+      name: material.name,
+      description: material.description,
+      unitOfMeasure: material.unitOfMeasure,
+      isHazardous: material.isHazardous,
+      currency: material.currency,
+      monetaryValueRaw: material.monetaryValue,
+      isActive: material.isActive,
+      createdAt: material.createdAt,
+      updatedAt: material.updatedAt,
+      categories: material.categories?.map(c => c.categoryId) ?? [],
+    };
   }
 
-  async findById(id: string, tenantId: string): Promise<Product | null> {
-    try {
-      const response = await apiClient.get<any>(`/products/${id}`, true);
-
-      // Manejar posibles estructuras de respuesta
-      const backendProduct = response.data || response;
-      return this.mapBackendProduct(backendProduct);
-    } catch (error: any) {
-      if (error?.statusCode === 404) {
-        return null;
-      }
-      console.error('Error fetching product:', error);
-      return null;
-    }
-  }
-
-  async create(product: Omit<Product, 'id'>): Promise<Product> {
-    try {
-      const response = await apiClient.post<any>('/products', {
-        sku: product.sku,
-        description: product.description,
-        type: product.type,
-        status: product.status,
-        uom: product.uom,
-        unitCost: product.unitCost,
-        currency: product.currency,
-        providerId: product.providerId,
-        projectId: product.projectId,
-      }, true);
-
-      const backendProduct = response.data || response;
-      return this.mapBackendProduct(backendProduct);
-    } catch (error) {
-      console.error('Error creating product:', error);
-      throw error;
-    }
-  }
-
-  async update(id: string, updates: Partial<Product>, tenantId: string): Promise<Product> {
-    try {
-      const payload: any = {};
-
-      if (updates.sku !== undefined) payload.sku = updates.sku;
-      if (updates.description !== undefined) payload.description = updates.description;
-      if (updates.type !== undefined) payload.type = updates.type;
-      if (updates.status !== undefined) payload.status = updates.status;
-      if (updates.uom !== undefined) payload.uom = updates.uom;
-      if (updates.unitCost !== undefined) payload.unitCost = updates.unitCost;
-      if (updates.currency !== undefined) payload.currency = updates.currency;
-      if (updates.providerId !== undefined) payload.providerId = updates.providerId;
-      if (updates.projectId !== undefined) payload.projectId = updates.projectId;
-
-      const response = await apiClient.patch<any>(`/products/${id}`, payload, true);
-
-      const backendProduct = response.data || response;
-      return this.mapBackendProduct(backendProduct);
-    } catch (error) {
-      console.error('Error updating product:', error);
-      throw error;
-    }
+  private mapSparePartToProduct(sparePart: BackendSparePart): Product {
+    return {
+      id: sparePart.id,
+      kind: 'SPARE_PART',
+      name: sparePart.name,
+      description: sparePart.description,
+      model: sparePart.model,
+      currency: sparePart.currency,
+      monetaryValueRaw: sparePart.monetaryValue,
+      isActive: sparePart.isActive,
+      createdAt: sparePart.createdAt,
+      updatedAt: sparePart.updatedAt,
+    };
   }
 }
