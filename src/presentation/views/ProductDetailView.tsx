@@ -40,6 +40,24 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { EditProductDialog } from "@/presentation/components/EditProductDialog";
 import { ProductHistoryTable } from "@/presentation/components/ProductHistoryTable";
 
+/**
+ * Formatea una fecha de forma segura
+ */
+function formatDateSafe(dateString: string | undefined | null, formatStr: string = "dd MMM yyyy"): string {
+  if (!dateString) return "Fecha no disponible";
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "Fecha no disponible";
+    }
+    return format(date, formatStr, { locale: es });
+  } catch (error) {
+    console.error("[ProductDetailView] Error formatting date:", dateString, error);
+    return "Fecha no disponible";
+  }
+}
+
 interface ProductDetailViewProps {
   productId: string;
   kind: ProductKind;
@@ -398,13 +416,13 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
             <div>
               <p className="text-sm text-muted-foreground">Fecha de Creación</p>
               <p className="font-medium">
-                {format(new Date(product.createdAt), "dd MMM yyyy", { locale: es })}
+                {formatDateSafe(product.createdAt)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Última Actualización</p>
               <p className="font-medium">
-                {format(new Date(product.updatedAt), "dd MMM yyyy", { locale: es })}
+                {formatDateSafe(product.updatedAt)}
               </p>
             </div>
           </div>

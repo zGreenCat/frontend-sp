@@ -13,7 +13,7 @@ interface BackendEquipment {
   model?: string;
   description?: string;
   monetaryValue?: unknown; // Formato crudo { s, e, d }
-  currency?: string;
+  currency?: string | { id: string; code: string; name: string; abbreviation: string };
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -23,9 +23,9 @@ interface BackendMaterial {
   id: string;
   name: string;
   description?: string;
-  unitOfMeasure: string; // LT, KG, UND, etc.
+  unitOfMeasure: string | { id: string; code: string; name: string; abbreviation: string }; // Puede ser string o objeto
   monetaryValue?: unknown; // Formato crudo { s, e, d }
-  currency?: string;
+  currency?: string | { id: string; code: string; name: string; abbreviation: string };
   isHazardous: boolean;
   isActive: boolean;
   createdAt: string;
@@ -46,7 +46,7 @@ interface BackendSparePart {
   description?: string;
   category?: string; // COMPONENT | SPARE
   monetaryValue?: unknown; // Formato crudo { s, e, d }
-  currency?: string;
+  currency?: string | { id: string; code: string; name: string; abbreviation: string };
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -234,6 +234,19 @@ export class ApiProductRepository implements IProductRepository {
     }
   }
 
+  /**
+   * Helper para extraer string de campos que pueden ser string u objeto
+   * El backend a veces envía objetos completos (con id, code, name, abbreviation)
+   */
+  private extractStringValue(value: string | { code?: string; abbreviation?: string; name?: string } | undefined | null): string | undefined {
+    if (!value) return undefined;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      return value.abbreviation || value.code || value.name;
+    }
+    return undefined;
+  }
+
   private mapEquipmentToProduct(equipment: BackendEquipment): Product {
     return {
       id: equipment.id,
@@ -241,7 +254,7 @@ export class ApiProductRepository implements IProductRepository {
       name: equipment.name,
       description: equipment.description,
       model: equipment.model,
-      currency: equipment.currency,
+      currency: this.extractStringValue(equipment.currency),
       monetaryValueRaw: equipment.monetaryValue,
       isActive: equipment.isActive,
       createdAt: equipment.createdAt,
@@ -255,9 +268,9 @@ export class ApiProductRepository implements IProductRepository {
       kind: 'MATERIAL',
       name: material.name,
       description: material.description,
-      unitOfMeasure: material.unitOfMeasure,
+      unitOfMeasure: this.extractStringValue(material.unitOfMeasure),
       isHazardous: material.isHazardous,
-      currency: material.currency,
+      currency: this.extractStringValue(material.currency),
       monetaryValueRaw: material.monetaryValue,
       isActive: material.isActive,
       createdAt: material.createdAt,
@@ -273,7 +286,7 @@ export class ApiProductRepository implements IProductRepository {
       name: sparePart.name,
       description: sparePart.description,
       model: sparePart.model,
-      currency: sparePart.currency,
+      currency: this.extractStringValue(sparePart.currency),
       monetaryValueRaw: sparePart.monetaryValue,
       isActive: sparePart.isActive,
       createdAt: sparePart.createdAt,

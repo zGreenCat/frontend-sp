@@ -26,6 +26,26 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+/**
+ * Formatea una fecha de forma segura
+ * Si la fecha es inválida, retorna un mensaje por defecto
+ */
+function formatDateSafe(dateString: string | undefined | null, formatStr: string = "dd/MM/yyyy"): string {
+  if (!dateString) return "Fecha no disponible";
+  
+  try {
+    const date = new Date(dateString);
+    // Verificar si la fecha es válida
+    if (isNaN(date.getTime())) {
+      return "Fecha no disponible";
+    }
+    return format(date, formatStr, { locale: es });
+  } catch (error) {
+    console.error("[ProductsView] Error formatting date:", dateString, error);
+    return "Fecha no disponible";
+  }
+}
+
 export function ProductsView() {
   const router = useRouter();
   const { toast } = useToast();
@@ -280,7 +300,7 @@ export function ProductsView() {
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className="font-mono">
-                                {material.unitOfMeasure}
+                                {material.unitOfMeasure || "—"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center">
@@ -484,7 +504,7 @@ export function ProductsView() {
                             </TableCell>
                             <TableCell>
                               <p className="text-sm text-muted-foreground">
-                                {format(new Date(equipment.createdAt), "dd/MM/yyyy", { locale: es })}
+                                {formatDateSafe(equipment.createdAt)}
                               </p>
                             </TableCell>
                           </TableRow>
@@ -644,7 +664,7 @@ export function ProductsView() {
                             </TableCell>
                             <TableCell>
                               <p className="text-sm text-muted-foreground">
-                                {format(new Date(sparePart.createdAt), "dd/MM/yyyy", { locale: es })}
+                                {formatDateSafe(sparePart.createdAt)}
                               </p>
                             </TableCell>
                           </TableRow>
