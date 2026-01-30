@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,14 +15,20 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, Package2, AlertTriangle, CheckCircle2, Wrench, Settings } from "lucide-react";
+import { Search, Loader2, Package2, AlertTriangle, CheckCircle2, Wrench, Settings, Plus } from "lucide-react";
 import { useMaterials, useEquipments, useSpareParts } from "@/hooks/useProducts";
-import { Product } from "@/domain/entities/Product";
+import { Product, ProductKind } from "@/domain/entities/Product";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { usePermissions } from "@/hooks/use-permissions";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 export function ProductsView() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const { isAdmin, isManager } = usePermissions();
+  
   const [activeTab, setActiveTab] = useState("materials");
   
   // Estados para tab de Materiales
@@ -39,23 +46,54 @@ export function ProductsView() {
   const limit = 10;
 
   // Hooks para datos
-  const { data: materialsData, isLoading: loadingMaterials } = useMaterials({
+  const { data: materialsData, isLoading: loadingMaterials, error: errorMaterials } = useMaterials({
     page: pageMaterials,
     limit,
     search: searchMaterials || undefined,
   });
 
-  const { data: equipmentsData, isLoading: loadingEquipments } = useEquipments({
+  const { data: equipmentsData, isLoading: loadingEquipments, error: errorEquipments } = useEquipments({
     page: pageEquipments,
     limit,
     search: searchEquipments || undefined,
   });
 
-  const { data: sparePartsData, isLoading: loadingSpareParts } = useSpareParts({
+  const { data: sparePartsData, isLoading: loadingSpareParts, error: errorSpareParts } = useSpareParts({
     page: pageSpareParts,
     limit,
     search: searchSpareParts || undefined,
   });
+
+  // Manejo de errores con toast
+  useEffect(() => {
+    if (errorMaterials && activeTab === "materials") {
+      toast({
+        variant: "destructive",
+        title: "Error al cargar los productos",
+        description: (errorMaterials as Error).message || "No se pudieron cargar los materiales",
+      });
+    }
+  }, [errorMaterials, activeTab, toast]);
+
+  useEffect(() => {
+    if (errorEquipments && activeTab === "equipments") {
+      toast({
+        variant: "destructive",
+        title: "Error al cargar los productos",
+        description: (errorEquipments as Error).message || "No se pudieron cargar los equipos",
+      });
+    }
+  }, [errorEquipments, activeTab, toast]);
+
+  useEffect(() => {
+    if (errorSpareParts && activeTab === "spare-parts") {
+      toast({
+        variant: "destructive",
+        title: "Error al cargar los productos",
+        description: (errorSpareParts as Error).message || "No se pudieron cargar los repuestos",
+      });
+    }
+  }, [errorSpareParts, activeTab, toast]);
 
   const materials: Product[] = materialsData?.data || [];
   const totalMaterials = materialsData?.total || 0;
@@ -69,14 +107,38 @@ export function ProductsView() {
   const totalSpareParts = sparePartsData?.total || 0;
   const totalPagesSpareParts = sparePartsData?.totalPages || 0;
 
+  // Permisos: puede crear productos si es Admin o Manager
+  const canCreateProduct = isAdmin() || isManager();
+
+  // Navegación al detalle
+  const handleNavigateToDetail = (productId: string, kind: ProductKind) => {
+    router.push(`/products/${kind.toLowerCase()}/${productId}`);
+  };
+
+  // Handler para botón crear producto (placeholder)
+  const handleCreateProduct = () => {
+    toast({
+      title: "Funcionalidad en desarrollo",
+      description: "La creación de productos estará disponible próximamente",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Productos</h1>
-        <p className="text-muted-foreground mt-1">
-          Catálogo de materiales, equipos y repuestos logísticos
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Productos</h1>
+          <p className="text-muted-foreground mt-1">
+            Catálogo de materiales, equipos y repuestos logísticos
+          </p>
+        </div>
+        {canCreateProduct && (
+          <Button onClick={handleCreateProduct} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Crear producto
+          </Button>
+        )}
       </div>
 
       {/* Tabs principales */}
@@ -136,18 +198,29 @@ export function ProductsView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Código</TableHead>
                           <TableHead>Nombre</TableHead>
                           <TableHead>Descripción</TableHead>
                           <TableHead>Unidad</TableHead>
                           <TableHead className="text-center">Peligroso</TableHead>
                           <TableHead>Moneda</TableHead>
+                          <TableHead>Costo unitario</TableHead>
                           <TableHead className="text-center">Categorías</TableHead>
                           <TableHead>Estado</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {materials.map((material) => (
-                          <TableRow key={material.id}>
+                          <TableRow 
+                            key={material.id}
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => handleNavigateToDetail(material.id, 'MATERIAL')}
+                          >
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono text-xs">
+                                {material.sku || "—"}
+                              </Badge>
+                            </TableCell>
                             <TableCell>
                               <div>
                                 <p className="font-medium">{material.name}</p>
@@ -184,12 +257,14 @@ export function ProductsView() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="text-sm">
-                                <p className="font-medium">{material.currency || "—"}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Valor pendiente
-                                </p>
-                              </div>
+                              <Badge variant="secondary" className="font-mono">
+                                {material.currency || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-xs text-muted-foreground italic">
+                                SIN FORMATO
+                              </p>
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge variant="secondary">
@@ -292,17 +367,28 @@ export function ProductsView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Código</TableHead>
                           <TableHead>Nombre</TableHead>
                           <TableHead>Modelo</TableHead>
                           <TableHead>Descripción</TableHead>
                           <TableHead>Moneda</TableHead>
+                          <TableHead>Costo unitario</TableHead>
                           <TableHead>Estado</TableHead>
                           <TableHead>Creado</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {equipments.map((equipment) => (
-                          <TableRow key={equipment.id}>
+                          <TableRow 
+                            key={equipment.id}
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => handleNavigateToDetail(equipment.id, 'EQUIPMENT')}
+                          >
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono text-xs">
+                                {equipment.sku || "—"}
+                              </Badge>
+                            </TableCell>
                             <TableCell>
                               <div>
                                 <p className="font-medium">{equipment.name}</p>
@@ -322,12 +408,14 @@ export function ProductsView() {
                               </p>
                             </TableCell>
                             <TableCell>
-                              <div className="text-sm">
-                                <p className="font-medium">{equipment.currency || "—"}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Valor pendiente
-                                </p>
-                              </div>
+                              <Badge variant="secondary" className="font-mono">
+                                {equipment.currency || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-xs text-muted-foreground italic">
+                                SIN FORMATO
+                              </p>
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -430,17 +518,28 @@ export function ProductsView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Código</TableHead>
                           <TableHead>Nombre</TableHead>
                           <TableHead>Modelo</TableHead>
                           <TableHead>Descripción</TableHead>
                           <TableHead>Moneda</TableHead>
+                          <TableHead>Costo unitario</TableHead>
                           <TableHead>Estado</TableHead>
                           <TableHead>Creado</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {spareParts.map((sparePart) => (
-                          <TableRow key={sparePart.id}>
+                          <TableRow 
+                            key={sparePart.id}
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => handleNavigateToDetail(sparePart.id, 'SPARE_PART')}
+                          >
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono text-xs">
+                                {sparePart.sku || "—"}
+                              </Badge>
+                            </TableCell>
                             <TableCell>
                               <div>
                                 <p className="font-medium">{sparePart.name}</p>
@@ -460,12 +559,14 @@ export function ProductsView() {
                               </p>
                             </TableCell>
                             <TableCell>
-                              <div className="text-sm">
-                                <p className="font-medium">{sparePart.currency || "—"}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Valor pendiente
-                                </p>
-                              </div>
+                              <Badge variant="secondary" className="font-mono">
+                                {sparePart.currency || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-xs text-muted-foreground italic">
+                                SIN FORMATO
+                              </p>
                             </TableCell>
                             <TableCell>
                               <Badge
