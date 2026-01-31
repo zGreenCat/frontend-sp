@@ -12,6 +12,8 @@ import { ApiAuditLogRepository } from '@/infrastructure/repositories/ApiAuditLog
 import { ApiUserEnablementHistoryRepository } from '@/infrastructure/repositories/ApiUserEnablementHistoryRepository';
 import { ApiBoxRepository } from '@/infrastructure/repositories/ApiBoxRepository';
 import { ApiProductRepository } from '@/infrastructure/repositories/ApiProductRepository';
+import { ApiUnitOfMeasureRepository } from '@/infrastructure/repositories/ApiUnitOfMeasureRepository';
+import { ApiCurrencyRepository } from '@/infrastructure/repositories/ApiCurrencyRepository';
 // Mock Repositories (mantener para módulos no conectados)
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
 import { MockProjectRepository } from '@/infrastructure/repositories/MockProjectRepository';
@@ -26,6 +28,8 @@ import { IAuditLogRepository } from '@/domain/repositories/IAuditLogRepository';
 import { IUserEnablementHistoryRepository } from '@/domain/repositories/IUserEnablementHistoryRepository';
 import { IBoxRepository } from '@/domain/repositories/IBoxRepository';
 import { IProductRepository } from '@/domain/repositories/IProductRepository';
+import { IUnitOfMeasureRepository } from '@/domain/repositories/IUnitOfMeasureRepository';
+import { ICurrencyRepository } from '@/domain/repositories/ICurrencyRepository';
 
 /**
  * Repositorios disponibles en la aplicación
@@ -37,6 +41,8 @@ interface Repositories {
   warehouseMovementRepo: IWarehouseMovementRepository;
   boxRepo: IBoxRepository;
   productRepo: IProductRepository; // ✅ Repositorio unificado de productos
+  unitOfMeasureRepo: IUnitOfMeasureRepository;
+  currencyRepo: ICurrencyRepository;
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
   assignmentHistoryRepo: IAssignmentHistoryRepository;
@@ -62,6 +68,10 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     
     // ✅ Repositorio unificado de productos (fachada sobre equipments, materials, spare-parts)
     productRepo: new ApiProductRepository(),
+    
+    // ✅ Catálogos de productos
+    unitOfMeasureRepo: new ApiUnitOfMeasureRepository(),
+    currencyRepo: new ApiCurrencyRepository(),
     
     // Repositorios Mock (pendientes de conectar)
     providerRepo: new MockProviderRepository(),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,10 +48,13 @@ function formatDateSafe(dateString: string | undefined | null, formatStr: string
 
 export function ProductsView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { isAdmin, isManager } = usePermissions();
   
-  const [activeTab, setActiveTab] = useState("materials");
+  // ✅ Leer tab desde URL query params (defaultTab=materials)
+  const tabFromUrl = searchParams.get('tab') || 'materials';
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
   
   // Estado del diálogo de creación
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -139,9 +142,38 @@ export function ProductsView() {
   // Permisos: puede crear productos si es Admin o Manager
   const canCreateProduct = isAdmin() || isManager();
 
-  // Navegación al detalle
+  // Helper para convertir ProductKind a slug de URL
+  const kindToSlug = (kind: ProductKind): string => {
+    switch (kind) {
+      case 'EQUIPMENT':
+        return 'equipment';
+      case 'MATERIAL':
+        return 'material';
+      case 'SPARE_PART':
+        return 'spare-part';
+      default:
+        return kind.toLowerCase();
+    }
+  };
+
+  // Helper para convertir ProductKind a nombre de tab
+  const kindToTab = (kind: ProductKind): string => {
+    switch (kind) {
+      case 'EQUIPMENT':
+        return 'equipments';
+      case 'MATERIAL':
+        return 'materials';
+      case 'SPARE_PART':
+        return 'spare-parts';
+      default:
+        return 'materials';
+    }
+  };
+
+  // ✅ Navegación al detalle con preservación del tab actual
   const handleNavigateToDetail = (productId: string, kind: ProductKind) => {
-    router.push(`/products/${kind.toLowerCase()}/${productId}`);
+    const tab = kindToTab(kind);
+    router.push(`/products/${kindToSlug(kind)}/${productId}?returnTab=${tab}`);
   };
 
   // Handler para abrir diálogo de crear producto
@@ -197,7 +229,11 @@ export function ProductsView() {
       </div>
 
       {/* Tabs principales */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(newTab) => {
+        setActiveTab(newTab);
+        // ✅ Actualizar URL con el tab activo
+        router.push(`/products?tab=${newTab}`, { scroll: false });
+      }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="materials">Materiales</TabsTrigger>
           <TabsTrigger value="equipments">Equipos</TabsTrigger>
@@ -326,9 +362,13 @@ export function ProductsView() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <p className="text-xs text-muted-foreground italic">
-                                SIN FORMATO
-                              </p>
+                              {material.price !== undefined && material.price !== null ? (
+                                <p className="text-sm font-medium">
+                                  {material.currencySymbol || material.currency || ''} {material.price.toLocaleString('es-CL')}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">—</p>
+                              )}
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge variant="secondary">
@@ -486,9 +526,13 @@ export function ProductsView() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <p className="text-xs text-muted-foreground italic">
-                                SIN FORMATO
-                              </p>
+                              {equipment.price !== undefined && equipment.price !== null ? (
+                                <p className="text-sm font-medium">
+                                  {equipment.currencySymbol || equipment.currency || ''} {equipment.price.toLocaleString('es-CL')}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">—</p>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -646,9 +690,13 @@ export function ProductsView() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <p className="text-xs text-muted-foreground italic">
-                                SIN FORMATO
-                              </p>
+                              {sparePart.price !== undefined && sparePart.price !== null ? (
+                                <p className="text-sm font-medium">
+                                  {sparePart.currencySymbol || sparePart.currency || ''} {sparePart.price.toLocaleString('es-CL')}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">—</p>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge

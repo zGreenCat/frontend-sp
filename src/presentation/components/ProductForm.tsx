@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { createProductSchema, CreateProductInput } from "@/shared/schemas";
 import { ProductKind } from "@/domain/entities/Product";
+import { useUnitsOfMeasure, mapUnitsToOptions, useCurrencies, mapCurrenciesToOptions } from "@/hooks/useUnitsAndCurrencies";
 
 interface ProductFormProps {
   onSubmit: (data: CreateProductInput) => Promise<void>;
@@ -35,24 +36,6 @@ interface ProductFormProps {
   kind: ProductKind; // Tipo de producto fijo para el formulario
 }
 
-// Opciones de unidad de medida para materiales
-const UNIT_OF_MEASURE_OPTIONS = [
-  { value: 'UNIT', label: 'Unidad (UND)' },
-  { value: 'KG', label: 'Kilogramo (KG)' },
-  { value: 'LT', label: 'Litro (LT)' },
-  { value: 'MT', label: 'Metro (MT)' },
-  { value: 'M2', label: 'Metro cuadrado (M²)' },
-  { value: 'M3', label: 'Metro cúbico (M³)' },
-  { value: 'TON', label: 'Tonelada (TON)' },
-  { value: 'GAL', label: 'Galón (GAL)' },
-];
-
-const CURRENCY_OPTIONS = [
-  { value: 'CLP', label: 'Peso Chileno (CLP)' },
-  { value: 'USD', label: 'Dólar (USD)' },
-  { value: 'EUR', label: 'Euro (EUR)' },
-];
-
 export function ProductForm({
   onSubmit,
   onCancel,
@@ -61,6 +44,13 @@ export function ProductForm({
   mode = "create",
   kind,
 }: ProductFormProps) {
+  // ✅ Consumir catálogos desde backend
+  const { data: units, isLoading: loadingUnits } = useUnitsOfMeasure();
+  const { data: currencies, isLoading: loadingCurrencies } = useCurrencies();
+
+  const unitOptions = units ? mapUnitsToOptions(units) : [];
+  const currencyOptions = currencies ? mapCurrenciesToOptions(currencies) : [];
+
   const form = useForm<CreateProductInput>({
     resolver: zodResolver(createProductSchema),
     defaultValues: {
@@ -210,15 +200,15 @@ export function ProductForm({
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
-                  disabled={isLoading}
+                  disabled={isLoading || loadingUnits}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una unidad" />
+                      <SelectValue placeholder={loadingUnits ? "Cargando unidades..." : "Selecciona una unidad"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {UNIT_OF_MEASURE_OPTIONS.map((option) => (
+                    {unitOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -268,15 +258,15 @@ export function ProductForm({
               <Select 
                 onValueChange={field.onChange} 
                 defaultValue={field.value}
-                disabled={isLoading}
+                disabled={isLoading || loadingCurrencies}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una moneda" />
+                    <SelectValue placeholder={loadingCurrencies ? "Cargando monedas..." : "Selecciona una moneda"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {CURRENCY_OPTIONS.map((option) => (
+                  {currencyOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

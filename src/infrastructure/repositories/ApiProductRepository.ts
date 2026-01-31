@@ -7,35 +7,73 @@ import { TENANT_ID } from '@/shared/constants';
 
 // ====== Tipos del Backend ======
 
+// Nueva estructura del backend (v2)
+interface BackendPrice {
+  amount: number;
+  currency: {
+    id: string;
+    code: string;
+    name: string;
+    symbol: string;
+  };
+}
+
+interface BackendUnitOfMeasure {
+  id: string;
+  code: string;
+  name: string;
+  abbreviation: string;
+}
+
+interface BackendCategory {
+  id: string;
+  name: string;
+}
+
+interface BackendFlags {
+  isHazardous?: boolean;
+  isActive: boolean;
+}
+
+interface BackendAudit {
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface BackendEquipment {
   id: string;
   name: string;
   model?: string;
   description?: string;
-  monetaryValue?: unknown; // Formato crudo { s, e, d }
+  price?: BackendPrice;
+  unitOfMeasure?: BackendUnitOfMeasure;
+  categories?: BackendCategory[];
+  flags?: BackendFlags; // Opcional para retrocompatibilidad
+  audit?: BackendAudit; // Opcional para retrocompatibilidad
+  // Campos legacy (estructura antigua)
+  monetaryValue?: unknown;
   currency?: string | { id: string; code: string; name: string; abbreviation: string };
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface BackendMaterial {
   id: string;
   name: string;
   description?: string;
-  unitOfMeasure: string | { id: string; code: string; name: string; abbreviation: string }; // Puede ser string o objeto
-  monetaryValue?: unknown; // Formato crudo { s, e, d }
+  price?: BackendPrice;
+  unitOfMeasure?: BackendUnitOfMeasure | string;
+  categories?: BackendCategory[];
+  flags?: BackendFlags; // Opcional para retrocompatibilidad
+  audit?: BackendAudit; // Opcional para retrocompatibilidad
+  // Campos legacy (estructura antigua)
+  monetaryValue?: unknown;
   currency?: string | { id: string; code: string; name: string; abbreviation: string };
-  isHazardous: boolean;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  categories?: Array<{
-    id: string;
-    materialId: string;
-    categoryId: string;
-    isActive: boolean;
-  }>;
+  isHazardous?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface BackendSparePart {
@@ -45,11 +83,16 @@ interface BackendSparePart {
   model?: string;
   description?: string;
   category?: string; // COMPONENT | SPARE
-  monetaryValue?: unknown; // Formato crudo { s, e, d }
+  price?: BackendPrice;
+  unitOfMeasure?: BackendUnitOfMeasure;
+  flags?: BackendFlags; // Opcional para retrocompatibilidad
+  audit?: BackendAudit; // Opcional para retrocompatibilidad
+  // Campos legacy (estructura antigua)
+  monetaryValue?: unknown;
   currency?: string | { id: string; code: string; name: string; abbreviation: string };
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface BackendPaginatedResponse<T> {
@@ -254,11 +297,17 @@ export class ApiProductRepository implements IProductRepository {
       name: equipment.name,
       description: equipment.description,
       model: equipment.model,
-      currency: this.extractStringValue(equipment.currency),
-      monetaryValueRaw: equipment.monetaryValue,
-      isActive: equipment.isActive,
-      createdAt: equipment.createdAt,
-      updatedAt: equipment.updatedAt,
+      // Soportar ambas estructuras: nueva (price.currency) y antigua (currency directo)
+      currency: equipment.price?.currency.code || (equipment as any).currency,
+      currencySymbol: equipment.price?.currency.symbol,
+      price: equipment.price?.amount,
+      monetaryValueRaw: equipment.price?.amount || (equipment as any).monetaryValue,
+      unitOfMeasure: equipment.unitOfMeasure?.abbreviation || equipment.unitOfMeasure?.code,
+      categories: equipment.categories?.map(c => ({ id: c.id, name: c.name })),
+      // Soportar ambas estructuras: nueva (flags.isActive) y antigua (isActive directo)
+      isActive: equipment.flags?.isActive ?? (equipment as any).isActive ?? true,
+      createdAt: equipment.audit?.createdAt || (equipment as any).createdAt,
+      updatedAt: equipment.audit?.updatedAt || (equipment as any).updatedAt,
     };
   }
 
@@ -268,14 +317,17 @@ export class ApiProductRepository implements IProductRepository {
       kind: 'MATERIAL',
       name: material.name,
       description: material.description,
-      unitOfMeasure: this.extractStringValue(material.unitOfMeasure),
-      isHazardous: material.isHazardous,
-      currency: this.extractStringValue(material.currency),
-      monetaryValueRaw: material.monetaryValue,
-      isActive: material.isActive,
-      createdAt: material.createdAt,
-      updatedAt: material.updatedAt,
-      categories: material.categories?.map(c => c.categoryId) ?? [],
+      unitOfMeasure: material.unitOfMeasure?.abbreviation || material.unitOfMeasure?.code || (material as any).unitOfMeasure,
+      // Soportar ambas estructuras
+      isHazardous: material.flags?.isHazardous ?? (material as any).isHazardous ?? false,
+      currency: material.price?.currency.code || (material as any).currency,
+      currencySymbol: material.price?.currency.symbol,
+      price: material.price?.amount,
+      monetaryValueRaw: material.price?.amount || (material as any).monetaryValue,
+      isActive: material.flags?.isActive ?? (material as any).isActive ?? true,
+      createdAt: material.audit?.createdAt || (material as any).createdAt,
+      updatedAt: material.audit?.updatedAt || (material as any).updatedAt,
+      categories: material.categories?.map(c => ({ id: c.id, name: c.name })) || (material as any).categories,
     };
   }
 
@@ -286,11 +338,15 @@ export class ApiProductRepository implements IProductRepository {
       name: sparePart.name,
       description: sparePart.description,
       model: sparePart.model,
-      currency: this.extractStringValue(sparePart.currency),
-      monetaryValueRaw: sparePart.monetaryValue,
-      isActive: sparePart.isActive,
-      createdAt: sparePart.createdAt,
-      updatedAt: sparePart.updatedAt,
+      // Soportar ambas estructuras
+      currency: sparePart.price?.currency.code || (sparePart as any).currency,
+      currencySymbol: sparePart.price?.currency.symbol,
+      price: sparePart.price?.amount,
+      monetaryValueRaw: sparePart.price?.amount || (sparePart as any).monetaryValue,
+      unitOfMeasure: sparePart.unitOfMeasure?.abbreviation || sparePart.unitOfMeasure?.code,
+      isActive: sparePart.flags?.isActive ?? (sparePart as any).isActive ?? true,
+      createdAt: sparePart.audit?.createdAt || (sparePart as any).createdAt,
+      updatedAt: sparePart.audit?.updatedAt || (sparePart as any).updatedAt,
     };
   }
 
@@ -395,7 +451,7 @@ export class ApiProductRepository implements IProductRepository {
 
   /**
    * Obtiene el historial de cambios de un producto
-   * Endpoints disponibles (sin paginación):
+   * Endpoints disponibles:
    * - GET /equipment/:id/history
    * - GET /materials/:id/history
    * - GET /spare-parts/:id/history
@@ -406,29 +462,29 @@ export class ApiProductRepository implements IProductRepository {
     filters?: ProductHistoryFilters
   ): Promise<PaginatedResponse<ProductHistoryEvent>> {
     try {
-      // Determinar endpoint según el tipo (sin query params)
+      // Determinar endpoint según el tipo
       const endpoint = this.getHistoryEndpointForKind(kind, id);
       
       console.log(`[ApiProductRepository] Fetching history for ${kind} ${id}:`, endpoint);
       
-      // El backend devuelve un array directo, no paginado
-      const response = await apiClient.get<any[]>(endpoint, true);
+      // El backend devuelve un objeto paginado: { data: [], total, page, limit, totalPages }
+      const response = await apiClient.get<any>(endpoint, true);
+      
+      console.log(`[ApiProductRepository] History response:`, response);
+      
+      // Extraer el array de eventos
+      const historyArray = response?.data || [];
       
       // Mapear respuesta del backend a entidades del dominio
-      const events = response.map(item => this.mapBackendHistoryToEvent(item, kind));
+      const events = historyArray.map((item: any) => this.mapBackendHistoryToEvent(item, kind));
       
-      // Aplicar paginación manual en el frontend si se solicita
-      const { page = 1, limit = 10 } = filters || {};
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedEvents = events.slice(startIndex, endIndex);
-      
+      // Usar la paginación que devuelve el backend
       return {
-        data: paginatedEvents,
-        total: events.length,
-        page,
-        limit,
-        totalPages: Math.ceil(events.length / limit),
+        data: events,
+        total: response?.total || events.length,
+        page: response?.page || 1,
+        limit: response?.limit || 10,
+        totalPages: response?.totalPages || Math.ceil((response?.total || events.length) / (response?.limit || 10)),
       };
     } catch (error) {
       console.error(`[ApiProductRepository] Error fetching history for ${kind}:`, error);
@@ -458,18 +514,23 @@ export class ApiProductRepository implements IProductRepository {
    * @private
    */
   private mapBackendHistoryToEvent(data: any, kind: ProductKind): ProductHistoryEvent {
+    // Construir nombre completo del usuario
+    const performerName = data.performer 
+      ? `${data.performer.firstName || ''} ${data.performer.lastName || ''}`.trim() || 'Usuario Desconocido'
+      : 'Usuario Desconocido';
+
     return {
       id: data.id,
       productId: data.productId || data.equipmentId || data.materialId || data.sparePartId,
       kind,
       eventType: data.eventType || data.actionType || 'OTHER',
-      performedBy: data.performedBy ? {
-        id: data.performedBy.id || data.performedByUserId,
-        name: data.performedBy.name || data.performedBy.fullName || 'Usuario Desconocido',
-        email: data.performedBy.email || '',
+      performedBy: data.performer ? {
+        id: data.performer.id || data.performedById,
+        name: performerName,
+        email: data.performer.email || '',
       } : null,
       performedAt: data.performedAt || data.occurredAt || data.createdAt,
-      previousValue: data.previousValue,
+      previousValue: data.previousValue || data.oldValue,
       newValue: data.newValue,
       justification: data.justification || data.reason,
       metadata: data.metadata,

@@ -185,9 +185,9 @@ const productSchemaBase = z.object({
   description: z.string()
     .max(500, 'La descripción no puede exceder 500 caracteres')
     .optional(),
-  currency: z.enum(['CLP', 'USD', 'EUR'], {
-    required_error: 'La moneda es requerida',
-  }),
+  // ✅ Cambiado de enum a string para permitir nuevas monedas sin tocar frontend
+  currency: z.string()
+    .min(1, 'La moneda es requerida'),
   isActive: z.boolean().default(true),
   
   // Campos específicos de EQUIPMENT y SPARE_PART

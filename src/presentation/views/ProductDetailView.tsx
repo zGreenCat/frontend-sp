@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,18 +80,39 @@ function getProductKindLabel(kind: ProductKind): string {
 }
 
 /**
- * Mapea ProductKind a ruta de listado
+ * Mapea ProductKind a ruta de listado con tab preservado
  */
-function getProductListRoute(kind: ProductKind): string {
-  // Por ahora redirigimos a /products
-  // Si en el futuro hay rutas específicas por tipo, ajustar aquí
-  return '/products';
+function getProductListRoute(kind: ProductKind, returnTab?: string | null): string {
+  // Si hay returnTab en query params, usarlo; si no, inferir del kind
+  let tab = returnTab;
+  
+  if (!tab) {
+    switch (kind) {
+      case 'EQUIPMENT':
+        tab = 'equipments';
+        break;
+      case 'MATERIAL':
+        tab = 'materials';
+        break;
+      case 'SPARE_PART':
+        tab = 'spare-parts';
+        break;
+      default:
+        tab = 'materials';
+    }
+  }
+  
+  return `/products?tab=${tab}`;
 }
 
 export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { can, isAdmin, isManager } = usePermissions();
+  const { isAdmin, isManager } = usePermissions();
+  
+  // ✅ Leer returnTab desde URL (ej: ?returnTab=equipments)
+  const returnTab = searchParams.get('returnTab');
 
   const {
     data: product,
@@ -154,7 +175,7 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(getProductListRoute(kind))}
+            onClick={() => router.push(getProductListRoute(kind, returnTab))}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -170,7 +191,7 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(getProductListRoute(kind))}
+          onClick={() => router.push(getProductListRoute(kind, returnTab))}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -201,7 +222,7 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(getProductListRoute(kind))}
+          onClick={() => router.push(getProductListRoute(kind, returnTab))}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -315,7 +336,7 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(getProductListRoute(kind))}
+            onClick={() => router.push(getProductListRoute(kind, returnTab))}
             className="gap-2 mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -413,7 +434,11 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Costo</p>
-              <p className="font-medium text-muted-foreground">Pendiente de formato</p>
+              <p className="font-medium">
+                {product.price !== undefined && product.price !== null
+                  ? `${product.currencySymbol || product.currency || ''} ${product.price.toLocaleString('es-CL')}`
+                  : "-"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Estado</p>
@@ -472,13 +497,21 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
                   <p className="text-sm text-muted-foreground mb-2">Categorías</p>
                   <div className="flex flex-wrap gap-2">
                     {product.categories.filter(Boolean).map((category, index) => {
-                      const categoryId = typeof category === 'string' 
-                        ? category 
-                        : (category?.id || category?.categoryId || '');
+                      // Extraer nombre y ID de la categoría
+                      let categoryName = '';
+                      let categoryKey = '';
+                      
+                      if (typeof category === 'string') {
+                        categoryName = category;
+                        categoryKey = category;
+                      } else if (category) {
+                        categoryName = category.name || category.id || category.categoryId || '';
+                        categoryKey = category.id || category.categoryId || `category-${index}`;
+                      }
                       
                       return (
-                        <Badge key={categoryId || `category-${index}`} variant="outline">
-                          {categoryId || `Categoría ${index + 1}`}
+                        <Badge key={categoryKey || `category-${index}`} variant="outline">
+                          {categoryName || `Categoría ${index + 1}`}
                         </Badge>
                       );
                     })}

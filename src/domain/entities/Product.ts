@@ -25,8 +25,10 @@ export interface Product {
   isHazardous?: boolean;
 
   // Campos monetarios (NO parseamos el decimal, guardamos crudo)
-  currency?: string;
-  monetaryValueRaw?: unknown; // Formato crudo del backend { s, e, d }
+  currency?: string; // Código de moneda (CLP, USD, EUR)
+  currencySymbol?: string; // Símbolo de moneda ($, USD, €)
+  monetaryValueRaw?: unknown; // Formato crudo del backend { s, e, d } (legacy)
+  price?: number; // Precio como número (nueva estructura del backend)
 
   // Estado y auditoría
   isActive: boolean;
