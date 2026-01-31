@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -123,17 +123,32 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
   // Permisos para editar/eliminar
   const canEdit = isAdmin() || isManager();
 
-  // Manejar errores
+  // Manejar errores con useEffect para evitar toast durante render
+  useEffect(() => {
+    if (error) {
+      const errorMessage = (error as Error).message;
+      
+      if (errorMessage === 'NOT_FOUND') {
+        toast({
+          title: "Producto no encontrado",
+          description: "El producto que buscas no existe o fue eliminado.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error al cargar el producto",
+          description: "Ocurrió un error al cargar el detalle del producto.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [error, toast]);
+
+  // Renderizar error después del useEffect
   if (error) {
     const errorMessage = (error as Error).message;
     
     if (errorMessage === 'NOT_FOUND') {
-      toast({
-        title: "Producto no encontrado",
-        description: "El producto que buscas no existe o fue eliminado.",
-        variant: "destructive",
-      });
-      
       return (
         <div className="space-y-6">
           <Button
@@ -149,13 +164,6 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
         </div>
       );
     }
-
-    // Otros errores
-    toast({
-      title: "Error al cargar el producto",
-      description: "Ocurrió un error al cargar el detalle del producto.",
-      variant: "destructive",
-    });
 
     return (
       <div className="space-y-6">
@@ -463,11 +471,17 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Categorías</p>
                   <div className="flex flex-wrap gap-2">
-                    {product.categories.map((categoryId) => (
-                      <Badge key={categoryId} variant="outline">
-                        {categoryId}
-                      </Badge>
-                    ))}
+                    {product.categories.filter(Boolean).map((category, index) => {
+                      const categoryId = typeof category === 'string' 
+                        ? category 
+                        : (category?.id || category?.categoryId || '');
+                      
+                      return (
+                        <Badge key={categoryId || `category-${index}`} variant="outline">
+                          {categoryId || `Categoría ${index + 1}`}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -516,36 +530,8 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
                 </div>
               )}
 
-              {/* Error: Backend no implementado */}
-              {historyError && (historyError as Error).message === 'PRODUCT_HISTORY_NOT_IMPLEMENTED' && (
-                <div className="py-12 text-center space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                    <History className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">Historial no disponible</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      El módulo de historial de productos está en desarrollo.
-                      Esta funcionalidad estará disponible próximamente cuando el backend
-                      exponga los endpoints necesarios.
-                    </p>
-                  </div>
-                  <div className="bg-muted/50 border border-border rounded-md p-4 max-w-md mx-auto">
-                    <p className="text-xs text-muted-foreground">
-                      <strong>Nota técnica:</strong> Los endpoints esperados son:
-                      <br />
-                      <code className="text-xs">GET /equipment/:id/history</code>
-                      <br />
-                      <code className="text-xs">GET /materials/:id/history</code>
-                      <br />
-                      <code className="text-xs">GET /spare-parts/:id/history</code>
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Otros errores */}
-              {historyError && (historyError as Error).message !== 'PRODUCT_HISTORY_NOT_IMPLEMENTED' && (
+              {/* Error al cargar historial */}
+              {historyError && (
                 <div className="py-8">
                   <EmptyState message="Error al cargar historial del producto" />
                 </div>

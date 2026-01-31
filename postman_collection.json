@@ -1,49 +1,15 @@
 {
   "info": {
     "_postman_id": "5f7df3d9-3ee0-4873-a4a1-b298d1d03f87",
-    "name": "SmartPack Backend - Complete API",
-    "description": "Colección completa de endpoints para SmartPack Backend: Auth, Users, Roles, Areas, Warehouses y Assignments",
+    "name": "SPack",
+    "description": "Colección de endpoints para testear el backend de SmartPack. Incluye: Auth, Users, Equipment, Materials, Spare Parts, Advanced Inventory System, Box Inventory History (equipment/material/spare-part), Catalog History (Equipment/Material/SparePart changes), y Trazabilidad completa.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "38493185"
   },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3000",
-      "type": "default"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
-      "type": "default"
-    }
-  ],
   "item": [
     {
       "name": "Auth",
       "item": [
-        {
-          "name": "/auth/register",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"nuevo.usuario@ekiproject.cl\",\n  \"password\": \"Password123!@#\",\n  \"firstName\": \"Nuevo\",\n  \"lastName\": \"Usuario\",\n  \"rut\": \"12.345.678-9\",\n  \"phone\": \"+56912345678\",\n  \"roleId\": null\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/register",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "register"]
-            }
-          },
-          "response": []
-        },
         {
           "name": "/auth/login",
           "event": [
@@ -51,16 +17,19 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData.accessToken) {",
-                  "    pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);",
-                  "    console.log(\"✓ Token guardado en accessToken\");",
-                  "} else {",
-                  "    console.warn(\"✗ No se encontró token en la respuesta\");",
-                  "}"
+                  "const jsonData = pm.response.json();\r",
+                  "\r",
+                  "if (jsonData.accessToken) {\r",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);\r",
+                  "    console.log(\"Token guardado:\", jsonData.accessToken);\r",
+                  "} else {\r",
+                  "    console.warn(\"No se encontró 'accessToken' en la respuesta.\");\r",
+                  "}\r",
+                  ""
                 ],
                 "type": "text/javascript",
-                "packages": {}
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -74,48 +43,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"fdcg.contacto1@gmail.com\",\n  \"password\": \"Admin123!@#\"\n}"
+              "raw": "{\n  \"email\": \"ernesft21@gmail.com\",\n  \"password\": \"Admin123!@#\"\n}"
             },
             "url": {
-              "raw": "{{base_url}/auth/login",
+              "raw": "{{base_url}}/auth/login",
               "host": ["{{base_url}}"],
               "path": ["auth", "login"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/auth/google",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/auth/google",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "google"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/auth/me",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "me"]
             }
           },
           "response": []
@@ -139,52 +72,20 @@
               ]
             },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"usuario.nuevo@ekiproject.cl\",\n  \"password\": \"Password123!@#\",\n  \"firstName\": \"Usuario\",\n  \"lastName\": \"Nuevo\",\n  \"rut\": \"15.123.456-7\",\n  \"phone\": \"+56987654321\",\n  \"roleId\": null\n}"
+              "raw": "{\r\n  \"email\": \"usuario.prueba@example.com\",\r\n  \"password\": \"Password123!@#\",\r\n  \"firstName\": \"Usuario\",\r\n  \"lastName\": \"Prueba\",\r\n  \"rut\": null,\r\n  \"phone\": null,\r\n  \"roleId\": null\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/users",
               "host": ["{{base_url}}"],
               "path": ["users"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/users/validate-unique",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rut\": \"12345678-9\",\n  \"email\": \"test@ekiproject.cl\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/users/validate-unique",
-              "host": ["{{base_url}}"],
-              "path": ["users", "validate-unique"]
             }
           },
           "response": []
@@ -205,42 +106,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/users?page=1&limit=10&search=&sortBy=createdAt&order=desc&roleId=&isEnabled=",
+              "raw": "{{base_url}}/users",
               "host": ["{{base_url}}"],
-              "path": ["users"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                },
-                {
-                  "key": "roleId",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "isEnabled",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
+              "path": ["users"]
             }
           },
           "response": []
@@ -269,29 +137,6 @@
           "response": []
         },
         {
-          "name": "/users/area/{areaId}",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/users/area/6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
-              "host": ["{{base_url}}"],
-              "path": ["users", "area", "6ebee4b1-b76a-4aba-bb92-9fe76349bb77"]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "/users/{id}",
           "request": {
             "auth": {
@@ -328,20 +173,20 @@
               ]
             },
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"+56987654321\",\n  \"isEnabled\": false,\n  \"reason\": \"Usuario inactivo por solicitud\"\n}"
+              "raw": "{\r\n  \"email\": \"usuario3.actualizado@example.com\",\r\n  \"firstName\": \"Usuario 3\",\r\n  \"lastName\": \"Actualizado\",\r\n  \"rut\": \"11.111.111-1\",\r\n  \"phone\": \"+56912345678\",\r\n  \"isEnabled\": true\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{base_url}}/users/37b6119d-6bb0-48c1-978d-f68c76bf65de",
+              "raw": "{{base_url}}/users/",
               "host": ["{{base_url}}"],
-              "path": ["users", "37b6119d-6bb0-48c1-978d-f68c76bf65de"]
+              "path": ["users", ""]
             }
           },
           "response": []
@@ -368,102 +213,6 @@
             }
           },
           "response": []
-        },
-        {
-          "name": "/users/{userId}/enablement-history",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/users/37b6119d-6bb0-48c1-978d-f68c76bf65de/enablement-history?page=1&limit=10&sortBy=occurredAt&order=desc",
-              "host": ["{{base_url}}"],
-              "path": [
-                "users",
-                "37b6119d-6bb0-48c1-978d-f68c76bf65de",
-                "enablement-history"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "occurredAt"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/enablement-history (Admin)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/enablement-history?page=1&limit=10&sortBy=occurredAt&order=desc&userId=&action=",
-              "host": ["{{base_url}}"],
-              "path": ["enablement-history"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "occurredAt"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                },
-                {
-                  "key": "userId",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "action",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
         }
       ]
     },
@@ -486,37 +235,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/roles?page=1&limit=10&search=&sortBy=createdAt&order=desc&isEnabled=",
+              "raw": "{{base_url}}/roles",
               "host": ["{{base_url}}"],
-              "path": ["roles"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                },
-                {
-                  "key": "isEnabled",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
+              "path": ["roles"]
             }
           },
           "response": []
@@ -524,7 +245,7 @@
       ]
     },
     {
-      "name": "Areas",
+      "name": "Area",
       "item": [
         {
           "name": "/areas",
@@ -540,15 +261,15 @@
               ]
             },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Nueva Área\",\n  \"nodeType\": \"ROOT\",\n  \"parentAreaId\": null\n}"
+              "raw": "{\r\n  \"name\": \"Gerencia Operaciones\",\r\n  \"nodeType\": \"ROOT\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/areas",
@@ -574,37 +295,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/areas?page=1&limit=10&search=&sortBy=createdAt&order=desc&isEnabled=",
+              "raw": "{{base_url}}/areas",
               "host": ["{{base_url}}"],
-              "path": ["areas"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                },
-                {
-                  "key": "isEnabled",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
+              "path": ["areas"]
             }
           },
           "response": []
@@ -625,9 +318,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+              "raw": "{{base_url}}/areas/b43885e1-736d-4f87-855a-daad4a23e5b3",
               "host": ["{{base_url}}"],
-              "path": ["areas", "6ebee4b1-b76a-4aba-bb92-9fe76349bb77"]
+              "path": ["areas", "b43885e1-736d-4f87-855a-daad4a23e5b3"]
             }
           },
           "response": []
@@ -635,213 +328,12 @@
         {
           "name": "/areas/{id}",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Área Actualizada\",\n  \"nodeType\": \"ROOT\",\n  \"parentAreaId\": null\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
-              "host": ["{{base_url}}"],
-              "path": ["areas", "6ebee4b1-b76a-4aba-bb92-9fe76349bb77"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/areas/{areaId}/managers",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/managers?page=1&limit=10",
+              "raw": "{{base_url}}/areas/{id}",
               "host": ["{{base_url}}"],
-              "path": [
-                "areas",
-                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
-                "managers"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/areas/{areaId/history",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/history",
-              "host": ["{{base_url}}"],
-              "path": [
-                "areas",
-                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
-                "history"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Warehouses",
-      "item": [
-        {
-          "name": "/warehouses",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/warehouses?page=1&limit=10&search=&sortBy=createdAt&order=desc&isEnabled=",
-              "host": ["{{base_url}}"],
-              "path": ["warehouses"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                },
-                {
-                  "key": "isEnabled",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/warehouses/{id}",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/warehouses/01921be2-9fd3-4d31-98d2-8a979193188a",
-              "host": ["{{base_url}}"],
-              "path": ["warehouses", "01921be2-9fd3-4d31-98d2-8a979193188a"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/warehouses/{warehouseId}/supervisors",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/warehouses/01921be2-9fd3-4d31-98d2-8a979193188a/supervisors?page=1&limit=10",
-              "host": ["{{base_url}}"],
-              "path": [
-                "warehouses",
-                "01921be2-9fd3-4d31-98d2-8a979193188a",
-                "supervisors"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "disabled": true
-                }
-              ]
+              "path": ["areas", "{id}"]
             }
           },
           "response": []
@@ -851,42 +343,6 @@
     {
       "name": "Assignments",
       "item": [
-        {
-          "name": "/areas/{areaId}/managers",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"managerId\": \"afad5af8-9110-4cad-9a1e-d937a435a827\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/managers",
-              "host": ["{{base_url}}"],
-              "path": [
-                "areas",
-                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
-                "managers"
-              ]
-            }
-          },
-          "response": []
-        },
         {
           "name": "/areas/{areaId}/warehouses",
           "request": {
@@ -901,15 +357,15 @@
               ]
             },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"warehouseId\": \"01921be2-9fd3-4d31-98d2-8a979193188a\"\n}"
+              "raw": "{\r\n  \"warehouseId\": \"01921be2-9fd3-4d31-98d2-8a979193188a\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/warehouses",
@@ -924,7 +380,7 @@
           "response": []
         },
         {
-          "name": "/warehouses/{warehouseId}/supervisors",
+          "name": "/areas/{areaId}/managers",
           "request": {
             "auth": {
               "type": "bearer",
@@ -937,24 +393,36 @@
               ]
             },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"supervisorId\": \"usuario-supervisor-id\"\n}"
+              "raw": "{\r\n  \"managerId\": \"afad5af8-9110-4cad-9a1e-d937a435a827\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{base_url}}/warehouses/01921be2-9fd3-4d31-98d2-8a979193188a/supervisors",
+              "raw": "{{base_url}}/areas/6ebee4b1-b76a-4aba-bb92-9fe76349bb77/managers",
               "host": ["{{base_url}}"],
               "path": [
-                "warehouses",
-                "01921be2-9fd3-4d31-98d2-8a979193188a",
-                "supervisors"
+                "areas",
+                "6ebee4b1-b76a-4aba-bb92-9fe76349bb77",
+                "managers"
               ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{warehouseId}/supervisors",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "/warehouses/{warehouseId}/supervisors",
+              "path": ["warehouses", "{warehouseId}", "supervisors"]
             }
           },
           "response": []
@@ -975,7 +443,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/assignments?page=1&limit=10&sortBy=assignedAt&order=desc&isEnabled=",
+              "raw": "{{base_url}}/assignments?page=1&limit=5",
               "host": ["{{base_url}}"],
               "path": ["assignments"],
               "query": [
@@ -985,20 +453,7 @@
                 },
                 {
                   "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "assignedAt"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                },
-                {
-                  "key": "isEnabled",
-                  "value": "",
-                  "disabled": true
+                  "value": "5"
                 }
               ]
             }
@@ -1008,68 +463,8 @@
         {
           "name": "/assignments/{id}",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/assignments/88764947-d4a5-4876-a1da-44a14d94de0e",
-              "host": ["{{base_url}}"],
-              "path": ["assignments", "88764947-d4a5-4876-a1da-44a14d94de0e"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "/assignment-history/user/{userId}",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/assignment-history/user/afad5af8-9110-4cad-9a1e-d937a435a827?page=1&limit=50&sortBy=timestamp&order=desc",
-              "host": ["{{base_url}}"],
-              "path": [
-                "assignment-history",
-                "user",
-                "afad5af8-9110-4cad-9a1e-d937a435a827"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "50"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "timestamp"
-                },
-                {
-                  "key": "order",
-                  "value": "desc"
-                }
-              ]
-            }
+            "header": []
           },
           "response": []
         },
@@ -1097,6 +492,2019 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Warehouses",
+      "item": [
+        {
+          "name": "/warehouses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "5",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": null,
+                  "disabled": true
+                },
+                {
+                  "key": "isEnabled",
+                  "value": null,
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses/9a7f3428-d2ef-4629-a8ef-b673e205ab78",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses", "9a7f3428-d2ef-4629-a8ef-b673e205ab78"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Bodega Central A\",\r\n  \"maxCapacityKg\": 9000\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/warehouses",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Bodega Central A - Ampliada\",\r\n  \"maxCapacityKg\": 12000\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/warehouses/9a7f3428-d2ef-4629-a8ef-b673e205ab78",
+              "host": ["{{base_url}}"],
+              "path": ["warehouses", "9a7f3428-d2ef-4629-a8ef-b673e205ab78"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/warehouses/{id}/movements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/warehouses/9a7f3428-d2ef-4629-a8ef-b673e205ab78/movements",
+              "host": ["{{base_url}}"],
+              "path": [
+                "warehouses",
+                "9a7f3428-d2ef-4629-a8ef-b673e205ab78",
+                "movements"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": null,
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": null,
+                  "disabled": true
+                },
+                {
+                  "key": "movementType",
+                  "value": null,
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": null,
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": null,
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Boxes",
+      "item": [
+        {
+          "name": "📦 CRUD - Cajas",
+          "item": [
+            {
+              "name": "POST /boxes - Crear caja",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"qrCode\": \"SCL-B2C3D4E5\",\n  \"description\": \"Caja para explosivos\",\n  \"type\": \"NORMAL\",\n  \"currentWeightKg\": 75,\n  \"warehouseId\": \"83272716-f985-47cc-a8c7-8c089a391e71\",\n  \"status\": \"DISPONIBLE\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes",
+                  "host": ["{{base_url}}"],
+                  "path": ["boxes"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /boxes - Listar cajas (con filtros)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes?limit=5&page=1",
+                  "host": ["{{base_url}}"],
+                  "path": ["boxes"],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "5"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "search",
+                      "value": null,
+                      "disabled": true
+                    },
+                    {
+                      "key": "warehouseId",
+                      "value": "a14eebab-4292-4fcb-9a03-d7088722dea6",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "DISPONIBLE",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sortBy",
+                      "value": "createdAt",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "desc",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GET /boxes/:id - Obtener caja con historial",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                  "host": ["{{base_url}}"],
+                  "path": ["boxes", "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "PATCH /boxes/:id - Actualizar caja",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Caja actualizada con nueva descripción\",\n  \"type\": \"REFORZADA\",\n  \"currentWeightKg\": 78.5\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                  "host": ["{{base_url}}"],
+                  "path": ["boxes", "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5"]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "🔎 Búsqueda - Cajas",
+          "item": [
+            {
+              "name": "GET /boxes/qr/:qrCode - Buscar por QR",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes/qr/SCL-B2C3D4E5",
+                  "host": ["{{base_url}}"],
+                  "path": ["boxes", "qr", "SCL-B2C3D4E5"]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "🚚 Movimientos - Cajas",
+          "item": [
+            {
+              "name": "PATCH /boxes/:id/move - Mover a otra bodega",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"targetWarehouseId\": \"f7cf511e-d61d-4ae7-9d89-5c66b094d153\",\n  \"notes\": \"Traslado para mantenimiento programado\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/move",
+                  "host": ["{{base_url}}"],
+                  "path": ["boxes", "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5", "move"]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "🔄 Estado - Cajas",
+          "item": [
+            {
+              "name": "PATCH /boxes/:id/status - Cambiar estado",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"EN_REPARACION\",\n  \"reason\": \"Mantenimiento preventivo requerido\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/status",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "status"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "PATCH /boxes/:id/deactivate - Dar de baja caja",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/deactivate",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "deactivate"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "⚙️ Inventario - Equipos",
+          "item": [
+            {
+              "name": "POST /boxes/:id/equipments - Agregar equipo",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"equipmentId\": \"uuid-equipo\",\n  \"quantity\": 2,\n  \"reason\": \"Reabastecimiento de equipos - Compra OC-2026-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/equipments",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "equipments"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "DELETE /boxes/:id/equipments/:equipmentAssignmentId - Remover equipo",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"boxEquipmentId\": \"uuid-asignacion\",\n  \"reason\": \"Reparación completada - Devuelto a mantenimiento\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/equipments/equipment-assignment-id",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "equipments",
+                    "equipment-assignment-id"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "🧪 Inventario - Materiales",
+          "item": [
+            {
+              "name": "POST /boxes/:id/materials - Agregar material",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"materialId\": \"uuid-material\",\n  \"quantity\": 50,\n  \"reason\": \"Stock inicial - Compra enero 2026\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/materials",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "materials"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "DELETE /boxes/:id/materials/:materialAssignmentId - Remover material",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"boxMaterialId\": \"uuid-asignacion\",\n  \"reason\": \"Consumido en operaciones - Voladura 2026-01-30\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/materials/material-assignment-id",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "materials",
+                    "material-assignment-id"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "📋 Historial - General",
+          "item": [
+            {
+              "name": "GET /boxes/:id/history - Historial de cambios caja",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/history?page=1&limit=20",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "eventType",
+                      "value": "INVENTORY_ADDED",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "📊 Historial - Equipos",
+          "item": [
+            {
+              "name": "GET /boxes/:id/equipment-history - Historial de equipos",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/equipment-history?page=1&limit=10",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "equipment-history"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "📊 Historial - Materiales",
+          "item": [
+            {
+              "name": "GET /boxes/:id/material-history - Historial de materiales",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/material-history?page=1&limit=10",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "material-history"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "📊 Historial - Repuestos",
+          "item": [
+            {
+              "name": "GET /boxes/:id/spare-part-history - Historial de repuestos",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/boxes/1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5/spare-part-history?page=1&limit=10",
+                  "host": ["{{base_url}}"],
+                  "path": [
+                    "boxes",
+                    "1c1f30d0-97ca-4fce-9c31-ffdff8d8afb5",
+                    "spare-part-history"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog History",
+      "item": [
+        {
+          "name": "GET /equipment/history - All Equipment Changes",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/equipment/history?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["equipment", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /equipment/:id/history - Equipment History by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/equipment/550e8400-e29b-41d4-a716-446655440000/history?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["equipment", "550e8400-e29b-41d4-a716-446655440000", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /spare-parts/history - All SparePart Changes",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/spare-parts/history?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /spare-parts/:id/history - SparePart History by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/spare-parts/550e8400-e29b-41d4-a716-446655440000/history?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts", "550e8400-e29b-41d4-a716-446655440000", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /materials/history - All Material Changes",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/materials/history?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["materials", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /materials/:id/history - Material History by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/materials/550e8400-e29b-41d4-a716-446655440000/history?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["materials", "550e8400-e29b-41d4-a716-446655440000", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Currencies",
+      "item": [
+        {
+          "name": "POST /currencies",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CLP\",\n  \"name\": \"Chilean Peso\",\n  \"symbol\": \"$\",\n  \"countryCode\": \"CL\",\n  \"description\": \"Peso chileno\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/currencies",
+              "host": ["{{base_url}}"],
+              "path": ["currencies"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /currencies",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/currencies?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["currencies"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /currencies/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Chilean Peso Updated\",\n  \"symbol\": \"CLP\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/currencies/550e8400-e29b-41d4-a716-446655440100",
+              "host": ["{{base_url}}"],
+              "path": ["currencies", "550e8400-e29b-41d4-a716-446655440100"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Units of Measure",
+      "item": [
+        {
+          "name": "POST /units-of-measure",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"KG\",\n  \"name\": \"Kilogram\",\n  \"abbreviation\": \"kg\",\n  \"type\": \"WEIGHT\",\n  \"description\": \"Unidad de peso\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/units-of-measure",
+              "host": ["{{base_url}}"],
+              "path": ["units-of-measure"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /units-of-measure",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/units-of-measure?page=1&limit=10&type=WEIGHT",
+              "host": ["{{base_url}}"],
+              "path": ["units-of-measure"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "type",
+                  "value": "WEIGHT",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /units-of-measure/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kilogram Updated\",\n  \"abbreviation\": \"kg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/units-of-measure/550e8400-e29b-41d4-a716-446655440103",
+              "host": ["{{base_url}}"],
+              "path": ["units-of-measure", "550e8400-e29b-41d4-a716-446655440103"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Equipment",
+      "item": [
+        {
+          "name": "POST /equipment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Compresor Industrial\",\n  \"model\": \"CAT-2500X\",\n  \"description\": \"Compresor de aire industrial 25 bar\",\n  \"weightValue\": 500,\n  \"weightUnitId\": \"550e8400-e29b-41d4-a716-446655440103\",\n  \"widthValue\": 100,\n  \"widthUnitId\": \"550e8400-e29b-41d4-a716-446655440104\",\n  \"heightValue\": 150,\n  \"heightUnitId\": \"550e8400-e29b-41d4-a716-446655440104\",\n  \"lengthValue\": 120,\n  \"lengthUnitId\": \"550e8400-e29b-41d4-a716-446655440104\",\n  \"monetaryValue\": 15000.50,\n  \"currencyId\": \"550e8400-e29b-41d4-a716-446655440100\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/equipment",
+              "host": ["{{base_url}}"],
+              "path": ["equipment"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /equipment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipment?page=1&limit=10&search=Bomba&isActive=true&currencyId=550e8400-e29b-41d4-a716-446655440100",
+              "host": ["{{base_url}}"],
+              "path": ["equipment"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "Bomba",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "currencyId",
+                  "value": "550e8400-e29b-41d4-a716-446655440100",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /equipment/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipment/550e8400-e29b-41d4-a716-446655440000",
+              "host": ["{{base_url}}"],
+              "path": ["equipment", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /equipment/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Compresor Industrial X2\",\n  \"monetaryValue\": \"16000.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/equipment/550e8400-e29b-41d4-a716-446655440000",
+              "host": ["{{base_url}}"],
+              "path": ["equipment", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /equipment/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/equipment/550e8400-e29b-41d4-a716-446655440000",
+              "host": ["{{base_url}}"],
+              "path": ["equipment", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Spare Parts",
+      "item": [
+        {
+          "name": "POST /spare-parts",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"equipmentId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"name\": \"Válvula de retención\",\n  \"description\": \"Válvula de retención para compresor\",\n  \"category\": \"COMPONENT\",\n  \"weightValue\": 2,\n  \"weightUnitId\": \"550e8400-e29b-41d4-a716-446655440103\",\n  \"widthValue\": 5,\n  \"widthUnitId\": \"550e8400-e29b-41d4-a716-446655440104\",\n  \"heightValue\": 8,\n  \"heightUnitId\": \"550e8400-e29b-41d4-a716-446655440104\",\n  \"lengthValue\": 10,\n  \"lengthUnitId\": \"550e8400-e29b-41d4-a716-446655440104\",\n  \"monetaryValue\": 250.50,\n  \"currencyId\": \"550e8400-e29b-41d4-a716-446655440101\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/spare-parts",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /spare-parts",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/spare-parts?page=1&limit=10&search=Válvula&category=COMPONENT&currencyId=550e8400-e29b-41d4-a716-446655440100&isActive=true&equipmentId=550e8400-e29b-41d4-a716-446655440000",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "Válvula",
+                  "disabled": true
+                },
+                {
+                  "key": "category",
+                  "value": "COMPONENT",
+                  "disabled": true
+                },
+                {
+                  "key": "currencyId",
+                  "value": "550e8400-e29b-41d4-a716-446655440100",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "equipmentId",
+                  "value": "550e8400-e29b-41d4-a716-446655440000",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /spare-parts/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/spare-parts/550e8400-e29b-41d4-a716-446655440001",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts", "550e8400-e29b-41d4-a716-446655440001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /spare-parts/equipment/:equipmentId",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/spare-parts/equipment/550e8400-e29b-41d4-a716-446655440000",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts", "equipment", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /spare-parts/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Válvula de retención PRO\",\n  \"monetaryValue\": \"300.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/spare-parts/550e8400-e29b-41d4-a716-446655440001",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts", "550e8400-e29b-41d4-a716-446655440001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /spare-parts/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/spare-parts/550e8400-e29b-41d4-a716-446655440001",
+              "host": ["{{base_url}}"],
+              "path": ["spare-parts", "550e8400-e29b-41d4-a716-446655440001"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Material Categories",
+      "item": [
+        {
+          "name": "POST /material-categories",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Explosivos y agentes de voladura\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/material-categories",
+              "host": ["{{base_url}}"],
+              "path": ["material-categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /material-categories",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/material-categories?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["material-categories"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /material-categories/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/material-categories/550e8400-e29b-41d4-a716-446655440002",
+              "host": ["{{base_url}}"],
+              "path": ["material-categories", "550e8400-e29b-41d4-a716-446655440002"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /material-categories/:id/subcategories",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/material-categories/550e8400-e29b-41d4-a716-446655440002/subcategories",
+              "host": ["{{base_url}}"],
+              "path": ["material-categories", "550e8400-e29b-41d4-a716-446655440002", "subcategories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /material-categories/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Explosivos de alta potencia\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/material-categories/550e8400-e29b-41d4-a716-446655440002",
+              "host": ["{{base_url}}"],
+              "path": ["material-categories", "550e8400-e29b-41d4-a716-446655440002"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /material-categories/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/material-categories/550e8400-e29b-41d4-a716-446655440002",
+              "host": ["{{base_url}}"],
+              "path": ["material-categories", "550e8400-e29b-41d4-a716-446655440002"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Materials",
+      "item": [
+        {
+          "name": "POST /materials",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dinamita de sílice\",\n  \"description\": \"Agente explosivo para voladura de rocas\",\n  \"unitOfMeasureId\": \"550e8400-e29b-41d4-a716-446655440200\",\n  \"monetaryValue\": \"45.50\",\n  \"currencyId\": \"550e8400-e29b-41d4-a716-446655440101\",\n  \"isHazardous\": true,\n  \"categoryIds\": [\"550e8400-e29b-41d4-a716-446655440002\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/materials",
+              "host": ["{{base_url}}"],
+              "path": ["materials"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /materials",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/materials?page=1&limit=10&search=Dinamita&unitOfMeasureId=550e8400-e29b-41d4-a716-446655440200&currencyId=550e8400-e29b-41d4-a716-446655440101&isHazardous=true&isActive=true",
+              "host": ["{{base_url}}"],
+              "path": ["materials"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "Dinamita",
+                  "disabled": true
+                },
+                {
+                  "key": "unitOfMeasureId",
+                  "value": "550e8400-e29b-41d4-a716-446655440200",
+                  "disabled": true
+                },
+                {
+                  "key": "currencyId",
+                  "value": "550e8400-e29b-41d4-a716-446655440101",
+                  "disabled": true
+                },
+                {
+                  "key": "isHazardous",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /materials/hazardous",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/materials/hazardous?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["materials", "hazardous"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /materials/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/materials/550e8400-e29b-41d4-a716-446655440003",
+              "host": ["{{base_url}}"],
+              "path": ["materials", "550e8400-e29b-41d4-a716-446655440003"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /materials/category/:categoryId",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/materials/category/550e8400-e29b-41d4-a716-446655440002",
+              "host": ["{{base_url}}"],
+              "path": ["materials", "category", "550e8400-e29b-41d4-a716-446655440002"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /materials/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monetaryValue\": \"50.00\",\n  \"description\": \"Dinamita de alta pureza para voladura controlada\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/materials/550e8400-e29b-41d4-a716-446655440003",
+              "host": ["{{base_url}}"],
+              "path": ["materials", "550e8400-e29b-41d4-a716-446655440003"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /materials/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/materials/550e8400-e29b-41d4-a716-446655440003",
+              "host": ["{{base_url}}"],
+              "path": ["materials", "550e8400-e29b-41d4-a716-446655440003"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "efa1d4f2-a208-4676-aafb-de5bcda044a2",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
     }
   ]
 }

@@ -36,7 +36,7 @@ export interface Product {
   // Campos adicionales de negocio (compatibilidad con código existente)
   sku?: string; // Opcional, algunos productos pueden no tener SKU
   status?: ProductStatus; // Mapeo de isActive a ACTIVO/INACTIVO
-  categories?: string[];
+  categories?: (string | { id?: string; categoryId?: string; name?: string })[];
   monetaryValue?: number; // Deprecated: usar monetaryValueRaw
   providerId?: string;
   projectId?: string;

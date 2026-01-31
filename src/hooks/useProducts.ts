@@ -230,6 +230,6 @@ export const useProductHistory = (
     },
     enabled: !!id, // Solo ejecutar si hay ID
     staleTime: 2 * 60 * 1000, // 2 minutos
-    retry: false, // No reintentar si falla (especialmente para PRODUCT_HISTORY_NOT_IMPLEMENTED)
+    retry: false, // No reintentar automáticamente en caso de error
   });
 };

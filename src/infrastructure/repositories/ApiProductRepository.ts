@@ -198,7 +198,7 @@ export class ApiProductRepository implements IProductRepository {
   private getDetailEndpointForKind(kind: ProductKind, id: string): string {
     switch (kind) {
       case 'EQUIPMENT':
-        return `/equipments/${id}`;
+        return `/equipment/${id}`;
       case 'MATERIAL':
         return `/materials/${id}`;
       case 'SPARE_PART':
@@ -395,81 +395,55 @@ export class ApiProductRepository implements IProductRepository {
 
   /**
    * Obtiene el historial de cambios de un producto
-   * 
-   * NOTA IMPORTANTE: El backend actualmente NO expone endpoints de historial para productos individuales.
-   * Los únicos endpoints de historial disponibles son para movimientos en cajas:
-   * - GET /boxes/:id/equipment-history
-   * - GET /boxes/:id/material-history
-   * - GET /boxes/:id/spare-part-history
-   * 
-   * Este método está preparado para cuando el backend implemente:
+   * Endpoints disponibles (sin paginación):
    * - GET /equipment/:id/history
    * - GET /materials/:id/history
    * - GET /spare-parts/:id/history
-   * 
-   * Por ahora, lanza un error controlado para informar que la funcionalidad no está disponible.
    */
   async getHistory(
     id: string,
     kind: ProductKind,
     filters?: ProductHistoryFilters
   ): Promise<PaginatedResponse<ProductHistoryEvent>> {
-    // TODO: Implementar cuando el backend exponga los endpoints de historial
-    // Los endpoints esperados serían:
-    // - GET /equipment/:id/history
-    // - GET /materials/:id/history
-    // - GET /spare-parts/:id/history
-    
-    throw new Error('PRODUCT_HISTORY_NOT_IMPLEMENTED: El backend aún no expone endpoints de historial para productos individuales. Esta funcionalidad estará disponible próximamente.');
-
-    /* Implementación futura cuando el backend esté listo:
-    
     try {
-      const { page = 1, limit = 10, from, to, eventType, performedBy } = filters || {};
-      
-      // Construir query params
-      const queryParams = new URLSearchParams();
-      queryParams.append('page', page.toString());
-      queryParams.append('limit', limit.toString());
-      if (from) queryParams.append('from', from);
-      if (to) queryParams.append('to', to);
-      if (eventType) queryParams.append('eventType', eventType);
-      if (performedBy) queryParams.append('performedBy', performedBy);
-      
-      // Determinar endpoint según el tipo
+      // Determinar endpoint según el tipo (sin query params)
       const endpoint = this.getHistoryEndpointForKind(kind, id);
-      const url = `${endpoint}?${queryParams.toString()}`;
       
-      console.log(`[ApiProductRepository] Fetching history for ${kind} ${id}:`, url);
+      console.log(`[ApiProductRepository] Fetching history for ${kind} ${id}:`, endpoint);
       
-      const response = await apiClient.get<BackendPaginatedResponse<any>>(url, true);
+      // El backend devuelve un array directo, no paginado
+      const response = await apiClient.get<any[]>(endpoint, true);
       
       // Mapear respuesta del backend a entidades del dominio
-      const events = response.data.map(item => this.mapBackendHistoryToEvent(item, kind));
+      const events = response.map(item => this.mapBackendHistoryToEvent(item, kind));
+      
+      // Aplicar paginación manual en el frontend si se solicita
+      const { page = 1, limit = 10 } = filters || {};
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedEvents = events.slice(startIndex, endIndex);
       
       return {
-        data: events,
-        total: response.total,
-        page: response.page,
-        limit: response.limit,
-        totalPages: response.totalPages || Math.ceil(response.total / response.limit),
+        data: paginatedEvents,
+        total: events.length,
+        page,
+        limit,
+        totalPages: Math.ceil(events.length / limit),
       };
     } catch (error) {
       console.error(`[ApiProductRepository] Error fetching history for ${kind}:`, error);
       throw error;
     }
-    */
   }
 
   /**
    * Helper para obtener el endpoint de historial según el tipo de producto
    * @private
    */
-  /* Descomentar cuando se implemente
   private getHistoryEndpointForKind(kind: ProductKind, id: string): string {
     switch (kind) {
       case 'EQUIPMENT':
-        return `/equipments/${id}/history`;
+        return `/equipment/${id}/history`;
       case 'MATERIAL':
         return `/materials/${id}/history`;
       case 'SPARE_PART':
@@ -478,13 +452,11 @@ export class ApiProductRepository implements IProductRepository {
         throw new Error(`Unknown product kind: ${kind}`);
     }
   }
-  */
 
   /**
    * Mapea el historial del backend a la entidad de dominio
    * @private
    */
-  /* Descomentar cuando se implemente
   private mapBackendHistoryToEvent(data: any, kind: ProductKind): ProductHistoryEvent {
     return {
       id: data.id,
@@ -503,6 +475,5 @@ export class ApiProductRepository implements IProductRepository {
       metadata: data.metadata,
     };
   }
-  */
 }
 
