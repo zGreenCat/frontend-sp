@@ -26,6 +26,8 @@ import { Loader2 } from "lucide-react";
 import { createProductSchema, CreateProductInput } from "@/shared/schemas";
 import { ProductKind } from "@/domain/entities/Product";
 import { useUnitsOfMeasure, useCurrencies } from "@/hooks/useUnitsAndCurrencies";
+import { useEquipments } from "@/hooks/useEquipments";
+import { useMaterialCategories } from "@/hooks/useMaterialCategories";
 
 interface ProductFormProps {
   onSubmit: (data: CreateProductInput) => Promise<void>;
@@ -47,6 +49,13 @@ export function ProductForm({
   // ✅ Consumir catálogos desde backend
   const { data: units, isLoading: loadingUnits } = useUnitsOfMeasure();
   const { data: currencies, isLoading: loadingCurrencies } = useCurrencies();
+  const { data: categories, isLoading: loadingCategories } = useMaterialCategories();
+  // Solo cargar equipos si el tipo es SPARE_PART
+  const shouldLoadEquipments = kind === 'SPARE_PART';
+  const { data: equipmentsData, isLoading: loadingEquipments } = useEquipments({ 
+    page: 1, 
+    limit: 100,
+  });
 
   const form = useForm<CreateProductInput>({
     resolver: zodResolver(createProductSchema),
@@ -60,7 +69,7 @@ export function ProductForm({
       model: defaultValues?.model || "",
       unitOfMeasureId: defaultValues?.unitOfMeasureId || "",
       isHazardous: defaultValues?.isHazardous || false,
-      categoryIds: defaultValues?.categoryIds || [],
+      categoryId: defaultValues?.categoryId || "",
       // Dimensiones para equipos
       weightValue: defaultValues?.weightValue || 0,
       weightUnitId: defaultValues?.weightUnitId || "",
@@ -70,6 +79,9 @@ export function ProductForm({
       heightUnitId: defaultValues?.heightUnitId || "",
       lengthValue: defaultValues?.lengthValue || 0,
       lengthUnitId: defaultValues?.lengthUnitId || "",
+      // Campos para repuestos
+      equipmentId: defaultValues?.equipmentId || "",
+      category: defaultValues?.category || "COMPONENT",
     },
   });
 
@@ -143,8 +155,8 @@ export function ProductForm({
           )}
         />
 
-        {/* Modelo (solo para EQUIPMENT y SPARE_PART) */}
-        {(kind === 'EQUIPMENT' || kind === 'SPARE_PART') && (
+        {/* Modelo (solo para EQUIPMENT) - Los repuestos no tienen modelo */}
+        {kind === 'EQUIPMENT' && (
           <FormField
             control={form.control}
             name="model"
@@ -155,7 +167,7 @@ export function ProductForm({
                 </FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="Modelo del equipo/repuesto" 
+                    placeholder="Modelo del equipo" 
                     {...field}
                     disabled={isLoading}
                   />
@@ -166,8 +178,73 @@ export function ProductForm({
           />
         )}
 
-        {/* Dimensiones (solo para EQUIPMENT) */}
-        {kind === 'EQUIPMENT' && (
+        {/* Campos específicos de SPARE_PART */}
+        {kind === 'SPARE_PART' && (
+          <>
+            {/* Equipo asociado */}
+            <FormField
+              control={form.control}
+              name="equipmentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Equipo asociado (opcional)</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
+                    defaultValue={field.value || "none"}
+                    disabled={isLoading || loadingEquipments}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingEquipments ? "Cargando equipos..." : "Selecciona un equipo"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Ninguno</SelectItem>
+                      {equipmentsData?.data?.map((equipment) => (
+                        <SelectItem key={equipment.id} value={equipment.id}>
+                          {equipment.name} {equipment.model && `- ${equipment.model}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Categoría del repuesto */}
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Categoría <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={isLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una categoría" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="COMPONENT">Componente</SelectItem>
+                      <SelectItem value="SPARE">Repuesto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+
+        {/* Dimensiones (para EQUIPMENT y SPARE_PART) */}
+        {(kind === 'EQUIPMENT' || kind === 'SPARE_PART') && (
           <>
             {/* Peso */}
             <div className="grid grid-cols-2 gap-4">
@@ -431,27 +508,62 @@ export function ProductForm({
 
         {/* Peligroso (solo para MATERIAL) */}
         {kind === 'MATERIAL' && (
-          <FormField
-            control={form.control}
-            name="isHazardous"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel>Material peligroso</FormLabel>
+          <>
+            <FormField
+              control={form.control}
+              name="isHazardous"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>Material peligroso</FormLabel>
+                    <FormDescription>
+                      Indica si el material es peligroso o requiere manejo especial
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {/* Categoría */}
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoría (opcional)</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isLoading || loadingCategories}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingCategories ? "Cargando categorías..." : "Selecciona una categoría"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories?.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormDescription>
-                    Indica si el material es peligroso o requiere manejo especial
+                    Selecciona la categoría del material
                   </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    disabled={isLoading}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
         )}
 
         {/* Moneda y Valor Monetario */}

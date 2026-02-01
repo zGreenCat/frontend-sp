@@ -30,23 +30,23 @@ export class CreateProduct {
         return failure('La unidad de medida es requerida para materiales');
       }
 
-      if ((input.kind === 'EQUIPMENT' || input.kind === 'SPARE_PART') && !input.model) {
-        return failure('El modelo es requerido para equipos y repuestos');
+      if (input.kind === 'EQUIPMENT' && !input.model) {
+        return failure('El modelo es requerido para equipos');
       }
 
-      // Validar dimensiones para equipos
-      if (input.kind === 'EQUIPMENT') {
+      // Validar dimensiones para equipos y repuestos
+      if (input.kind === 'EQUIPMENT' || input.kind === 'SPARE_PART') {
         if (!input.weightValue || !input.weightUnitId) {
-          return failure('El peso y su unidad son requeridos para equipos');
+          return failure('El peso y su unidad son requeridos');
         }
         if (!input.widthValue || !input.widthUnitId) {
-          return failure('El ancho y su unidad son requeridos para equipos');
+          return failure('El ancho y su unidad son requeridos');
         }
         if (!input.heightValue || !input.heightUnitId) {
-          return failure('El alto y su unidad son requeridos para equipos');
+          return failure('El alto y su unidad son requeridos');
         }
         if (!input.lengthValue || !input.lengthUnitId) {
-          return failure('El largo y su unidad son requeridos para equipos');
+          return failure('El largo y su unidad son requeridos');
         }
       }
 

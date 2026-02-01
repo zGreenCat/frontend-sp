@@ -33,7 +33,11 @@ export interface CreateProductInput {
   // Campos específicos de EQUIPMENT y SPARE_PART
   model?: string;
   
-  // Campos de dimensiones para EQUIPMENT
+  // Campos específicos de SPARE_PART
+  equipmentId?: string; // UUID del equipo al que pertenece el repuesto
+  category?: 'COMPONENT' | 'SPARE'; // Categoría del repuesto
+  
+  // Campos de dimensiones para EQUIPMENT y SPARE_PART
   weightValue?: number;
   weightUnitId?: string; // UUID de la unidad de peso
   widthValue?: number;
@@ -46,7 +50,7 @@ export interface CreateProductInput {
   // Campos específicos de MATERIAL
   unitOfMeasureId?: string; // UUID de la unidad de medida
   isHazardous?: boolean;
-  categoryIds?: string[]; // UUIDs de categorías
+  categoryId?: string; // UUID de la categoría (una sola)
   
   // Campos opcionales de negocio
   providerId?: string;
@@ -69,7 +73,7 @@ export interface UpdateProductInput {
   model?: string;
   unitOfMeasureId?: string;
   isHazardous?: boolean;
-  categoryIds?: string[];
+  categoryId?: string;
   providerId?: string;
   projectId?: string;
   

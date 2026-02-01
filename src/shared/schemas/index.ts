@@ -194,7 +194,7 @@ const productSchemaBase = z.object({
     .max(100, 'El modelo no puede exceder 100 caracteres')
     .optional(),
   
-  // Campos de dimensiones para EQUIPMENT
+  // Campos de dimensiones para EQUIPMENT y SPARE_PART
   weightValue: z.number().optional(),
   weightUnitId: z.string().optional(),
   widthValue: z.number().optional(),
@@ -204,11 +204,15 @@ const productSchemaBase = z.object({
   lengthValue: z.number().optional(),
   lengthUnitId: z.string().optional(),
   
+  // Campos específicos de SPARE_PART
+  equipmentId: z.string().optional(), // UUID del equipo al que pertenece
+  category: z.enum(['COMPONENT', 'SPARE']).optional(), // Categoría del repuesto
+  
   // Campos específicos de MATERIAL
   unitOfMeasureId: z.string()
     .optional(),
   isHazardous: z.boolean().optional().default(false),
-  categoryIds: z.array(z.string()).optional(),
+  categoryId: z.string().optional(), // Una sola categoría
   
   // Campos opcionales de negocio
   providerId: z.string().optional(),
@@ -230,20 +234,20 @@ export const createProductSchema = productSchemaBase.refine(
   }
 ).refine(
   (data) => {
-    // Validar que equipos y repuestos tengan model
-    if (data.kind === 'EQUIPMENT' || data.kind === 'SPARE_PART') {
+    // Validar que solo equipos tengan model (repuestos no tienen model)
+    if (data.kind === 'EQUIPMENT') {
       return !!data.model;
     }
     return true;
   },
   {
-    message: 'El modelo es requerido para equipos y repuestos',
+    message: 'El modelo es requerido para equipos',
     path: ['model'],
   }
 ).refine(
   (data) => {
-    // Validar que equipos tengan dimensiones completas
-    if (data.kind === 'EQUIPMENT') {
+    // Validar que equipos y repuestos tengan dimensiones completas
+    if (data.kind === 'EQUIPMENT' || data.kind === 'SPARE_PART') {
       const hasWeight = data.weightValue !== undefined && !!data.weightUnitId;
       const hasWidth = data.widthValue !== undefined && !!data.widthUnitId;
       const hasHeight = data.heightValue !== undefined && !!data.heightUnitId;
@@ -253,7 +257,7 @@ export const createProductSchema = productSchemaBase.refine(
     return true;
   },
   {
-    message: 'Los equipos requieren peso, ancho, alto y largo con sus unidades',
+    message: 'Los equipos y repuestos requieren peso, ancho, alto y largo con sus unidades',
     path: ['weightValue'],
   }
 );

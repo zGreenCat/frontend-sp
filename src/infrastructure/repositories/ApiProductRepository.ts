@@ -395,14 +395,22 @@ export class ApiProductRepository implements IProductRepository {
           ...basePayload,
           unitOfMeasureId: input.unitOfMeasureId,
           isHazardous: input.isHazardous || false,
-          categoryIds: input.categoryIds || [],
+          categoryId: input.categoryId, // Una sola categoría
         };
 
       case 'SPARE_PART':
         return {
           ...basePayload,
-          model: input.model || '',
-          category: 'SPARE', // Valor por defecto según backend
+          equipmentId: input.equipmentId,
+          category: input.category || 'COMPONENT', // COMPONENT o SPARE
+          weightValue: input.weightValue,
+          weightUnitId: input.weightUnitId,
+          widthValue: input.widthValue,
+          widthUnitId: input.widthUnitId,
+          heightValue: input.heightValue,
+          heightUnitId: input.heightUnitId,
+          lengthValue: input.lengthValue,
+          lengthUnitId: input.lengthUnitId,
         };
 
       default:

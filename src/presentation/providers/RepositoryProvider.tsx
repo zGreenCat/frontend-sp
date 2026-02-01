@@ -14,6 +14,7 @@ import { ApiBoxRepository } from '@/infrastructure/repositories/ApiBoxRepository
 import { ApiProductRepository } from '@/infrastructure/repositories/ApiProductRepository';
 import { ApiUnitOfMeasureRepository } from '@/infrastructure/repositories/ApiUnitOfMeasureRepository';
 import { ApiCurrencyRepository } from '@/infrastructure/repositories/ApiCurrencyRepository';
+import { ApiMaterialCategoryRepository } from '@/infrastructure/repositories/ApiMaterialCategoryRepository';
 // Mock Repositories (mantener para módulos no conectados)
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
 import { MockProjectRepository } from '@/infrastructure/repositories/MockProjectRepository';
@@ -30,6 +31,7 @@ import { IBoxRepository } from '@/domain/repositories/IBoxRepository';
 import { IProductRepository } from '@/domain/repositories/IProductRepository';
 import { IUnitOfMeasureRepository } from '@/domain/repositories/IUnitOfMeasureRepository';
 import { ICurrencyRepository } from '@/domain/repositories/ICurrencyRepository';
+import { IMaterialCategoryRepository } from '@/domain/repositories/IMaterialCategoryRepository';
 
 /**
  * Repositorios disponibles en la aplicación
@@ -43,6 +45,7 @@ interface Repositories {
   productRepo: IProductRepository; // ✅ Repositorio unificado de productos
   unitOfMeasureRepo: IUnitOfMeasureRepository;
   currencyRepo: ICurrencyRepository;
+  materialCategoryRepo: IMaterialCategoryRepository;
   providerRepo: MockProviderRepository;
   projectRepo: MockProjectRepository;
   assignmentHistoryRepo: IAssignmentHistoryRepository;
@@ -72,6 +75,7 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     // ✅ Catálogos de productos
     unitOfMeasureRepo: new ApiUnitOfMeasureRepository(),
     currencyRepo: new ApiCurrencyRepository(),
+    materialCategoryRepo: new ApiMaterialCategoryRepository(),
     
     // Repositorios Mock (pendientes de conectar)
     providerRepo: new MockProviderRepository(),

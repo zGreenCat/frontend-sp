@@ -19,8 +19,12 @@ export interface Product {
 
   // Campos específicos de Equipment y SparePart
   model?: string;
+  
+  // Campos específicos de SparePart
+  equipmentId?: string; // UUID del equipo al que pertenece
+  category?: 'COMPONENT' | 'SPARE'; // Categoría del repuesto
 
-  // Campos de dimensiones (solo para EQUIPMENT)
+  // Campos de dimensiones (para EQUIPMENT y SPARE_PART)
   weightValue?: number;
   weightUnitId?: string;
   widthValue?: number;
