@@ -23,7 +23,7 @@ export interface CreateProductInput {
   name: string;
   // ❌ SKU removido - lo genera el backend automáticamente
   currencyId: string; // UUID de la moneda
-  monetaryValue: string; // Valor como string: "10.50"
+  monetaryValue: number; // Valor numérico: 10.50
   // ✅ isActive es opcional - siempre será true en creación (el usuario no puede crear productos inactivos)
   isActive?: boolean;
   
@@ -32,6 +32,16 @@ export interface CreateProductInput {
   
   // Campos específicos de EQUIPMENT y SPARE_PART
   model?: string;
+  
+  // Campos de dimensiones para EQUIPMENT
+  weightValue?: number;
+  weightUnitId?: string; // UUID de la unidad de peso
+  widthValue?: number;
+  widthUnitId?: string; // UUID de la unidad de longitud
+  heightValue?: number;
+  heightUnitId?: string; // UUID de la unidad de longitud
+  lengthValue?: number;
+  lengthUnitId?: string; // UUID de la unidad de longitud
   
   // Campos específicos de MATERIAL
   unitOfMeasureId?: string; // UUID de la unidad de medida
@@ -53,7 +63,7 @@ export interface UpdateProductInput {
   name?: string;
   // sku es readonly - no se puede actualizar
   currencyId?: string;
-  monetaryValue?: string;
+  monetaryValue?: number;
   isActive?: boolean;
   description?: string;
   model?: string;

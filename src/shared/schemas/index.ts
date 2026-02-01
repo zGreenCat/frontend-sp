@@ -184,9 +184,8 @@ const productSchemaBase = z.object({
   // ✅ currencyId y unitOfMeasureId ahora son IDs (UUIDs) no códigos
   currencyId: z.string()
     .min(1, 'La moneda es requerida'),
-  monetaryValue: z.string()
-    .min(1, 'El valor monetario es requerido')
-    .regex(/^\d+(\.\d{1,2})?$/, 'Formato de precio inválido (ej: 10.50)'),
+  monetaryValue: z.number()
+    .min(0, 'El valor monetario debe ser mayor o igual a 0'),
   // ✅ isActive siempre es true en creación (el usuario no puede crear productos inactivos)
   isActive: z.boolean().optional().default(true),
   
@@ -194,6 +193,16 @@ const productSchemaBase = z.object({
   model: z.string()
     .max(100, 'El modelo no puede exceder 100 caracteres')
     .optional(),
+  
+  // Campos de dimensiones para EQUIPMENT
+  weightValue: z.number().optional(),
+  weightUnitId: z.string().optional(),
+  widthValue: z.number().optional(),
+  widthUnitId: z.string().optional(),
+  heightValue: z.number().optional(),
+  heightUnitId: z.string().optional(),
+  lengthValue: z.number().optional(),
+  lengthUnitId: z.string().optional(),
   
   // Campos específicos de MATERIAL
   unitOfMeasureId: z.string()
@@ -231,6 +240,22 @@ export const createProductSchema = productSchemaBase.refine(
     message: 'El modelo es requerido para equipos y repuestos',
     path: ['model'],
   }
+).refine(
+  (data) => {
+    // Validar que equipos tengan dimensiones completas
+    if (data.kind === 'EQUIPMENT') {
+      const hasWeight = data.weightValue !== undefined && !!data.weightUnitId;
+      const hasWidth = data.widthValue !== undefined && !!data.widthUnitId;
+      const hasHeight = data.heightValue !== undefined && !!data.heightUnitId;
+      const hasLength = data.lengthValue !== undefined && !!data.lengthUnitId;
+      return hasWeight && hasWidth && hasHeight && hasLength;
+    }
+    return true;
+  },
+  {
+    message: 'Los equipos requieren peso, ancho, alto y largo con sus unidades',
+    path: ['weightValue'],
+  }
 );
 
 // Schema de actualización (sin validaciones condicionales por ahora)
@@ -246,8 +271,8 @@ export const updateProductSchema = z.object({
     .max(500, 'La descripción no puede exceder 500 caracteres')
     .optional(),
   currencyId: z.string().optional(),
-  monetaryValue: z.string()
-    .regex(/^\d+(\.\d{1,2})?$/, 'Formato de precio inválido (ej: 10.50)')
+  monetaryValue: z.number()
+    .min(0, 'El valor monetario debe ser mayor o igual a 0')
     .optional(),
   isActive: z.boolean().optional(),
   model: z.string()

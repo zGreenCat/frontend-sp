@@ -380,6 +380,14 @@ export class ApiProductRepository implements IProductRepository {
         return {
           ...basePayload,
           model: input.model || '',
+          weightValue: input.weightValue,
+          weightUnitId: input.weightUnitId,
+          widthValue: input.widthValue,
+          widthUnitId: input.widthUnitId,
+          heightValue: input.heightValue,
+          heightUnitId: input.heightUnitId,
+          lengthValue: input.lengthValue,
+          lengthUnitId: input.lengthUnitId,
         };
 
       case 'MATERIAL':

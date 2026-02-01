@@ -55,12 +55,21 @@ export function ProductForm({
       name: defaultValues?.name || "",
       description: defaultValues?.description || "",
       currencyId: defaultValues?.currencyId || "",
-      monetaryValue: defaultValues?.monetaryValue || "",
+      monetaryValue: defaultValues?.monetaryValue || 0,
       isActive: defaultValues?.isActive ?? true,
       model: defaultValues?.model || "",
       unitOfMeasureId: defaultValues?.unitOfMeasureId || "",
       isHazardous: defaultValues?.isHazardous || false,
       categoryIds: defaultValues?.categoryIds || [],
+      // Dimensiones para equipos
+      weightValue: defaultValues?.weightValue || 0,
+      weightUnitId: defaultValues?.weightUnitId || "",
+      widthValue: defaultValues?.widthValue || 0,
+      widthUnitId: defaultValues?.widthUnitId || "",
+      heightValue: defaultValues?.heightValue || 0,
+      heightUnitId: defaultValues?.heightUnitId || "",
+      lengthValue: defaultValues?.lengthValue || 0,
+      lengthUnitId: defaultValues?.lengthUnitId || "",
     },
   });
 
@@ -155,6 +164,235 @@ export function ProductForm({
               </FormItem>
             )}
           />
+        )}
+
+        {/* Dimensiones (solo para EQUIPMENT) */}
+        {kind === 'EQUIPMENT' && (
+          <>
+            {/* Peso */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="weightValue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Peso <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        placeholder="500"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="weightUnitId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unidad peso <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={isLoading || loadingUnits}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units?.filter(u => u.type === 'WEIGHT').map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Ancho */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="widthValue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Ancho <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        placeholder="100"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="widthUnitId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unidad ancho <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={isLoading || loadingUnits}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units?.filter(u => u.type === 'LENGTH').map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Alto */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="heightValue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Alto <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        placeholder="150"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="heightUnitId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unidad alto <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={isLoading || loadingUnits}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units?.filter(u => u.type === 'LENGTH').map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Largo */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="lengthValue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Largo <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        placeholder="120"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lengthUnitId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unidad largo <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={isLoading || loadingUnits}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units?.filter(u => u.type === 'LENGTH').map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.abbreviation})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </>
         )}
 
         {/* Unidad de medida (solo para MATERIAL) */}
@@ -259,9 +497,11 @@ export function ProductForm({
                 </FormLabel>
                 <FormControl>
                   <Input 
-                    type="text"
+                    type="number"
+                    step="0.01"
                     placeholder="0.00" 
                     {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     disabled={isLoading}
                     className="font-mono"
                   />

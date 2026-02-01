@@ -20,6 +20,16 @@ export interface Product {
   // Campos específicos de Equipment y SparePart
   model?: string;
 
+  // Campos de dimensiones (solo para EQUIPMENT)
+  weightValue?: number;
+  weightUnitId?: string;
+  widthValue?: number;
+  widthUnitId?: string;
+  heightValue?: number;
+  heightUnitId?: string;
+  lengthValue?: number;
+  lengthUnitId?: string;
+
   // Campos específicos de Material
   unitOfMeasure?: string; // 'KG' | 'LT' | 'UNIT' | etc. (código de unidad)
   unitOfMeasureId?: string; // UUID de la unidad de medida

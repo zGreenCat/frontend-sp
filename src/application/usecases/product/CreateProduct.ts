@@ -34,6 +34,22 @@ export class CreateProduct {
         return failure('El modelo es requerido para equipos y repuestos');
       }
 
+      // Validar dimensiones para equipos
+      if (input.kind === 'EQUIPMENT') {
+        if (!input.weightValue || !input.weightUnitId) {
+          return failure('El peso y su unidad son requeridos para equipos');
+        }
+        if (!input.widthValue || !input.widthUnitId) {
+          return failure('El ancho y su unidad son requeridos para equipos');
+        }
+        if (!input.heightValue || !input.heightUnitId) {
+          return failure('El alto y su unidad son requeridos para equipos');
+        }
+        if (!input.lengthValue || !input.lengthUnitId) {
+          return failure('El largo y su unidad son requeridos para equipos');
+        }
+      }
+
       if (!input.currencyId) {
         return failure('La moneda es requerida');
       }
