@@ -23,17 +23,23 @@ export class CreateProduct {
         return failure('El nombre del producto es requerido');
       }
 
-      if (!input.sku || input.sku.trim().length === 0) {
-        return failure('El código (SKU) del producto es requerido');
-      }
+      // ✅ SKU removido - lo genera el backend automáticamente
 
       // Validar campos específicos según el tipo
-      if (input.kind === 'MATERIAL' && !input.unitOfMeasure) {
+      if (input.kind === 'MATERIAL' && !input.unitOfMeasureId) {
         return failure('La unidad de medida es requerida para materiales');
       }
 
       if ((input.kind === 'EQUIPMENT' || input.kind === 'SPARE_PART') && !input.model) {
         return failure('El modelo es requerido para equipos y repuestos');
+      }
+
+      if (!input.currencyId) {
+        return failure('La moneda es requerida');
+      }
+
+      if (!input.monetaryValue) {
+        return failure('El valor monetario es requerido');
       }
 
       // Delegar al repositorio

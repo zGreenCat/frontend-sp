@@ -21,13 +21,16 @@ export interface Product {
   model?: string;
 
   // Campos específicos de Material
-  unitOfMeasure?: string; // 'KG' | 'LT' | 'UNIT' | etc.
+  unitOfMeasure?: string; // 'KG' | 'LT' | 'UNIT' | etc. (código de unidad)
+  unitOfMeasureId?: string; // UUID de la unidad de medida
   isHazardous?: boolean;
 
   // Campos monetarios (NO parseamos el decimal, guardamos crudo)
   currency?: string; // Código de moneda (CLP, USD, EUR)
+  currencyId?: string; // UUID de la moneda
   currencySymbol?: string; // Símbolo de moneda ($, USD, €)
   monetaryValueRaw?: unknown; // Formato crudo del backend { s, e, d } (legacy)
+  monetaryValue?: string; // Valor monetario como string "10.50"
   price?: number; // Precio como número (nueva estructura del backend)
 
   // Estado y auditoría
@@ -36,10 +39,10 @@ export interface Product {
   updatedAt: string;
 
   // Campos adicionales de negocio (compatibilidad con código existente)
-  sku?: string; // Opcional, algunos productos pueden no tener SKU
+  sku?: string; // Opcional, algunos productos pueden no tener SKU (generado por backend)
   status?: ProductStatus; // Mapeo de isActive a ACTIVO/INACTIVO
   categories?: (string | { id?: string; categoryId?: string; name?: string })[];
-  monetaryValue?: number; // Deprecated: usar monetaryValueRaw
+  categoryIds?: string[]; // UUIDs de categorías
   providerId?: string;
   projectId?: string;
   tenantId?: string;

@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { createProductSchema, CreateProductInput } from "@/shared/schemas";
 import { ProductKind } from "@/domain/entities/Product";
-import { useUnitsOfMeasure, mapUnitsToOptions, useCurrencies, mapCurrenciesToOptions } from "@/hooks/useUnitsAndCurrencies";
+import { useUnitsOfMeasure, useCurrencies } from "@/hooks/useUnitsAndCurrencies";
 
 interface ProductFormProps {
   onSubmit: (data: CreateProductInput) => Promise<void>;
@@ -48,21 +48,19 @@ export function ProductForm({
   const { data: units, isLoading: loadingUnits } = useUnitsOfMeasure();
   const { data: currencies, isLoading: loadingCurrencies } = useCurrencies();
 
-  const unitOptions = units ? mapUnitsToOptions(units) : [];
-  const currencyOptions = currencies ? mapCurrenciesToOptions(currencies) : [];
-
   const form = useForm<CreateProductInput>({
     resolver: zodResolver(createProductSchema),
     defaultValues: {
       kind,
       name: defaultValues?.name || "",
-      sku: defaultValues?.sku || "",
       description: defaultValues?.description || "",
-      currency: defaultValues?.currency || "CLP",
+      currencyId: defaultValues?.currencyId || "",
+      monetaryValue: defaultValues?.monetaryValue || "",
       isActive: defaultValues?.isActive ?? true,
       model: defaultValues?.model || "",
-      unitOfMeasure: defaultValues?.unitOfMeasure || "UNIT",
+      unitOfMeasureId: defaultValues?.unitOfMeasureId || "",
       isHazardous: defaultValues?.isHazardous || false,
+      categoryIds: defaultValues?.categoryIds || [],
     },
   });
 
@@ -110,34 +108,6 @@ export function ProductForm({
                   disabled={isLoading}
                 />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Código (SKU) */}
-        <FormField
-          control={form.control}
-          name="sku"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Código (SKU) <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Ej: MAT-001, EQP-100" 
-                  {...field}
-                  onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                  disabled={isLoading || mode === "edit"}
-                  className="font-mono"
-                />
-              </FormControl>
-              <FormDescription>
-                {mode === "edit" 
-                  ? "El código no puede ser modificado"
-                  : "Código único del producto (se convertirá a mayúsculas)"}
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -191,7 +161,7 @@ export function ProductForm({
         {kind === 'MATERIAL' && (
           <FormField
             control={form.control}
-            name="unitOfMeasure"
+            name="unitOfMeasureId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
@@ -208,9 +178,9 @@ export function ProductForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {unitOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {units?.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name} ({unit.abbreviation})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -246,60 +216,89 @@ export function ProductForm({
           />
         )}
 
-        {/* Moneda */}
-        <FormField
-          control={form.control}
-          name="currency"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Moneda <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
-                defaultValue={field.value}
-                disabled={isLoading || loadingCurrencies}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={loadingCurrencies ? "Cargando monedas..." : "Selecciona una moneda"} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {currencyOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Moneda y Valor Monetario */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="currencyId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Moneda <span className="text-destructive">*</span>
+                </FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                  disabled={isLoading || loadingCurrencies}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingCurrencies ? "Cargando..." : "Selecciona moneda"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {currencies?.map((currency) => (
+                      <SelectItem key={currency.id} value={currency.id}>
+                        {currency.symbol} {currency.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* Estado Activo */}
-        <FormField
-          control={form.control}
-          name="isActive"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <FormLabel>Estado</FormLabel>
+          <FormField
+            control={form.control}
+            name="monetaryValue"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Valor unitario <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="text"
+                    placeholder="0.00" 
+                    {...field}
+                    disabled={isLoading}
+                    className="font-mono"
+                  />
+                </FormControl>
                 <FormDescription>
-                  {field.value ? "Producto activo" : "Producto inactivo"}
+                  Formato: 10.50 (sin separadores de miles)
                 </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Estado Activo - Solo en modo edición */}
+        {mode === "edit" && (
+          <FormField
+            control={form.control}
+            name="isActive"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel>Estado</FormLabel>
+                  <FormDescription>
+                    {field.value ? "Producto activo" : "Producto inactivo"}
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={isLoading}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* Botones de acción */}
         <div className="flex gap-3 pt-4">

@@ -21,9 +21,11 @@ export interface CreateProductInput {
   // Campos obligatorios para todos los productos
   kind: ProductKind;
   name: string;
-  sku: string; // Código del producto
-  currency: Currency;
-  isActive: boolean;
+  // ❌ SKU removido - lo genera el backend automáticamente
+  currencyId: string; // UUID de la moneda
+  monetaryValue: string; // Valor como string: "10.50"
+  // ✅ isActive es opcional - siempre será true en creación (el usuario no puede crear productos inactivos)
+  isActive?: boolean;
   
   // Campos opcionales comunes
   description?: string;
@@ -32,9 +34,9 @@ export interface CreateProductInput {
   model?: string;
   
   // Campos específicos de MATERIAL
-  unitOfMeasure?: string; // 'KG' | 'LT' | 'UNIT' | etc.
+  unitOfMeasureId?: string; // UUID de la unidad de medida
   isHazardous?: boolean;
-  categories?: string[]; // IDs de categorías
+  categoryIds?: string[]; // UUIDs de categorías
   
   // Campos opcionales de negocio
   providerId?: string;
@@ -49,14 +51,15 @@ export interface CreateProductInput {
 export interface UpdateProductInput {
   id: string;
   name?: string;
-  sku?: string; // Opcional, pero será readonly en UI
-  currency?: Currency;
+  // sku es readonly - no se puede actualizar
+  currencyId?: string;
+  monetaryValue?: string;
   isActive?: boolean;
   description?: string;
   model?: string;
-  unitOfMeasure?: string;
+  unitOfMeasureId?: string;
   isHazardous?: boolean;
-  categories?: string[];
+  categoryIds?: string[];
   providerId?: string;
   projectId?: string;
   

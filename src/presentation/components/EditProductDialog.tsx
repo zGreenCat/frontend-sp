@@ -64,13 +64,14 @@ export function EditProductDialog({
   const defaultValues: Partial<CreateProductInput> = {
     kind: product.kind,
     name: product.name,
-    sku: product.sku || '',
     description: product.description || '',
-    currency: (product.currency as 'CLP' | 'USD' | 'EUR') || 'CLP',
+    currencyId: product.currencyId || '',
+    monetaryValue: product.monetaryValue || product.price?.toString() || '',
     isActive: product.isActive,
     model: product.model || '',
-    unitOfMeasure: product.unitOfMeasure || 'UNIT',
+    unitOfMeasureId: product.unitOfMeasureId || '',
     isHazardous: product.isHazardous || false,
+    categoryIds: product.categoryIds || [],
   };
 
   // Handler para transformar CreateProductInput a UpdateProductInput
@@ -79,13 +80,14 @@ export function EditProductDialog({
     const updateInput: UpdateProductInput = {
       id: product.id,
       name: data.name,
-      // sku: data.sku, // No incluir SKU porque es readonly
       description: data.description,
-      currency: data.currency,
+      currencyId: data.currencyId,
+      monetaryValue: data.monetaryValue,
       isActive: data.isActive,
       model: data.model,
-      unitOfMeasure: data.unitOfMeasure,
+      unitOfMeasureId: data.unitOfMeasureId,
       isHazardous: data.isHazardous,
+      categoryIds: data.categoryIds,
       // TODO: Agregar justification cuando backend lo soporte
     };
 

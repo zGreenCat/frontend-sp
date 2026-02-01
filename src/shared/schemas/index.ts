@@ -177,18 +177,18 @@ const productSchemaBase = z.object({
     .min(1, 'El nombre es requerido')
     .max(100, 'El nombre no puede exceder 100 caracteres')
     .trim(),
-  sku: z.string()
-    .min(1, 'El código (SKU) es requerido')
-    .max(50, 'El código no puede exceder 50 caracteres')
-    .trim()
-    .toUpperCase(),
+  // ❌ SKU removido - lo genera el backend
   description: z.string()
     .max(500, 'La descripción no puede exceder 500 caracteres')
     .optional(),
-  // ✅ Cambiado de enum a string para permitir nuevas monedas sin tocar frontend
-  currency: z.string()
+  // ✅ currencyId y unitOfMeasureId ahora son IDs (UUIDs) no códigos
+  currencyId: z.string()
     .min(1, 'La moneda es requerida'),
-  isActive: z.boolean().default(true),
+  monetaryValue: z.string()
+    .min(1, 'El valor monetario es requerido')
+    .regex(/^\d+(\.\d{1,2})?$/, 'Formato de precio inválido (ej: 10.50)'),
+  // ✅ isActive siempre es true en creación (el usuario no puede crear productos inactivos)
+  isActive: z.boolean().optional().default(true),
   
   // Campos específicos de EQUIPMENT y SPARE_PART
   model: z.string()
@@ -196,11 +196,10 @@ const productSchemaBase = z.object({
     .optional(),
   
   // Campos específicos de MATERIAL
-  unitOfMeasure: z.string()
-    .max(20, 'La unidad de medida no puede exceder 20 caracteres')
+  unitOfMeasureId: z.string()
     .optional(),
   isHazardous: z.boolean().optional().default(false),
-  categories: z.array(z.string()).optional(),
+  categoryIds: z.array(z.string()).optional(),
   
   // Campos opcionales de negocio
   providerId: z.string().optional(),
@@ -210,15 +209,15 @@ const productSchemaBase = z.object({
 // Schema de creación con validaciones condicionales
 export const createProductSchema = productSchemaBase.refine(
   (data) => {
-    // Validar que materiales tengan unitOfMeasure
+    // Validar que materiales tengan unitOfMeasureId
     if (data.kind === 'MATERIAL') {
-      return !!data.unitOfMeasure;
+      return !!data.unitOfMeasureId;
     }
     return true;
   },
   {
     message: 'La unidad de medida es requerida para materiales',
-    path: ['unitOfMeasure'],
+    path: ['unitOfMeasureId'],
   }
 ).refine(
   (data) => {
@@ -235,8 +234,28 @@ export const createProductSchema = productSchemaBase.refine(
 );
 
 // Schema de actualización (sin validaciones condicionales por ahora)
-export const updateProductSchema = productSchemaBase.partial().extend({
+// ✅ El SKU sí existe en actualización (es readonly)
+export const updateProductSchema = z.object({
   id: z.string().min(1),
+  name: z.string()
+    .min(1, 'El nombre es requerido')
+    .max(100, 'El nombre no puede exceder 100 caracteres')
+    .trim()
+    .optional(),
+  description: z.string()
+    .max(500, 'La descripción no puede exceder 500 caracteres')
+    .optional(),
+  currencyId: z.string().optional(),
+  monetaryValue: z.string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Formato de precio inválido (ej: 10.50)')
+    .optional(),
+  isActive: z.boolean().optional(),
+  model: z.string()
+    .max(100, 'El modelo no puede exceder 100 caracteres')
+    .optional(),
+  unitOfMeasureId: z.string().optional(),
+  isHazardous: z.boolean().optional(),
+  categoryIds: z.array(z.string()).optional(),
 });
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;

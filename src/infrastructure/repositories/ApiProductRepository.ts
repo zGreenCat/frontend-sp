@@ -299,11 +299,15 @@ export class ApiProductRepository implements IProductRepository {
       model: equipment.model,
       // Soportar ambas estructuras: nueva (price.currency) y antigua (currency directo)
       currency: equipment.price?.currency.code || (equipment as any).currency,
+      currencyId: equipment.price?.currency.id,
       currencySymbol: equipment.price?.currency.symbol,
       price: equipment.price?.amount,
+      monetaryValue: equipment.price?.amount?.toString(),
       monetaryValueRaw: equipment.price?.amount || (equipment as any).monetaryValue,
       unitOfMeasure: equipment.unitOfMeasure?.abbreviation || equipment.unitOfMeasure?.code,
+      unitOfMeasureId: equipment.unitOfMeasure?.id,
       categories: equipment.categories?.map(c => ({ id: c.id, name: c.name })),
+      categoryIds: equipment.categories?.map(c => c.id),
       // Soportar ambas estructuras: nueva (flags.isActive) y antigua (isActive directo)
       isActive: equipment.flags?.isActive ?? (equipment as any).isActive ?? true,
       createdAt: equipment.audit?.createdAt || (equipment as any).createdAt,
@@ -318,16 +322,20 @@ export class ApiProductRepository implements IProductRepository {
       name: material.name,
       description: material.description,
       unitOfMeasure: material.unitOfMeasure?.abbreviation || material.unitOfMeasure?.code || (material as any).unitOfMeasure,
+      unitOfMeasureId: typeof material.unitOfMeasure === 'object' ? material.unitOfMeasure?.id : undefined,
       // Soportar ambas estructuras
       isHazardous: material.flags?.isHazardous ?? (material as any).isHazardous ?? false,
       currency: material.price?.currency.code || (material as any).currency,
+      currencyId: material.price?.currency.id,
       currencySymbol: material.price?.currency.symbol,
       price: material.price?.amount,
+      monetaryValue: material.price?.amount?.toString(),
       monetaryValueRaw: material.price?.amount || (material as any).monetaryValue,
       isActive: material.flags?.isActive ?? (material as any).isActive ?? true,
       createdAt: material.audit?.createdAt || (material as any).createdAt,
       updatedAt: material.audit?.updatedAt || (material as any).updatedAt,
       categories: material.categories?.map(c => ({ id: c.id, name: c.name })) || (material as any).categories,
+      categoryIds: material.categories?.map(c => c.id),
     };
   }
 
@@ -340,10 +348,13 @@ export class ApiProductRepository implements IProductRepository {
       model: sparePart.model,
       // Soportar ambas estructuras
       currency: sparePart.price?.currency.code || (sparePart as any).currency,
+      currencyId: sparePart.price?.currency.id,
       currencySymbol: sparePart.price?.currency.symbol,
       price: sparePart.price?.amount,
+      monetaryValue: sparePart.price?.amount?.toString(),
       monetaryValueRaw: sparePart.price?.amount || (sparePart as any).monetaryValue,
       unitOfMeasure: sparePart.unitOfMeasure?.abbreviation || sparePart.unitOfMeasure?.code,
+      unitOfMeasureId: sparePart.unitOfMeasure?.id,
       isActive: sparePart.flags?.isActive ?? (sparePart as any).isActive ?? true,
       createdAt: sparePart.audit?.createdAt || (sparePart as any).createdAt,
       updatedAt: sparePart.audit?.updatedAt || (sparePart as any).updatedAt,
@@ -356,13 +367,12 @@ export class ApiProductRepository implements IProductRepository {
    */
   private mapInputToBackendPayload(input: CreateProductInput): any {
     // Campos comunes a todos los tipos
+    // ⚠️ El backend NO acepta isActive ni tenantId en creación
     const basePayload = {
       name: input.name,
-      sku: input.sku,
       description: input.description || '',
-      currency: input.currency,
-      isActive: input.isActive,
-      tenantId: TENANT_ID,
+      monetaryValue: input.monetaryValue,
+      currencyId: input.currencyId,
     };
 
     switch (input.kind) {
@@ -375,9 +385,9 @@ export class ApiProductRepository implements IProductRepository {
       case 'MATERIAL':
         return {
           ...basePayload,
-          unitOfMeasure: input.unitOfMeasure || 'UNIT',
+          unitOfMeasureId: input.unitOfMeasureId,
           isHazardous: input.isHazardous || false,
-          // categories se manejarían después de crear el material si el backend lo requiere
+          categoryIds: input.categoryIds || [],
         };
 
       case 'SPARE_PART':
@@ -422,9 +432,9 @@ export class ApiProductRepository implements IProductRepository {
     const basePayload: any = {};
     
     if (input.name !== undefined) basePayload.name = input.name;
-    if (input.sku !== undefined) basePayload.sku = input.sku;
     if (input.description !== undefined) basePayload.description = input.description;
-    if (input.currency !== undefined) basePayload.currency = input.currency;
+    if (input.currencyId !== undefined) basePayload.currencyId = input.currencyId;
+    if (input.monetaryValue !== undefined) basePayload.monetaryValue = input.monetaryValue;
     if (input.isActive !== undefined) basePayload.isActive = input.isActive;
 
     switch (kind) {
@@ -433,9 +443,9 @@ export class ApiProductRepository implements IProductRepository {
         break;
 
       case 'MATERIAL':
-        if (input.unitOfMeasure !== undefined) basePayload.unitOfMeasure = input.unitOfMeasure;
+        if (input.unitOfMeasureId !== undefined) basePayload.unitOfMeasureId = input.unitOfMeasureId;
         if (input.isHazardous !== undefined) basePayload.isHazardous = input.isHazardous;
-        // TODO: categories cuando backend lo soporte
+        if (input.categoryIds !== undefined) basePayload.categoryIds = input.categoryIds;
         break;
 
       case 'SPARE_PART':
