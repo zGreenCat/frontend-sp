@@ -169,69 +169,78 @@ export type ChangeBoxStatusInput = z.infer<typeof changeBoxStatusSchema>;
 // ────────────────────────────────────────────────────────────────
 
 // Schema base sin validaciones condicionales
-const productSchemaBase = z.object({
-  kind: z.enum(['EQUIPMENT', 'MATERIAL', 'SPARE_PART'], {
-    required_error: 'El tipo de producto es requerido',
+export const productSchemaBase = z.object({
+  kind: z.enum(["EQUIPMENT", "MATERIAL", "SPARE_PART"], {
+    required_error: "El tipo de producto es requerido",
   }),
-  name: z.string()
-    .min(1, 'El nombre es requerido')
-    .max(100, 'El nombre no puede exceder 100 caracteres')
+
+  name: z
+    .string()
+    .min(1, "El nombre es requerido")
+    .max(100, "El nombre no puede exceder 100 caracteres")
     .trim(),
-  // ❌ SKU removido - lo genera el backend
-  description: z.string()
-    .max(500, 'La descripción no puede exceder 500 caracteres')
+
+  description: z
+    .string()
+    .max(500, "La descripción no puede exceder 500 caracteres")
     .optional(),
-  // ✅ currencyId y unitOfMeasureId ahora son IDs (UUIDs) no códigos
-  currencyId: z.string()
-    .min(1, 'La moneda es requerida'),
-  monetaryValue: z.number()
-    .min(0, 'El valor monetario debe ser mayor o igual a 0')
+
+  // IDs de catálogo
+  currencyId: z.string().min(1, "La moneda es requerida"),
+
+  // 👇 Ajuste importante: coerce a number, pero opcional aquí
+  monetaryValue: z
+    .coerce
+    .number()
+    .min(0, "El valor monetario debe ser mayor o igual a 0")
     .optional(),
-  // ✅ isActive siempre es true en creación (el usuario no puede crear productos inactivos)
+
   isActive: z.boolean().optional().default(true),
-  
-  // Campos específicos de EQUIPMENT y SPARE_PART
-  model: z.string()
-    .max(100, 'El modelo no puede exceder 100 caracteres')
+
+  // EQUIPMENT / SPARE_PART
+  model: z
+    .string()
+    .max(100, "El modelo no puede exceder 100 caracteres")
     .optional(),
-  
-  // Campos de dimensiones para EQUIPMENT y SPARE_PART
-  weightValue: z.number().optional(),
+
+  // Dimensiones
+  weightValue: z.coerce.number().min(0).optional(),
   weightUnitId: z.string().optional(),
-  widthValue: z.number().optional(),
+  widthValue: z.coerce.number().min(0).optional(),
   widthUnitId: z.string().optional(),
-  heightValue: z.number().optional(),
+  heightValue: z.coerce.number().min(0).optional(),
   heightUnitId: z.string().optional(),
-  lengthValue: z.number().optional(),
+  lengthValue: z.coerce.number().min(0).optional(),
   lengthUnitId: z.string().optional(),
-  
-  // Campos específicos de SPARE_PART
-  equipmentId: z.string().optional(), // UUID del equipo al que pertenece
-  category: z.enum(['COMPONENT', 'SPARE']).optional(), // Categoría del repuesto
-  
-  // Campos específicos de MATERIAL
-  unitOfMeasureId: z.string()
-    .optional(),
+
+  // SPARE_PART
+  equipmentId: z.string().optional(),
+  category: z.enum(["COMPONENT", "SPARE"]).optional(),
+
+  // MATERIAL
+  unitOfMeasureId: z.string().optional(),
   isHazardous: z.boolean().optional().default(false),
-  categoryId: z.string().optional(), // Una sola categoría
-  
-  // Campos opcionales de negocio
+  categoryIds: z.array(z.string()).optional(),
+
+  // Otros opcionales de negocio
   providerId: z.string().optional(),
   projectId: z.string().optional(),
 });
 
-
-// Schema de creación con validaciones condicionales
 export const createProductSchema = productSchemaBase
+  // En creación, el valor monetario sí es requerido
+  .extend({
+    monetaryValue: productSchemaBase.shape.monetaryValue
+      .optional()
+      .transform((v) => v ?? 0)
+      .refine((v) => v >= 0, {
+        message: "El valor monetario debe ser mayor o igual a 0",
+      }),
+  })
 
   // 1) MATERIAL: unidad de medida requerida
   .refine(
-    (data) => {
-      if (data.kind === "MATERIAL") {
-        return !!data.unitOfMeasureId;
-      }
-      return true;
-    },
+    (data) => (data.kind === "MATERIAL" ? !!data.unitOfMeasureId : true),
     {
       message: "La unidad de medida es requerida para materiales",
       path: ["unitOfMeasureId"],
@@ -240,40 +249,17 @@ export const createProductSchema = productSchemaBase
 
   // 1.1) MATERIAL: isHazardous requerido (true/false)
   .refine(
-    (data) => {
-      if (data.kind === "MATERIAL") {
-        return typeof data.isHazardous === "boolean";
-      }
-      return true;
-    },
+    (data) =>
+      data.kind === "MATERIAL" ? typeof data.isHazardous === "boolean" : true,
     {
       message: "Debes indicar si el material es peligroso o no",
       path: ["isHazardous"],
     }
   )
 
-  // 1.2) MATERIAL: si hay weightValue, debe haber weightUnitId
-  .refine(
-    (data) => {
-      if (data.kind === "MATERIAL" && data.weightValue !== undefined) {
-        return !!data.weightUnitId;
-      }
-      return true;
-    },
-    {
-      message: "Si indicas un peso, debes seleccionar su unidad",
-      path: ["weightUnitId"],
-    }
-  )
-
   // 2) EQUIPMENT: modelo requerido
   .refine(
-    (data) => {
-      if (data.kind === "EQUIPMENT") {
-        return !!data.model;
-      }
-      return true;
-    },
+    (data) => (data.kind === "EQUIPMENT" ? !!data.model : true),
     {
       message: "El modelo es requerido para equipos",
       path: ["model"],
@@ -300,32 +286,22 @@ export const createProductSchema = productSchemaBase
     {
       message:
         "Los equipos requieren peso, ancho, alto y largo con sus unidades",
-      path: ["weightValue"], // ancla general del error
+      path: ["weightValue"],
     }
   )
 
   // 4) SPARE_PART: equipo asociado requerido
   .refine(
-    (data) => {
-      if (data.kind === "SPARE_PART") {
-        return !!data.equipmentId;
-      }
-      return true;
-    },
+    (data) => (data.kind === "SPARE_PART" ? !!data.equipmentId : true),
     {
       message: "El repuesto debe estar asociado a un equipo",
       path: ["equipmentId"],
     }
   )
 
-  // 5) SPARE_PART: categoría requerida (COMPONENT / SPARE)
+  // 5) SPARE_PART: categoría requerida
   .refine(
-    (data) => {
-      if (data.kind === "SPARE_PART") {
-        return !!data.category;
-      }
-      return true;
-    },
+    (data) => (data.kind === "SPARE_PART" ? !!data.category : true),
     {
       message: "La categoría es requerida para repuestos",
       path: ["category"],
@@ -335,28 +311,11 @@ export const createProductSchema = productSchemaBase
 
 // Schema de actualización (sin validaciones condicionales por ahora)
 // ✅ El SKU sí existe en actualización (es readonly)
-export const updateProductSchema = z.object({
-  id: z.string().min(1),
-  name: z.string()
-    .min(1, 'El nombre es requerido')
-    .max(100, 'El nombre no puede exceder 100 caracteres')
-    .trim()
-    .optional(),
-  description: z.string()
-    .max(500, 'La descripción no puede exceder 500 caracteres')
-    .optional(),
-  currencyId: z.string().optional(),
-  monetaryValue: z.number()
-    .min(0, 'El valor monetario debe ser mayor o igual a 0')
-    .optional(),
-  isActive: z.boolean().optional(),
-  model: z.string()
-    .max(100, 'El modelo no puede exceder 100 caracteres')
-    .optional(),
-  unitOfMeasureId: z.string().optional(),
-  isHazardous: z.boolean().optional(),
-  categoryIds: z.array(z.string()).optional(),
-});
+export const updateProductSchema = productSchemaBase
+  .partial() // 👈 todos los campos opcionales
+  .extend({
+    id: z.string().min(1),
+  });
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;

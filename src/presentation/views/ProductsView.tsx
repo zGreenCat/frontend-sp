@@ -650,7 +650,6 @@ export function ProductsView() {
                         <TableRow>
                           <TableHead>Código</TableHead>
                           <TableHead>Nombre</TableHead>
-                          <TableHead>Modelo</TableHead>
                           <TableHead>Descripción</TableHead>
                           <TableHead>Moneda</TableHead>
                           <TableHead>Costo unitario</TableHead>
@@ -677,11 +676,6 @@ export function ProductsView() {
                                   ID: {sparePart.id.substring(0, 8)}...
                                 </p>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="font-mono">
-                                {sparePart.model || "—"}
-                              </Badge>
                             </TableCell>
                             <TableCell>
                               <p className="text-sm text-muted-foreground max-w-xs truncate">

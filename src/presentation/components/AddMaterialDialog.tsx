@@ -68,7 +68,7 @@ export function AddMaterialDialog({
       const useCase = new ListProducts(productRepo);
       const response = await useCase.execute({ 
         kind: "MATERIAL", 
-        status: "ACTIVO" 
+        isActive: true
       });
 
       // La respuesta ahora es PaginatedResponse<Product>

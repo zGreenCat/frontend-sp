@@ -26,11 +26,14 @@ import {
   GitBranch,
   History,
   AlertTriangle,
+  Box,
+  Weight,
+  Ruler,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-import { useProductDetail, useUpdateProduct, useDeleteProduct, useProductHistory } from "@/hooks/useProducts";
+import { useProductDetail, useUpdateProduct, useDeleteProduct, useProductHistory, useEquipmentById } from "@/hooks/useProducts";
 import { ProductKind, Product } from "@/domain/entities/Product";
 import { ProductHistoryFilters } from "@/domain/entities/ProductHistory";
 import { UpdateProductInput } from "@/shared/schemas";
@@ -80,6 +83,22 @@ function getProductKindLabel(kind: ProductKind): string {
 }
 
 /**
+ * Mapea ProductKind a slug para URL
+ */
+function getProductKindSlug(kind: ProductKind): string {
+  switch (kind) {
+    case 'EQUIPMENT':
+      return 'equipment';
+    case 'MATERIAL':
+      return 'material';
+    case 'SPARE_PART':
+      return 'spare-part';
+    default:
+      return 'material';
+  }
+}
+
+/**
  * Mapea ProductKind a ruta de listado con tab preservado
  */
 function getProductListRoute(kind: ProductKind, returnTab?: string | null): string {
@@ -120,6 +139,12 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
     error,
     refetch,
   } = useProductDetail(productId, kind);
+
+  // Cargar equipo asociado si es un repuesto
+  const {
+    data: associatedEquipment,
+    isLoading: isLoadingEquipment,
+  } = useEquipmentById(kind === 'SPARE_PART' ? product?.equipmentId : undefined);
 
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
@@ -525,6 +550,71 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
                   </div>
                 </div>
               )}
+
+              {/* Dimensiones y peso (EQUIPMENT y SPARE_PART) */}
+              {(kind === 'EQUIPMENT' || kind === 'SPARE_PART') && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm font-medium mb-4 flex items-center gap-2">
+                    <Box className="h-4 w-4 text-muted-foreground" />
+                    Dimensiones y Peso
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Peso */}
+                    {product.dimensions?.weight && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Weight className="h-3.5 w-3.5" />
+                          Peso
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {product.dimensions.weight.value} {product.dimensions.weight.unit?.abbreviation || product.dimensions.weight.unit?.name || ''}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Dimensiones (Ancho × Alto × Largo) */}
+                    {(product.dimensions?.width || product.dimensions?.height || product.dimensions?.length) && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Ruler className="h-3.5 w-3.5" />
+                          Dimensiones (A × A × L)
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {product.dimensions?.width && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-semibold">{product.dimensions.width.value}</span>
+                            </div>
+                          )}
+                          {product.dimensions?.height && (
+                            <>
+                              <span className="text-muted-foreground">×</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm font-semibold">{product.dimensions.height.value}</span>
+                              </div>
+                            </>
+                          )}
+                          {product.dimensions?.length && (
+                            <>
+                              <span className="text-muted-foreground">×</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm font-semibold">{product.dimensions.length.value}</span>
+                              </div>
+                            </>
+                          )}
+                          {(product.dimensions?.width?.unit || product.dimensions?.height?.unit || product.dimensions?.length?.unit) && (
+                            <span className="text-sm text-muted-foreground">
+                              {product.dimensions?.width?.unit?.abbreviation || 
+                               product.dimensions?.height?.unit?.abbreviation || 
+                               product.dimensions?.length?.unit?.abbreviation || ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -536,6 +626,42 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
               <CardTitle>Asociaciones</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Equipo asociado (solo para repuestos) */}
+              {kind === 'SPARE_PART' && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Equipo asociado</p>
+                  {isLoadingEquipment ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Cargando...</span>
+                    </div>
+                  ) : associatedEquipment ? (
+                    <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                         onClick={() => router.push(`/products/${getProductKindSlug('EQUIPMENT')}/${associatedEquipment.id}?returnTab=spare-parts`)}>
+                      <Package className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{associatedEquipment.name}</p>
+                        {associatedEquipment.model && (
+                          <p className="text-xs text-muted-foreground">Modelo: {associatedEquipment.model}</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyState message="Sin equipo asociado" />
+                  )}
+                </div>
+              )}
+
+              {/* Categoría del repuesto */}
+              {kind === 'SPARE_PART' && product?.category && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Categoría</p>
+                  <Badge variant="outline" className="text-sm">
+                    {product.category === 'COMPONENT' ? 'Componente' : 'Repuesto'}
+                  </Badge>
+                </div>
+              )}
+
               {/* Proveedor asociado */}
               <div>
                 <p className="text-sm font-medium mb-2">Proveedor asociado</p>

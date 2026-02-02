@@ -68,7 +68,7 @@ export function AddEquipmentDialog({
       const useCase = new ListProducts(productRepo);
       const response = await useCase.execute({ 
         kind: "EQUIPMENT", 
-        status: "ACTIVO" 
+        isActive: true
       });
 
       // La respuesta ahora es PaginatedResponse<Product>

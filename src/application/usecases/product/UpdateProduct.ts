@@ -1,4 +1,5 @@
-import { IProductRepository, UpdateProductInput } from '@/domain/repositories/IProductRepository';
+import { IProductRepository } from '@/domain/repositories/IProductRepository';
+import { UpdateProductInput } from '@/shared/schemas';
 import { Product, ProductKind } from '@/domain/entities/Product';
 import { Result, success, failure } from '@/shared/types/Result';
 
@@ -30,17 +31,12 @@ export class UpdateProduct {
         return failure('El nombre del producto no puede estar vacío');
       }
 
-      // Si se intenta actualizar el SKU, validar que no esté vacío
-      if (input.sku !== undefined && input.sku.trim().length === 0) {
-        return failure('El código (SKU) del producto no puede estar vacío');
-      }
-
       // Validar campos específicos según el tipo si se están actualizando
-      if (kind === 'MATERIAL' && input.unitOfMeasure !== undefined && !input.unitOfMeasure) {
+      if (kind === 'MATERIAL' && input.unitOfMeasureId !== undefined && !input.unitOfMeasureId) {
         return failure('La unidad de medida es requerida para materiales');
       }
 
-      if ((kind === 'EQUIPMENT' || kind === 'SPARE_PART') && input.model !== undefined && !input.model) {
+      if ((kind === 'EQUIPMENT' || kind === 'SPARE_PART') && input.model !== undefined && input.model.trim().length === 0) {
         return failure('El modelo es requerido para equipos y repuestos');
       }
 

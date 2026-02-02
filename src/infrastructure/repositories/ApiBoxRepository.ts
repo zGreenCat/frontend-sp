@@ -17,41 +17,30 @@ import { BoxMaterial } from '@/domain/entities/BoxMaterial';
 // Tipos del backend
 interface BackendBoxEquipmentSparePart {
   id: string;
-  sparePartId: string;
-  name: string;
+  boxEquipmentId: string;
   quantity: number;
-  category: string;
-  description?: string;
-  monetaryValue?: number;
-  currency?: string;
-  isActive: boolean;
+  assignedAt: string;
+  revokedAt: string | null;
+  sparePart: any; // Estructura completa del spare part
 }
 
 interface BackendBoxEquipment {
   id: string;
-  equipmentId: string;
-  name: string;
-  model: string;
+  boxId: string;
   quantity: number;
-  description?: string;
-  monetaryValue?: number;
-  currency?: string;
-  isActive: boolean;
+  assignedAt: string;
+  revokedAt: string | null;
+  equipment: any; // Estructura completa del equipment
   spareParts?: BackendBoxEquipmentSparePart[];
 }
 
 interface BackendBoxMaterial {
   id: string;
-  materialId: string;
-  name: string;
+  boxId: string;
   quantity: number;
-  unitOfMeasure: string;
-  description?: string;
-  monetaryValue?: number;
-  currency?: string;
-  isHazardous: boolean;
-  categories?: string[];
-  isActive: boolean;
+  assignedAt: string;
+  revokedAt: string | null;
+  material: any; // Estructura completa del material
 }
 
 interface BackendBox {
@@ -81,11 +70,14 @@ interface BackendHistoryEvent {
   id: string;
   boxId: string;
   eventType: string;
-  timestamp: string;
-  userId: string;
-  description?: string;
-  metadata?: Record<string, any>;
-  createdAt: string;
+  reason?: string;
+  performedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  occurredAt: string;
 }
 
 interface BackendBoxListResponse {
@@ -107,47 +99,114 @@ export class ApiBoxRepository implements IBoxRepository {
   private mapBackendSparePart(backendSparePart: BackendBoxEquipmentSparePart): BoxEquipmentSparePart {
     return {
       id: backendSparePart.id,
-      sparePartId: backendSparePart.sparePartId,
-      name: backendSparePart.name,
+      boxEquipmentId: backendSparePart.boxEquipmentId,
       quantity: backendSparePart.quantity,
-      category: backendSparePart.category,
-      description: backendSparePart.description,
-      monetaryValue: backendSparePart.monetaryValue,
-      currency: backendSparePart.currency,
-      isActive: backendSparePart.isActive,
+      assignedAt: backendSparePart.assignedAt,
+      revokedAt: backendSparePart.revokedAt,
+      sparePart: {
+        id: backendSparePart.sparePart.id,
+        name: backendSparePart.sparePart.name,
+        description: backendSparePart.sparePart.description,
+        category: backendSparePart.sparePart.category,
+        equipmentId: backendSparePart.sparePart.equipmentId,
+        dimensions: backendSparePart.sparePart.dimensions,
+        price: backendSparePart.sparePart.price,
+        status: backendSparePart.sparePart.status,
+        audit: backendSparePart.sparePart.audit,
+      },
     };
   }
 
   // Mapear BoxEquipment del backend al dominio
   private mapBackendEquipment(backendEquipment: BackendBoxEquipment): BoxEquipment {
+    // Si no viene el objeto equipment completo, crear uno básico
+    if (!backendEquipment.equipment) {
+      console.warn('[ApiBoxRepository] Equipment object not found in response, creating minimal structure');
+      return {
+        id: backendEquipment.id,
+        boxId: backendEquipment.boxId,
+        quantity: backendEquipment.quantity,
+        assignedAt: backendEquipment.assignedAt,
+        revokedAt: backendEquipment.revokedAt,
+        equipment: {
+          id: (backendEquipment as any).equipmentId || '',
+          name: 'Equipo',
+          description: '',
+          status: {
+            isActive: true,
+          },
+          audit: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        },
+        spareParts: [],
+      };
+    }
+    
     return {
       id: backendEquipment.id,
-      equipmentId: backendEquipment.equipmentId,
-      name: backendEquipment.name,
-      model: backendEquipment.model,
+      boxId: backendEquipment.boxId,
       quantity: backendEquipment.quantity,
-      description: backendEquipment.description,
-      monetaryValue: backendEquipment.monetaryValue,
-      currency: backendEquipment.currency,
-      isActive: backendEquipment.isActive,
+      assignedAt: backendEquipment.assignedAt,
+      revokedAt: backendEquipment.revokedAt,
+      equipment: {
+        id: backendEquipment.equipment.id,
+        name: backendEquipment.equipment.name,
+        model: backendEquipment.equipment.model,
+        description: backendEquipment.equipment.description,
+        dimensions: backendEquipment.equipment.dimensions,
+        price: backendEquipment.equipment.price,
+        status: backendEquipment.equipment.status,
+        audit: backendEquipment.equipment.audit,
+      },
       spareParts: backendEquipment.spareParts?.map(sp => this.mapBackendSparePart(sp)),
     };
   }
 
   // Mapear BoxMaterial del backend al dominio
   private mapBackendMaterial(backendMaterial: BackendBoxMaterial): BoxMaterial {
+    // Si no viene el objeto material completo, crear uno básico
+    if (!backendMaterial.material) {
+      console.warn('[ApiBoxRepository] Material object not found in response, creating minimal structure');
+      return {
+        id: backendMaterial.id,
+        boxId: backendMaterial.boxId,
+        quantity: backendMaterial.quantity,
+        assignedAt: backendMaterial.assignedAt,
+        revokedAt: backendMaterial.revokedAt,
+        material: {
+          id: (backendMaterial as any).materialId || '',
+          name: 'Material',
+          description: '',
+          flags: {
+            isHazardous: false,
+            isActive: true,
+          },
+          audit: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+    }
+    
     return {
       id: backendMaterial.id,
-      materialId: backendMaterial.materialId,
-      name: backendMaterial.name,
+      boxId: backendMaterial.boxId,
       quantity: backendMaterial.quantity,
-      unitOfMeasure: backendMaterial.unitOfMeasure,
-      description: backendMaterial.description,
-      monetaryValue: backendMaterial.monetaryValue,
-      currency: backendMaterial.currency,
-      isHazardous: backendMaterial.isHazardous,
-      categories: backendMaterial.categories,
-      isActive: backendMaterial.isActive,
+      assignedAt: backendMaterial.assignedAt,
+      revokedAt: backendMaterial.revokedAt,
+      material: {
+        id: backendMaterial.material.id,
+        name: backendMaterial.material.name,
+        description: backendMaterial.material.description,
+        price: backendMaterial.material.price,
+        unitOfMeasure: backendMaterial.material.unitOfMeasure,
+        categories: backendMaterial.material.categories,
+        flags: backendMaterial.material.flags,
+        audit: backendMaterial.material.audit,
+      },
     };
   }
 
@@ -182,12 +241,10 @@ export class ApiBoxRepository implements IBoxRepository {
     return {
       id: event.id,
       boxId: event.boxId,
-      eventType: event.eventType as 'CREATED' | 'UPDATED' | 'MOVED' | 'STATUS_CHANGED' | 'DEACTIVATED',
-      timestamp: event.timestamp,
-      userId: event.userId,
-      description: event.description,
-      metadata: event.metadata,
-      createdAt: event.createdAt,
+      eventType: event.eventType as any,
+      reason: event.reason,
+      performedBy: event.performedBy,
+      occurredAt: event.occurredAt,
     };
   }
 

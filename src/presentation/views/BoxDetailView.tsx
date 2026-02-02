@@ -334,6 +334,8 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
                   <SelectItem value="MOVED">Movimiento</SelectItem>
                   <SelectItem value="STATUS_CHANGED">Cambio de Estado</SelectItem>
                   <SelectItem value="DEACTIVATED">Desactivación</SelectItem>
+                  <SelectItem value="INVENTORY_ADDED">Inventario Añadido</SelectItem>
+                  <SelectItem value="INVENTORY_REMOVED">Inventario Removido</SelectItem>
                 </SelectContent>
               </Select>
             </CardHeader>
@@ -360,34 +362,25 @@ export function BoxDetailView({ boxId }: BoxDetailViewProps) {
                               <Badge variant="outline">{event.eventType}</Badge>
                             </div>
 
-                            {event.description && (
-                              <p className="text-sm text-foreground mb-2">{event.description}</p>
+                            {event.reason && (
+                              <p className="text-sm text-foreground mb-2">{event.reason}</p>
                             )}
 
                             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
-                                <span>Usuario: {event.userId}</span>
+                                <span>{event.performedBy.firstName} {event.performedBy.lastName}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>
-                                  {event.timestamp && !isNaN(new Date(event.timestamp).getTime()) 
-                                    ? format(new Date(event.timestamp), "dd MMM yyyy, HH:mm", { locale: es })
+                                  {event.occurredAt && !isNaN(new Date(event.occurredAt).getTime()) 
+                                    ? format(new Date(event.occurredAt), "dd MMM yyyy, HH:mm", { locale: es })
                                     : "Fecha no disponible"
                                   }
                                 </span>
                               </div>
                             </div>
-
-                            {event.metadata && Object.keys(event.metadata).length > 0 && (
-                              <div className="mt-2 text-sm">
-                                <span className="text-muted-foreground">Detalles:</span>{" "}
-                                <code className="text-xs bg-secondary px-2 py-1 rounded">
-                                  {JSON.stringify(event.metadata, null, 2)}
-                                </code>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>

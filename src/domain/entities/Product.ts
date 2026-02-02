@@ -7,6 +7,27 @@ export type ProductType = ProductKind;
 export type ProductStatus = 'ACTIVO' | 'INACTIVO';
 export type Currency = 'CLP' | 'USD' | 'EUR';
 
+// Estructura de dimensiones del backend
+export interface DimensionUnit {
+  id: string;
+  code: string;
+  name: string;
+  abbreviation: string;
+  type: 'WEIGHT' | 'LENGTH';
+}
+
+export interface Dimension {
+  value: number;
+  unit?: DimensionUnit;
+}
+
+export interface ProductDimensions {
+  weight?: Dimension;
+  width?: Dimension;
+  height?: Dimension;
+  length?: Dimension;
+}
+
 /**
  * Entidad unificada de Producto
  * Representa equipos, materiales y repuestos del catálogo
@@ -25,6 +46,7 @@ export interface Product {
   category?: 'COMPONENT' | 'SPARE'; // Categoría del repuesto
 
   // Campos de dimensiones (para EQUIPMENT y SPARE_PART)
+  // Valores planos (legacy/form)
   weightValue?: number;
   weightUnitId?: string;
   widthValue?: number;
@@ -33,6 +55,9 @@ export interface Product {
   heightUnitId?: string;
   lengthValue?: number;
   lengthUnitId?: string;
+  
+  // Estructura anidada del backend
+  dimensions?: ProductDimensions;
 
   // Campos específicos de Material
   unitOfMeasure?: string; // 'KG' | 'LT' | 'UNIT' | etc. (código de unidad)

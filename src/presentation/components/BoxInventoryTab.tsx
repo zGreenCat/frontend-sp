@@ -20,6 +20,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Package } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ interface BoxInventoryTabProps {
 export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
   const { can } = usePermissions();
   const { toast } = useToast();
+  const router = useRouter();
   const removeEquipmentMutation = useRemoveBoxEquipment();
   const removeMaterialMutation = useRemoveBoxMaterial();
 
@@ -68,7 +70,7 @@ export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
 
       toast({
         title: "✅ Equipo removido",
-        description: `El equipo "${removeEquipmentDialog.equipment.name}" ha sido removido del inventario.`,
+        description: `El equipo "${removeEquipmentDialog.equipment.equipment.name}" ha sido removido del inventario.`,
       });
 
       setRemoveEquipmentDialog({ open: false, equipment: null });
@@ -92,7 +94,7 @@ export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
 
       toast({
         title: "✅ Material removido",
-        description: `El material "${removeMaterialDialog.material.name}" ha sido removido del inventario.`,
+        description: `El material "${removeMaterialDialog.material.material.name}" ha sido removido del inventario.`,
       });
 
       setRemoveMaterialDialog({ open: false, material: null });
@@ -133,45 +135,72 @@ export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Modelo</TableHead>
                   <TableHead className="text-center">Cantidad</TableHead>
+                  <TableHead>Dimensiones</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Moneda</TableHead>
                   <TableHead>Estado</TableHead>
                   {canEdit && <TableHead className="text-center">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {box.equipments!.map((equipment) => (
-                  <TableRow key={equipment.id}>
-                    <TableCell className="font-medium">{equipment.name}</TableCell>
-                    <TableCell>{equipment.model}</TableCell>
-                    <TableCell className="text-center">{equipment.quantity}</TableCell>
-                    <TableCell className="text-right">
-                      {equipment.monetaryValue
-                        ? equipment.monetaryValue.toLocaleString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell>{equipment.currency || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={equipment.isActive ? "default" : "secondary"}>
-                        {equipment.isActive ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TableCell>
-                    {canEdit && (
-                      <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setRemoveEquipmentDialog({ open: true, equipment })
-                          }
-                          className="text-destructive hover:text-destructive"
+                {box.equipments!.map((equipmentAssignment) => {
+                  const eq = equipmentAssignment.equipment;
+                  const dims = eq.dimensions;
+                  return (
+                    <TableRow key={equipmentAssignment.id}>
+                      <TableCell className="font-medium">
+                        <button
+                          onClick={() => router.push(`/products/equipment/${eq.id}`)}
+                          className="text-primary hover:underline text-left"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          {eq.name}
+                        </button>
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell>{eq.model || "-"}</TableCell>
+                      <TableCell className="text-center">{equipmentAssignment.quantity}</TableCell>
+                      <TableCell>
+                        {dims && (
+                          <div className="text-sm space-y-1">
+                            {dims.weight && (
+                              <div>Peso: {dims.weight.value} {dims.weight.unit.abbreviation}</div>
+                            )}
+                            {(dims.width || dims.height || dims.length) && (
+                              <div>
+                                {dims.width?.value || '-'} × {dims.height?.value || '-'} × {dims.length?.value || '-'} {dims.width?.unit.abbreviation || ''}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!dims && "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {eq.price ? (
+                          <div>
+                            {eq.price.currency.symbol}{eq.price.amount.toLocaleString('es-CL')}
+                          </div>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={eq.status.isActive ? "default" : "secondary"}>
+                          {eq.status.isActive ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setRemoveEquipmentDialog({ open: true, equipment: equipmentAssignment })
+                            }
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -194,6 +223,7 @@ export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
                   <TableHead>Nombre</TableHead>
                   <TableHead className="text-center">Cantidad</TableHead>
                   <TableHead>Unidad</TableHead>
+                  <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-center">Peligroso</TableHead>
                   <TableHead>Categorías</TableHead>
                   <TableHead>Estado</TableHead>
@@ -201,42 +231,59 @@ export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {box.materials!.map((material) => (
-                  <TableRow key={material.id}>
-                    <TableCell className="font-medium">{material.name}</TableCell>
-                    <TableCell className="text-center">{material.quantity}</TableCell>
-                    <TableCell>{material.unitOfMeasure}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={material.isHazardous ? "destructive" : "secondary"}>
-                        {material.isHazardous ? "Sí" : "No"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {material.categories && material.categories.length > 0
-                        ? material.categories.join(", ")
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={material.isActive ? "default" : "secondary"}>
-                        {material.isActive ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TableCell>
-                    {canEdit && (
-                      <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setRemoveMaterialDialog({ open: true, material })
-                          }
-                          className="text-destructive hover:text-destructive"
+                {box.materials!.map((materialAssignment) => {
+                  const mat = materialAssignment.material;
+                  return (
+                    <TableRow key={materialAssignment.id}>
+                      <TableCell className="font-medium">
+                        <button
+                          onClick={() => router.push(`/products/material/${mat.id}`)}
+                          className="text-primary hover:underline text-left"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          {mat.name}
+                        </button>
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell className="text-center">{materialAssignment.quantity}</TableCell>
+                      <TableCell>{mat.unitOfMeasure?.abbreviation || mat.unitOfMeasure?.name || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        {mat.price ? (
+                          <div>
+                            {mat.price.currency.symbol}{mat.price.amount.toLocaleString('es-CL')}
+                          </div>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={mat.flags.isHazardous ? "destructive" : "secondary"}>
+                          {mat.flags.isHazardous ? "Sí" : "No"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {mat.categories && mat.categories.length > 0
+                          ? mat.categories.map(c => c.name).join(", ")
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={mat.flags.isActive ? "default" : "secondary"}>
+                          {mat.flags.isActive ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setRemoveMaterialDialog({ open: true, material: materialAssignment })
+                            }
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -255,7 +302,7 @@ export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
             <AlertDialogTitle>¿Remover equipo del inventario?</AlertDialogTitle>
             <AlertDialogDescription>
               Estás a punto de remover el equipo{" "}
-              <strong>{removeEquipmentDialog.equipment?.name}</strong> de esta caja.
+              <strong>{removeEquipmentDialog.equipment?.equipment.name}</strong> de esta caja.
               Esta acción quedará registrada en el historial.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -280,7 +327,7 @@ export function BoxInventoryTab({ box }: BoxInventoryTabProps) {
             <AlertDialogTitle>¿Remover material del inventario?</AlertDialogTitle>
             <AlertDialogDescription>
               Estás a punto de remover el material{" "}
-              <strong>{removeMaterialDialog.material?.name}</strong> de esta caja.
+              <strong>{removeMaterialDialog.material?.material.name}</strong> de esta caja.
               Esta acción quedará registrada en el historial.
             </AlertDialogDescription>
           </AlertDialogHeader>

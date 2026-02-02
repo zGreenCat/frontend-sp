@@ -8,17 +8,22 @@ export type BoxStatus = 'DISPONIBLE' | 'EN_REPARACION' | 'DANADA' | 'RETIRADA';
 export type BoxType = 'PEQUEÑA' | 'NORMAL' | 'GRANDE';
 
 // History Event Types según backend
-export type HistoryEventType = 'CREATED' | 'UPDATED' | 'MOVED' | 'STATUS_CHANGED' | 'DEACTIVATED';
+export type HistoryEventType = 'CREATED' | 'UPDATED' | 'MOVED' | 'STATUS_CHANGED' | 'DEACTIVATED' | 'INVENTORY_ADDED' | 'INVENTORY_REMOVED';
+
+export interface PerformedBy {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 
 export interface HistoryEvent {
   id: string;
   boxId: string;
   eventType: HistoryEventType;
-  timestamp: string; // ISO 8601
-  userId: string;
-  description?: string;
-  metadata?: Record<string, any>; // Datos adicionales del evento
-  createdAt: string;
+  reason?: string;
+  performedBy: PerformedBy;
+  occurredAt: string; // ISO 8601
 }
 
 export interface Warehouse {

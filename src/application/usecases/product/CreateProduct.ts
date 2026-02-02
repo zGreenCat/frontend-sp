@@ -1,4 +1,5 @@
-import { IProductRepository, CreateProductInput } from '@/domain/repositories/IProductRepository';
+import { IProductRepository } from '@/domain/repositories/IProductRepository';
+import { CreateProductInput } from '@/shared/schemas';
 import { Product } from '@/domain/entities/Product';
 import { Result, success, failure } from '@/shared/types/Result';
 

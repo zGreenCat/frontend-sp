@@ -1,4 +1,5 @@
-import { IProductRepository, ListProductsParams, CreateProductInput, UpdateProductInput } from '@/domain/repositories/IProductRepository';
+import { IProductRepository, ListProductsParams } from '@/domain/repositories/IProductRepository';
+import { CreateProductInput, UpdateProductInput } from '@/shared/schemas';
 import { Product, ProductKind } from '@/domain/entities/Product';
 import { ProductHistoryEvent, ProductHistoryFilters } from '@/domain/entities/ProductHistory';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
@@ -113,7 +114,7 @@ export class ApiProductRepository implements IProductRepository {
    * Lista productos según el tipo especificado
    */
   async list(params: ListProductsParams): Promise<PaginatedResponse<Product>> {
-    const { kind, page = 1, limit = 10, search, status } = params;
+    const { kind, page = 1, limit = 10, search, isActive } = params;
 
     // Si no se especifica kind, retornamos error controlado
     if (!kind) {
@@ -133,7 +134,7 @@ export class ApiProductRepository implements IProductRepository {
       queryParams.append('page', page.toString());
       queryParams.append('limit', limit.toString());
       if (search) queryParams.append('search', search);
-      if (status) queryParams.append('status', status);
+      if (isActive !== undefined) queryParams.append('isActive', isActive.toString());
 
       // Determinar endpoint según el tipo
       const endpoint = this.getEndpointForKind(kind);
@@ -308,8 +309,10 @@ export class ApiProductRepository implements IProductRepository {
       unitOfMeasureId: equipment.unitOfMeasure?.id,
       categories: equipment.categories?.map(c => ({ id: c.id, name: c.name })),
       categoryIds: equipment.categories?.map(c => c.id),
-      // Soportar ambas estructuras: nueva (flags.isActive) y antigua (isActive directo)
-      isActive: equipment.flags?.isActive ?? (equipment as any).isActive ?? true,
+      // Dimensiones del backend
+      dimensions: (equipment as any).dimensions,
+      // Soportar ambas estructuras: nueva (status.isActive), antigua (flags.isActive) y legacy (isActive directo)
+      isActive: (equipment as any).status?.isActive ?? equipment.flags?.isActive ?? (equipment as any).isActive ?? true,
       createdAt: equipment.audit?.createdAt || (equipment as any).createdAt,
       updatedAt: equipment.audit?.updatedAt || (equipment as any).updatedAt,
     };
@@ -346,6 +349,8 @@ export class ApiProductRepository implements IProductRepository {
       name: sparePart.name,
       description: sparePart.description,
       model: sparePart.model,
+      equipmentId: (sparePart as any).equipmentId,
+      category: (sparePart as any).category,
       // Soportar ambas estructuras
       currency: sparePart.price?.currency.code || (sparePart as any).currency,
       currencyId: sparePart.price?.currency.id,
@@ -355,7 +360,9 @@ export class ApiProductRepository implements IProductRepository {
       monetaryValueRaw: sparePart.price?.amount || (sparePart as any).monetaryValue,
       unitOfMeasure: sparePart.unitOfMeasure?.abbreviation || sparePart.unitOfMeasure?.code,
       unitOfMeasureId: sparePart.unitOfMeasure?.id,
-      isActive: sparePart.flags?.isActive ?? (sparePart as any).isActive ?? true,
+      // Dimensiones del backend
+      dimensions: (sparePart as any).dimensions,
+      isActive: sparePart.status?.isActive ?? sparePart.flags?.isActive ?? (sparePart as any).isActive ?? true,
       createdAt: sparePart.audit?.createdAt || (sparePart as any).createdAt,
       updatedAt: sparePart.audit?.updatedAt || (sparePart as any).updatedAt,
     };
@@ -395,7 +402,7 @@ export class ApiProductRepository implements IProductRepository {
           ...basePayload,
           unitOfMeasureId: input.unitOfMeasureId,
           isHazardous: input.isHazardous || false,
-          categoryId: input.categoryId, // Una sola categoría
+          categoryIds: input.categoryIds || [], // Array de categorías
         };
 
       case 'SPARE_PART':
@@ -458,37 +465,70 @@ export class ApiProductRepository implements IProductRepository {
   }
 
   /**
+   * Helper: Agrega un campo al payload solo si tiene un valor válido
+   * Excluye: undefined, null, string vacío
+   */
+  private addIfValid(payload: any, key: string, value: any): void {
+    if (value !== undefined && value !== null && value !== '') {
+      payload[key] = value;
+    }
+  }
+
+  /**
    * Mapea el input de actualización al formato esperado por el backend
+   * Solo envía los campos que han sido modificados y tienen valores válidos
    * Similar a mapInputToBackendPayload pero sin campos obligatorios y sin tenantId
    */
   private mapUpdateInputToBackendPayload(input: UpdateProductInput, kind: ProductKind): any {
-    // Campos comunes opcionales (solo enviar si están presentes)
     const basePayload: any = {};
     
-    if (input.name !== undefined) basePayload.name = input.name;
-    if (input.description !== undefined) basePayload.description = input.description;
-    if (input.currencyId !== undefined) basePayload.currencyId = input.currencyId;
-    if (input.monetaryValue !== undefined) basePayload.monetaryValue = input.monetaryValue;
-    if (input.isActive !== undefined) basePayload.isActive = input.isActive;
+    // Campos comunes (excluir isActive - el backend no lo acepta en PATCH)
+    this.addIfValid(basePayload, 'name', input.name);
+    this.addIfValid(basePayload, 'description', input.description);
+    this.addIfValid(basePayload, 'currencyId', input.currencyId);
+    this.addIfValid(basePayload, 'monetaryValue', input.monetaryValue);
+    // NO enviar isActive en actualizaciones
 
     switch (kind) {
       case 'EQUIPMENT':
-        if (input.model !== undefined) basePayload.model = input.model;
+        this.addIfValid(basePayload, 'model', input.model);
+        
+        // Dimensiones
+        this.addIfValid(basePayload, 'weightValue', input.weightValue);
+        this.addIfValid(basePayload, 'weightUnitId', input.weightUnitId);
+        this.addIfValid(basePayload, 'widthValue', input.widthValue);
+        this.addIfValid(basePayload, 'widthUnitId', input.widthUnitId);
+        this.addIfValid(basePayload, 'heightValue', input.heightValue);
+        this.addIfValid(basePayload, 'heightUnitId', input.heightUnitId);
+        this.addIfValid(basePayload, 'lengthValue', input.lengthValue);
+        this.addIfValid(basePayload, 'lengthUnitId', input.lengthUnitId);
         break;
 
       case 'MATERIAL':
-        if (input.unitOfMeasureId !== undefined) basePayload.unitOfMeasureId = input.unitOfMeasureId;
-        if (input.isHazardous !== undefined) basePayload.isHazardous = input.isHazardous;
-        if (input.categoryIds !== undefined) basePayload.categoryIds = input.categoryIds;
+        this.addIfValid(basePayload, 'unitOfMeasureId', input.unitOfMeasureId);
+        this.addIfValid(basePayload, 'isHazardous', input.isHazardous);
+        this.addIfValid(basePayload, 'categoryIds', input.categoryIds);
+        
+        // Weight para materiales
+        this.addIfValid(basePayload, 'weightValue', input.weightValue);
+        this.addIfValid(basePayload, 'weightUnitId', input.weightUnitId);
         break;
 
       case 'SPARE_PART':
-        if (input.model !== undefined) basePayload.model = input.model;
+        this.addIfValid(basePayload, 'equipmentId', input.equipmentId);
+        this.addIfValid(basePayload, 'category', input.category);
+        
+        // Dimensiones
+        this.addIfValid(basePayload, 'weightValue', input.weightValue);
+        this.addIfValid(basePayload, 'weightUnitId', input.weightUnitId);
+        this.addIfValid(basePayload, 'widthValue', input.widthValue);
+        this.addIfValid(basePayload, 'widthUnitId', input.widthUnitId);
+        this.addIfValid(basePayload, 'heightValue', input.heightValue);
+        this.addIfValid(basePayload, 'heightUnitId', input.heightUnitId);
+        this.addIfValid(basePayload, 'lengthValue', input.lengthValue);
+        this.addIfValid(basePayload, 'lengthUnitId', input.lengthUnitId);
         break;
     }
-
-    // TODO: Agregar justification cuando backend lo soporte
-    // if (input.justification) basePayload.justification = input.justification;
 
     return basePayload;
   }

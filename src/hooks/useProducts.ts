@@ -3,7 +3,7 @@ import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { ProductKind, Product } from '@/domain/entities/Product';
 import { ProductHistoryEvent, ProductHistoryFilters } from '@/domain/entities/ProductHistory';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
-import { CreateProductInput, UpdateProductInput } from '@/domain/repositories/IProductRepository';
+import { CreateProductInput, UpdateProductInput } from '@/shared/schemas';
 import { CreateProduct } from '@/application/usecases/product/CreateProduct';
 import { UpdateProduct } from '@/application/usecases/product/UpdateProduct';
 import { DeleteProduct } from '@/application/usecases/product/DeleteProduct';

@@ -1,6 +1,7 @@
 import { Product, ProductKind, Currency } from '../entities/Product';
 import { ProductHistoryEvent, ProductHistoryFilters } from '../entities/ProductHistory';
 import { PaginatedResponse } from '@/shared/types/pagination.types';
+import { CreateProductInput, UpdateProductInput } from '@/shared/schemas';
 
 /**
  * Filtros para listar productos
@@ -10,75 +11,7 @@ export interface ListProductsParams {
   page?: number;
   limit?: number;
   search?: string; // Busca en nombre o descripción
-  status?: string; // Filtro por estado
-}
-
-/**
- * Input para crear un producto
- * Campos obligatorios y opcionales según el tipo de producto
- */
-export interface CreateProductInput {
-  // Campos obligatorios para todos los productos
-  kind: ProductKind;
-  name: string;
-  // ❌ SKU removido - lo genera el backend automáticamente
-  currencyId: string; // UUID de la moneda
-  monetaryValue: number; // Valor numérico: 10.50
-  // ✅ isActive es opcional - siempre será true en creación (el usuario no puede crear productos inactivos)
-  isActive?: boolean;
-  
-  // Campos opcionales comunes
-  description?: string;
-  
-  // Campos específicos de EQUIPMENT y SPARE_PART
-  model?: string;
-  
-  // Campos específicos de SPARE_PART
-  equipmentId?: string; // UUID del equipo al que pertenece el repuesto
-  category?: 'COMPONENT' | 'SPARE'; // Categoría del repuesto
-  
-  // Campos de dimensiones para EQUIPMENT y SPARE_PART
-  weightValue?: number;
-  weightUnitId?: string; // UUID de la unidad de peso
-  widthValue?: number;
-  widthUnitId?: string; // UUID de la unidad de longitud
-  heightValue?: number;
-  heightUnitId?: string; // UUID de la unidad de longitud
-  lengthValue?: number;
-  lengthUnitId?: string; // UUID de la unidad de longitud
-  
-  // Campos específicos de MATERIAL
-  unitOfMeasureId?: string; // UUID de la unidad de medida
-  isHazardous?: boolean;
-  categoryId?: string; // UUID de la categoría (una sola)
-  
-  // Campos opcionales de negocio
-  providerId?: string;
-  projectId?: string;
-}
-
-/**
- * Input para actualizar un producto
- * Todos los campos son opcionales excepto el ID
- * kind no puede cambiar (inmutable)
- */
-export interface UpdateProductInput {
-  id: string;
-  name?: string;
-  // sku es readonly - no se puede actualizar
-  currencyId?: string;
-  monetaryValue?: number;
-  isActive?: boolean;
-  description?: string;
-  model?: string;
-  unitOfMeasureId?: string;
-  isHazardous?: boolean;
-  categoryId?: string;
-  providerId?: string;
-  projectId?: string;
-  
-  // TODO: Agregar cuando backend lo soporte
-  // justification?: string; // Justificación para cambios sensibles
+  isActive?: boolean; // Filtro por estado activo/inactivo
 }
 
 /**
