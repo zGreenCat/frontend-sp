@@ -371,9 +371,13 @@ export function ProductsView() {
                               )}
                             </TableCell>
                             <TableCell className="text-center">
-                              <Badge variant="secondary">
-                                {material.categories?.length || 0}
-                              </Badge>
+                              {material.categories && material.categories.length > 0 ? (
+                                <Badge variant="secondary">
+                                  {material.categories.map((cat: any) => cat.name || cat).join(', ')}
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">Sin categoría</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge

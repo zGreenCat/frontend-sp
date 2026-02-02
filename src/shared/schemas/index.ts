@@ -185,7 +185,8 @@ const productSchemaBase = z.object({
   currencyId: z.string()
     .min(1, 'La moneda es requerida'),
   monetaryValue: z.number()
-    .min(0, 'El valor monetario debe ser mayor o igual a 0'),
+    .min(0, 'El valor monetario debe ser mayor o igual a 0')
+    .optional(),
   // ✅ isActive siempre es true en creación (el usuario no puede crear productos inactivos)
   isActive: z.boolean().optional().default(true),
   
@@ -219,48 +220,118 @@ const productSchemaBase = z.object({
   projectId: z.string().optional(),
 });
 
+
 // Schema de creación con validaciones condicionales
-export const createProductSchema = productSchemaBase.refine(
-  (data) => {
-    // Validar que materiales tengan unitOfMeasureId
-    if (data.kind === 'MATERIAL') {
-      return !!data.unitOfMeasureId;
+export const createProductSchema = productSchemaBase
+
+  // 1) MATERIAL: unidad de medida requerida
+  .refine(
+    (data) => {
+      if (data.kind === "MATERIAL") {
+        return !!data.unitOfMeasureId;
+      }
+      return true;
+    },
+    {
+      message: "La unidad de medida es requerida para materiales",
+      path: ["unitOfMeasureId"],
     }
-    return true;
-  },
-  {
-    message: 'La unidad de medida es requerida para materiales',
-    path: ['unitOfMeasureId'],
-  }
-).refine(
-  (data) => {
-    // Validar que solo equipos tengan model (repuestos no tienen model)
-    if (data.kind === 'EQUIPMENT') {
-      return !!data.model;
+  )
+
+  // 1.1) MATERIAL: isHazardous requerido (true/false)
+  .refine(
+    (data) => {
+      if (data.kind === "MATERIAL") {
+        return typeof data.isHazardous === "boolean";
+      }
+      return true;
+    },
+    {
+      message: "Debes indicar si el material es peligroso o no",
+      path: ["isHazardous"],
     }
-    return true;
-  },
-  {
-    message: 'El modelo es requerido para equipos',
-    path: ['model'],
-  }
-).refine(
-  (data) => {
-    // Validar que equipos y repuestos tengan dimensiones completas
-    if (data.kind === 'EQUIPMENT' || data.kind === 'SPARE_PART') {
-      const hasWeight = data.weightValue !== undefined && !!data.weightUnitId;
-      const hasWidth = data.widthValue !== undefined && !!data.widthUnitId;
-      const hasHeight = data.heightValue !== undefined && !!data.heightUnitId;
-      const hasLength = data.lengthValue !== undefined && !!data.lengthUnitId;
-      return hasWeight && hasWidth && hasHeight && hasLength;
+  )
+
+  // 1.2) MATERIAL: si hay weightValue, debe haber weightUnitId
+  .refine(
+    (data) => {
+      if (data.kind === "MATERIAL" && data.weightValue !== undefined) {
+        return !!data.weightUnitId;
+      }
+      return true;
+    },
+    {
+      message: "Si indicas un peso, debes seleccionar su unidad",
+      path: ["weightUnitId"],
     }
-    return true;
-  },
-  {
-    message: 'Los equipos y repuestos requieren peso, ancho, alto y largo con sus unidades',
-    path: ['weightValue'],
-  }
-);
+  )
+
+  // 2) EQUIPMENT: modelo requerido
+  .refine(
+    (data) => {
+      if (data.kind === "EQUIPMENT") {
+        return !!data.model;
+      }
+      return true;
+    },
+    {
+      message: "El modelo es requerido para equipos",
+      path: ["model"],
+    }
+  )
+
+  // 3) EQUIPMENT: dimensiones completas requeridas
+  .refine(
+    (data) => {
+      if (data.kind === "EQUIPMENT") {
+        const hasWeight =
+          data.weightValue !== undefined && !!data.weightUnitId;
+        const hasWidth =
+          data.widthValue !== undefined && !!data.widthUnitId;
+        const hasHeight =
+          data.heightValue !== undefined && !!data.heightUnitId;
+        const hasLength =
+          data.lengthValue !== undefined && !!data.lengthUnitId;
+
+        return hasWeight && hasWidth && hasHeight && hasLength;
+      }
+      return true;
+    },
+    {
+      message:
+        "Los equipos requieren peso, ancho, alto y largo con sus unidades",
+      path: ["weightValue"], // ancla general del error
+    }
+  )
+
+  // 4) SPARE_PART: equipo asociado requerido
+  .refine(
+    (data) => {
+      if (data.kind === "SPARE_PART") {
+        return !!data.equipmentId;
+      }
+      return true;
+    },
+    {
+      message: "El repuesto debe estar asociado a un equipo",
+      path: ["equipmentId"],
+    }
+  )
+
+  // 5) SPARE_PART: categoría requerida (COMPONENT / SPARE)
+  .refine(
+    (data) => {
+      if (data.kind === "SPARE_PART") {
+        return !!data.category;
+      }
+      return true;
+    },
+    {
+      message: "La categoría es requerida para repuestos",
+      path: ["category"],
+    }
+  );
+
 
 // Schema de actualización (sin validaciones condicionales por ahora)
 // ✅ El SKU sí existe en actualización (es readonly)

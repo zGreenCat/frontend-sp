@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
+
 import { createProductSchema, CreateProductInput } from "@/shared/schemas";
 import { ProductKind } from "@/domain/entities/Product";
 import { useUnitsOfMeasure, useCurrencies } from "@/hooks/useUnitsAndCurrencies";
@@ -46,14 +47,14 @@ export function ProductForm({
   mode = "create",
   kind,
 }: ProductFormProps) {
-  // ✅ Consumir catálogos desde backend
+  // Catálogos desde backend
   const { data: units, isLoading: loadingUnits } = useUnitsOfMeasure();
   const { data: currencies, isLoading: loadingCurrencies } = useCurrencies();
   const { data: categories, isLoading: loadingCategories } = useMaterialCategories();
-  // Solo cargar equipos si el tipo es SPARE_PART
-  const shouldLoadEquipments = kind === 'SPARE_PART';
-  const { data: equipmentsData, isLoading: loadingEquipments } = useEquipments({ 
-    page: 1, 
+
+  // Equipos (para repuestos)
+  const { data: equipmentsData, isLoading: loadingEquipments } = useEquipments({
+    page: 1,
     limit: 100,
   });
 
@@ -64,22 +65,31 @@ export function ProductForm({
       name: defaultValues?.name || "",
       description: defaultValues?.description || "",
       currencyId: defaultValues?.currencyId || "",
-      monetaryValue: defaultValues?.monetaryValue || 0,
+      monetaryValue: defaultValues?.monetaryValue,
       isActive: defaultValues?.isActive ?? true,
-      model: defaultValues?.model || "",
+
+      // MATERIAL
       unitOfMeasureId: defaultValues?.unitOfMeasureId || "",
-      isHazardous: defaultValues?.isHazardous || false,
+      isHazardous:
+        typeof defaultValues?.isHazardous === "boolean"
+          ? defaultValues.isHazardous
+          : kind === "MATERIAL"
+          ? false
+          : undefined,
       categoryId: defaultValues?.categoryId || "",
-      // Dimensiones para equipos
-      weightValue: defaultValues?.weightValue || 0,
+
+      // EQUIPMENT
+      model: defaultValues?.model || "",
+      weightValue: defaultValues?.weightValue,
       weightUnitId: defaultValues?.weightUnitId || "",
-      widthValue: defaultValues?.widthValue || 0,
+      widthValue: defaultValues?.widthValue,
       widthUnitId: defaultValues?.widthUnitId || "",
-      heightValue: defaultValues?.heightValue || 0,
+      heightValue: defaultValues?.heightValue,
       heightUnitId: defaultValues?.heightUnitId || "",
-      lengthValue: defaultValues?.lengthValue || 0,
+      lengthValue: defaultValues?.lengthValue,
       lengthUnitId: defaultValues?.lengthUnitId || "",
-      // Campos para repuestos
+
+      // SPARE_PART
       equipmentId: defaultValues?.equipmentId || "",
       category: defaultValues?.category || "COMPONENT",
     },
@@ -89,19 +99,22 @@ export function ProductForm({
     await onSubmit(data);
   };
 
-  // Helper para obtener el label del tipo de producto
   const getKindLabel = () => {
     switch (kind) {
-      case 'EQUIPMENT':
-        return 'Equipo';
-      case 'MATERIAL':
-        return 'Material';
-      case 'SPARE_PART':
-        return 'Repuesto';
+      case "EQUIPMENT":
+        return "Equipo";
+      case "MATERIAL":
+        return "Material";
+      case "SPARE_PART":
+        return "Repuesto";
       default:
-        return 'Producto';
+        return "Producto";
     }
   };
+
+  // Helpers para unidades
+  const weightUnits = units?.filter((u) => u.type === "WEIGHT") ?? [];
+  const lengthUnits = units?.filter((u) => u.type === "LENGTH") ?? [];
 
   return (
     <Form {...form}>
@@ -109,7 +122,8 @@ export function ProductForm({
         {/* Tipo de producto (readonly) */}
         <div className="rounded-lg bg-muted p-3">
           <p className="text-sm text-muted-foreground">
-            Tipo de producto: <span className="font-medium text-foreground">{getKindLabel()}</span>
+            Tipo de producto:{" "}
+            <span className="font-medium text-foreground">{getKindLabel()}</span>
           </p>
         </div>
 
@@ -123,9 +137,9 @@ export function ProductForm({
                 Nombre <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="Nombre del producto" 
-                  {...field} 
+                <Input
+                  placeholder="Nombre del producto"
+                  {...field}
                   disabled={isLoading}
                 />
               </FormControl>
@@ -142,7 +156,7 @@ export function ProductForm({
             <FormItem>
               <FormLabel>Descripción</FormLabel>
               <FormControl>
-                <Textarea 
+                <Textarea
                   placeholder="Descripción del producto..."
                   className="resize-none"
                   rows={3}
@@ -155,8 +169,8 @@ export function ProductForm({
           )}
         />
 
-        {/* Modelo (solo para EQUIPMENT) - Los repuestos no tienen modelo */}
-        {kind === 'EQUIPMENT' && (
+        {/* Modelo (solo EQUIPMENT) */}
+        {kind === "EQUIPMENT" && (
           <FormField
             control={form.control}
             name="model"
@@ -166,8 +180,8 @@ export function ProductForm({
                   Modelo <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Modelo del equipo" 
+                  <Input
+                    placeholder="Modelo del equipo"
                     {...field}
                     disabled={isLoading}
                   />
@@ -178,31 +192,39 @@ export function ProductForm({
           />
         )}
 
-        {/* Campos específicos de SPARE_PART */}
-        {kind === 'SPARE_PART' && (
+        {/* SPARE_PART: datos específicos */}
+        {kind === "SPARE_PART" && (
           <>
-            {/* Equipo asociado */}
+            {/* Equipo asociado (obligatorio ahora) */}
             <FormField
               control={form.control}
               name="equipmentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Equipo asociado (opcional)</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
-                    defaultValue={field.value || "none"}
+                  <FormLabel>
+                    Equipo asociado <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
                     disabled={isLoading || loadingEquipments}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingEquipments ? "Cargando equipos..." : "Selecciona un equipo"} />
+                        <SelectValue
+                          placeholder={
+                            loadingEquipments
+                              ? "Cargando equipos..."
+                              : "Selecciona un equipo"
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">Ninguno</SelectItem>
                       {equipmentsData?.data?.map((equipment) => (
                         <SelectItem key={equipment.id} value={equipment.id}>
-                          {equipment.name} {equipment.model && `- ${equipment.model}`}
+                          {equipment.name}
+                          {equipment.model && ` - ${equipment.model}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -221,8 +243,8 @@ export function ProductForm({
                   <FormLabel>
                     Categoría <span className="text-destructive">*</span>
                   </FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     defaultValue={field.value}
                     disabled={isLoading}
                   >
@@ -243,8 +265,8 @@ export function ProductForm({
           </>
         )}
 
-        {/* Dimensiones (para EQUIPMENT y SPARE_PART) */}
-        {(kind === 'EQUIPMENT' || kind === 'SPARE_PART') && (
+        {/* Dimensiones (EQUIPMENT y SPARE_PART) */}
+        {(kind === "EQUIPMENT" || kind === "SPARE_PART") && (
           <>
             {/* Peso */}
             <div className="grid grid-cols-2 gap-4">
@@ -254,15 +276,23 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Peso <span className="text-destructive">*</span>
+                      Peso{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         step="0.01"
                         placeholder="500"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(
+                            value === "" ? undefined : parseFloat(value)
+                          );
+                        }}
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -276,20 +306,25 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Unidad peso <span className="text-destructive">*</span>
+                      Unidad peso{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       disabled={isLoading || loadingUnits}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                          <SelectValue
+                            placeholder={loadingUnits ? "Cargando..." : "Unidad"}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {units?.filter(u => u.type === 'WEIGHT').map((unit) => (
+                        {weightUnits.map((unit) => (
                           <SelectItem key={unit.id} value={unit.id}>
                             {unit.name} ({unit.abbreviation})
                           </SelectItem>
@@ -310,15 +345,23 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Ancho <span className="text-destructive">*</span>
+                      Ancho{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         step="0.01"
                         placeholder="100"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(
+                            value === "" ? undefined : parseFloat(value)
+                          );
+                        }}
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -332,20 +375,25 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Unidad ancho <span className="text-destructive">*</span>
+                      Unidad ancho{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       disabled={isLoading || loadingUnits}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                          <SelectValue
+                            placeholder={loadingUnits ? "Cargando..." : "Unidad"}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {units?.filter(u => u.type === 'LENGTH').map((unit) => (
+                        {lengthUnits.map((unit) => (
                           <SelectItem key={unit.id} value={unit.id}>
                             {unit.name} ({unit.abbreviation})
                           </SelectItem>
@@ -366,15 +414,23 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Alto <span className="text-destructive">*</span>
+                      Alto{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         step="0.01"
                         placeholder="150"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(
+                            value === "" ? undefined : parseFloat(value)
+                          );
+                        }}
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -388,20 +444,25 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Unidad alto <span className="text-destructive">*</span>
+                      Unidad alto{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       disabled={isLoading || loadingUnits}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                          <SelectValue
+                            placeholder={loadingUnits ? "Cargando..." : "Unidad"}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {units?.filter(u => u.type === 'LENGTH').map((unit) => (
+                        {lengthUnits.map((unit) => (
                           <SelectItem key={unit.id} value={unit.id}>
                             {unit.name} ({unit.abbreviation})
                           </SelectItem>
@@ -422,15 +483,23 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Largo <span className="text-destructive">*</span>
+                      Largo{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         step="0.01"
                         placeholder="120"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(
+                            value === "" ? undefined : parseFloat(value)
+                          );
+                        }}
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -444,20 +513,25 @@ export function ProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Unidad largo <span className="text-destructive">*</span>
+                      Unidad largo{" "}
+                      {kind === "EQUIPMENT" && (
+                        <span className="text-destructive">*</span>
+                      )}
                     </FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       disabled={isLoading || loadingUnits}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingUnits ? "Cargando..." : "Unidad"} />
+                          <SelectValue
+                            placeholder={loadingUnits ? "Cargando..." : "Unidad"}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {units?.filter(u => u.type === 'LENGTH').map((unit) => (
+                        {lengthUnits.map((unit) => (
                           <SelectItem key={unit.id} value={unit.id}>
                             {unit.name} ({unit.abbreviation})
                           </SelectItem>
@@ -472,8 +546,8 @@ export function ProductForm({
           </>
         )}
 
-        {/* Unidad de medida (solo para MATERIAL) */}
-        {kind === 'MATERIAL' && (
+        {/* MATERIAL: unidad de medida */}
+        {kind === "MATERIAL" && (
           <FormField
             control={form.control}
             name="unitOfMeasureId"
@@ -482,14 +556,20 @@ export function ProductForm({
                 <FormLabel>
                   Unidad de medida <span className="text-destructive">*</span>
                 </FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
+                <Select
+                  onValueChange={field.onChange}
                   defaultValue={field.value}
                   disabled={isLoading || loadingUnits}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={loadingUnits ? "Cargando unidades..." : "Selecciona una unidad"} />
+                      <SelectValue
+                        placeholder={
+                          loadingUnits
+                            ? "Cargando unidades..."
+                            : "Selecciona una unidad"
+                        }
+                      />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -506,8 +586,77 @@ export function ProductForm({
           />
         )}
 
-        {/* Peligroso (solo para MATERIAL) */}
-        {kind === 'MATERIAL' && (
+        {/* MATERIAL: peso estándar opcional */}
+        {kind === "MATERIAL" && (
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="weightValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Peso estándar (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Ej: 25"
+                      value={field.value ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(
+                          value === "" ? undefined : parseFloat(value)
+                        );
+                      }}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Peso unitario típico del material.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="weightUnitId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unidad de peso</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isLoading || loadingUnits}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            loadingUnits ? "Cargando..." : "Selecciona unidad"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {weightUnits.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name} ({unit.abbreviation})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Requerida si indicas un peso.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+
+        {/* MATERIAL: peligroso */}
+        {kind === "MATERIAL" && (
           <>
             <FormField
               control={form.control}
@@ -515,14 +664,18 @@ export function ProductForm({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <FormLabel>Material peligroso</FormLabel>
+                    <FormLabel>
+                      Material peligroso{" "}
+                      <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormDescription>
-                      Indica si el material es peligroso o requiere manejo especial
+                      Indica si el material es peligroso o requiere manejo
+                      especial.
                     </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
-                      checked={field.value}
+                      checked={!!field.value}
                       onCheckedChange={field.onChange}
                       disabled={isLoading}
                     />
@@ -531,21 +684,27 @@ export function ProductForm({
               )}
             />
 
-            {/* Categoría */}
+            {/* MATERIAL: categoría única */}
             <FormField
               control={form.control}
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoría (opcional)</FormLabel>
-                  <Select 
+                  <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     disabled={isLoading || loadingCategories}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingCategories ? "Cargando categorías..." : "Selecciona una categoría"} />
+                        <SelectValue
+                          placeholder={
+                            loadingCategories
+                              ? "Cargando..."
+                              : "Selecciona una categoría"
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -557,7 +716,7 @@ export function ProductForm({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Selecciona la categoría del material
+                    Selecciona la categoría del material.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -566,7 +725,7 @@ export function ProductForm({
           </>
         )}
 
-        {/* Moneda y Valor Monetario */}
+        {/* Moneda y Valor */}
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -576,14 +735,18 @@ export function ProductForm({
                 <FormLabel>
                   Moneda <span className="text-destructive">*</span>
                 </FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
+                <Select
+                  onValueChange={field.onChange}
                   defaultValue={field.value}
                   disabled={isLoading || loadingCurrencies}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={loadingCurrencies ? "Cargando..." : "Selecciona moneda"} />
+                      <SelectValue
+                        placeholder={
+                          loadingCurrencies ? "Cargando..." : "Selecciona moneda"
+                        }
+                      />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -608,18 +771,23 @@ export function ProductForm({
                   Valor unitario <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     type="number"
                     step="0.01"
-                    placeholder="0.00" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    value={field.value ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(
+                        value === "" ? undefined : parseFloat(value)
+                      );
+                    }}
                     disabled={isLoading}
                     className="font-mono"
                   />
                 </FormControl>
                 <FormDescription>
-                  Formato: 10.50 (sin separadores de miles)
+                  Formato: 10.50 (sin separadores de miles).
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -642,7 +810,7 @@ export function ProductForm({
                 </div>
                 <FormControl>
                   <Switch
-                    checked={field.value}
+                    checked={!!field.value}
                     onCheckedChange={field.onChange}
                     disabled={isLoading}
                   />
@@ -652,7 +820,7 @@ export function ProductForm({
           />
         )}
 
-        {/* Botones de acción */}
+        {/* Botones */}
         <div className="flex gap-3 pt-4">
           <Button
             type="button"
@@ -663,11 +831,7 @@ export function ProductForm({
           >
             Cancelar
           </Button>
-          <Button 
-            type="submit" 
-            disabled={isLoading}
-            className="flex-1"
-          >
+          <Button type="submit" disabled={isLoading} className="flex-1">
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

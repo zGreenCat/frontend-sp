@@ -30,7 +30,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-import { useProductDetail, useUpdateProduct, useProductHistory } from "@/hooks/useProducts";
+import { useProductDetail, useUpdateProduct, useDeleteProduct, useProductHistory } from "@/hooks/useProducts";
 import { ProductKind, Product } from "@/domain/entities/Product";
 import { ProductHistoryFilters } from "@/domain/entities/ProductHistory";
 import { UpdateProductInput } from "@/shared/schemas";
@@ -122,6 +122,7 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
   } = useProductDetail(productId, kind);
 
   const updateProductMutation = useUpdateProduct();
+  const deleteProductMutation = useDeleteProduct();
 
   const [activeTab, setActiveTab] = useState("general");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -271,7 +272,7 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
     }
   };
 
-  // Handler para dar de baja (cambiar isActive a false)
+  // Handler para dar de baja (soft delete con DELETE HTTP)
   const handleDeactivateProduct = async () => {
     if (!product) return;
     
@@ -286,13 +287,9 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
     }
 
     try {
-      await updateProductMutation.mutateAsync({
+      await deleteProductMutation.mutateAsync({
         id: productId,
         kind,
-        input: {
-          id: productId,
-          isActive: false,
-        },
       });
 
       toast({
@@ -301,10 +298,20 @@ export function ProductDetailView({ productId, kind }: ProductDetailViewProps) {
       });
 
       setDeactivateDialogOpen(false);
+      
+      // Mapear kind a tab correcto
+      const tabMap: Record<ProductKind, string> = {
+        'MATERIAL': 'materials',
+        'EQUIPMENT': 'equipments',
+        'SPARE_PART': 'spare-parts',
+      };
+      
+      // Redirigir a la lista de productos después de eliminar
+      router.push(`/products?tab=${tabMap[kind]}`);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error al procesar la operación de producto",
+        title: "Error al dar de baja el producto",
         description: (error as Error).message,
       });
     }

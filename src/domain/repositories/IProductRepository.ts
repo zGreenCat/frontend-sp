@@ -121,6 +121,14 @@ export interface IProductRepository {
   update(id: string, kind: ProductKind, input: UpdateProductInput): Promise<Product>;
 
   /**
+   * Elimina un producto (soft delete)
+   * @param id - ID del producto a eliminar
+   * @param kind - Tipo de producto (para enrutar al endpoint correcto)
+   * @returns Promise<void>
+   */
+  delete(id: string, kind: ProductKind): Promise<void>;
+
+  /**
    * Obtiene el historial de cambios de un producto
    * @param id - ID del producto
    * @param kind - Tipo de producto (para enrutar al endpoint correcto)

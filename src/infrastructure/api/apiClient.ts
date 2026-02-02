@@ -66,7 +66,24 @@ private async handleResponse<T>(response: Response): Promise<T> {
     } as ApiError;
   }
 
-  return response.json();
+  // Si la respuesta está vacía (204 No Content) o no tiene contenido, retornar undefined
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as T;
+  }
+
+  // Intentar parsear JSON, si falla retornar undefined
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    return undefined as T;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    // Si no es JSON válido, intentar devolver el texto plano
+    console.warn('[ApiClient] Response is not valid JSON:', text);
+    return undefined as T;
+  }
 }
 
 
@@ -183,15 +200,13 @@ private handleSessionExpired(): void {
     return this.handleResponse<T>(response);
   }
 
-  async delete<T, D = unknown>(
+  async delete<T = void>(
     endpoint: string,
-    data?: D,
     requiresAuth: boolean = true
   ): Promise<T> {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: "DELETE",
       headers: this.getHeaders(requiresAuth),
-      body: data ? JSON.stringify(data) : undefined,
     });
 
     return this.handleResponse<T>(response);

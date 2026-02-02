@@ -6,6 +6,7 @@ import { PaginatedResponse } from '@/shared/types/pagination.types';
 import { CreateProductInput, UpdateProductInput } from '@/domain/repositories/IProductRepository';
 import { CreateProduct } from '@/application/usecases/product/CreateProduct';
 import { UpdateProduct } from '@/application/usecases/product/UpdateProduct';
+import { DeleteProduct } from '@/application/usecases/product/DeleteProduct';
 import { GetProductHistory } from '@/application/usecases/product/GetProductHistory';
 import { TENANT_ID } from '@/shared/constants';
 
@@ -141,9 +142,9 @@ export const useCreateProduct = () => {
       return result.value;
     },
     onSuccess: (product) => {
-      // Invalidar queries del tipo de producto creado
+      // Invalidar todas las queries de listado del tipo de producto creado
       queryClient.invalidateQueries({ 
-        queryKey: productKeys.all(product.kind, undefined) 
+        queryKey: ['products', TENANT_ID, product.kind]
       });
     },
   });
@@ -182,9 +183,46 @@ export const useUpdateProduct = () => {
         queryKey: productKeys.detail(product.id, product.kind) 
       });
       
-      // Invalidar queries de listado del tipo de producto actualizado
+      // Invalidar todas las queries de listado del tipo de producto actualizado
       queryClient.invalidateQueries({ 
-        queryKey: productKeys.all(product.kind, undefined) 
+        queryKey: ['products', TENANT_ID, product.kind]
+      });
+    },
+  });
+};
+
+/**
+ * Mutation para eliminar un producto (soft delete)
+ * Invalida las queries de listado del tipo de producto eliminado
+ */
+export const useDeleteProduct = () => {
+  const { productRepo } = useRepositories();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      kind 
+    }: { 
+      id: string; 
+      kind: ProductKind; 
+    }): Promise<void> => {
+      const useCase = new DeleteProduct(productRepo);
+      const result = await useCase.execute(id, kind);
+      
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+    },
+    onSuccess: (_, variables) => {
+      // Invalidar query de detalle del producto eliminado
+      queryClient.invalidateQueries({ 
+        queryKey: productKeys.detail(variables.id, variables.kind) 
+      });
+      
+      // Invalidar todas las queries de listado del tipo de producto eliminado
+      queryClient.invalidateQueries({ 
+        queryKey: ['products', TENANT_ID, variables.kind]
       });
     },
   });

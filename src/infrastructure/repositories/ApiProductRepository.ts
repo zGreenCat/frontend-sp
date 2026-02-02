@@ -440,6 +440,24 @@ export class ApiProductRepository implements IProductRepository {
   }
 
   /**
+   * Elimina un producto (soft delete)
+   */
+  async delete(id: string, kind: ProductKind): Promise<void> {
+    try {
+      const endpoint = this.getDetailEndpointForKind(kind, id);
+      
+      console.log(`[ApiProductRepository] Deleting ${kind}:`, endpoint);
+      
+      await apiClient.delete(endpoint, true);
+      
+      console.log(`[ApiProductRepository] Product deleted successfully:`, id);
+    } catch (error) {
+      console.error('[ApiProductRepository] Error deleting product:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Mapea el input de actualización al formato esperado por el backend
    * Similar a mapInputToBackendPayload pero sin campos obligatorios y sin tenantId
    */
