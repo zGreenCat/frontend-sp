@@ -1,7 +1,6 @@
 "use client";
 
-import { Search, User as UserIcon, LogOut, Settings } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { User as UserIcon, LogOut, Settings } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -57,18 +56,8 @@ export function AppTopbar() {
           </h1>
         </div>
 
-        <div className="flex-1 max-w-md ml-auto">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar..."
-              className="pl-9 h-10 bg-secondary/50 border-input"
-            />
-          </div>
-        </div>
-
-        <DropdownMenu>
+        <div className="ml-auto">
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 ring-primary transition-all">
               <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
@@ -103,6 +92,7 @@ export function AppTopbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   );
