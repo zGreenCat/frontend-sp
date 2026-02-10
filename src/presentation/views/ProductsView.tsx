@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -15,16 +14,25 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, Package2, AlertTriangle, CheckCircle2, Wrench, Settings, Plus } from "lucide-react";
+import { Loader2, Package2, AlertTriangle, CheckCircle2, Wrench, Settings, Plus } from "lucide-react";
 import { useMaterials, useEquipments, useSpareParts, useCreateProduct } from "@/hooks/useProducts";
 import { Product, ProductKind } from "@/domain/entities/Product";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { CreateProductDialog } from "@/presentation/components/CreateProductDialog";
+import { ProductFilterBar } from "@/presentation/components/ProductFilterBar";
 import { CreateProductInput } from "@/shared/schemas";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrencies } from "@/hooks/useUnitsAndCurrencies";
+import { useUnitsOfMeasure } from "@/hooks/useUnitsAndCurrencies";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { 
+  EquipmentQuery, 
+  MaterialQuery, 
+  SparePartQuery 
+} from "@/shared/types/product-filters.types";
+import { buildQueryParams, parseQueryParams } from "@/shared/utils/queryParamsHelper";
 
 /**
  * Formatea una fecha de forma segura
@@ -52,6 +60,10 @@ export function ProductsView() {
   const { toast } = useToast();
   const { isAdmin, isManager } = usePermissions();
   
+  // Cargar catálogos
+  const { data: currencies = [] } = useCurrencies();
+  const { data: unitsOfMeasure = [] } = useUnitsOfMeasure();
+  
   // ✅ Leer tab desde URL query params (defaultTab=materials)
   const tabFromUrl = searchParams.get('tab') || 'materials';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
@@ -60,41 +72,71 @@ export function ProductsView() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDialogKind, setCreateDialogKind] = useState<ProductKind>('MATERIAL');
   
-  // Estados para tab de Materiales
-  const [searchMaterials, setSearchMaterials] = useState("");
-  const [pageMaterials, setPageMaterials] = useState(1);
+  // ======== Estados para Materiales ========
+  const [materialFilters, setMaterialFilters] = useState<MaterialQuery>(() => {
+    const fromUrl = parseQueryParams(searchParams);
+    return {
+      page: fromUrl.page || 1,
+      limit: 10,
+      search: fromUrl.search || '',
+      isActive: fromUrl.isActive,
+      currencyId: fromUrl.currencyId,
+      unitOfMeasureId: (fromUrl as any).unitOfMeasureId,
+      isHazardous: (fromUrl as any).isHazardous,
+    };
+  });
   
-  // Estados para tab de Equipos
-  const [searchEquipments, setSearchEquipments] = useState("");
-  const [pageEquipments, setPageEquipments] = useState(1);
+  // ======== Estados para Equipos ========
+  const [equipmentFilters, setEquipmentFilters] = useState<EquipmentQuery>(() => {
+    const fromUrl = parseQueryParams(searchParams);
+    return {
+      page: fromUrl.page || 1,
+      limit: 10,
+      search: fromUrl.search || '',
+      isActive: fromUrl.isActive,
+      currencyId: fromUrl.currencyId,
+    };
+  });
   
-  // Estados para tab de Repuestos
-  const [searchSpareParts, setSearchSpareParts] = useState("");
-  const [pageSpareParts, setPageSpareParts] = useState(1);
-  
-  const limit = 10;
+  // ======== Estados para Repuestos ========
+  const [sparePartFilters, setSparePartFilters] = useState<SparePartQuery>(() => {
+    const fromUrl = parseQueryParams(searchParams);
+    return {
+      page: fromUrl.page || 1,
+      limit: 10,
+      search: fromUrl.search || '',
+      isActive: fromUrl.isActive,
+      currencyId: fromUrl.currencyId,
+      category: (fromUrl as any).category,
+      equipmentId: (fromUrl as any).equipmentId,
+    };
+  });
 
   // Hooks para datos
-  const { data: materialsData, isLoading: loadingMaterials, error: errorMaterials } = useMaterials({
-    page: pageMaterials,
-    limit,
-    search: searchMaterials || undefined,
-  });
-
-  const { data: equipmentsData, isLoading: loadingEquipments, error: errorEquipments } = useEquipments({
-    page: pageEquipments,
-    limit,
-    search: searchEquipments || undefined,
-  });
-
-  const { data: sparePartsData, isLoading: loadingSpareParts, error: errorSpareParts } = useSpareParts({
-    page: pageSpareParts,
-    limit,
-    search: searchSpareParts || undefined,
-  });
+  const { data: materialsData, isLoading: loadingMaterials, error: errorMaterials } = useMaterials(materialFilters);
+  const { data: equipmentsData, isLoading: loadingEquipments, error: errorEquipments } = useEquipments(equipmentFilters);
+  const { data: sparePartsData, isLoading: loadingSpareParts, error: errorSpareParts } = useSpareParts(sparePartFilters);
 
   // Mutation para crear producto
   const createProductMutation = useCreateProduct();
+  
+  // ✅ Sincronizar URL con filtros actuales
+  const syncUrlWithFilters = useCallback((filters: any, tab: string) => {
+    const params = buildQueryParams(filters);
+    params.set('tab', tab);
+    router.replace(`/products?${params.toString()}`, { scroll: false });
+  }, [router]);
+  
+  // Sincronizar cuando cambian los filtros del tab activo
+  useEffect(() => {
+    if (activeTab === 'materials') {
+      syncUrlWithFilters(materialFilters, activeTab);
+    } else if (activeTab === 'equipments') {
+      syncUrlWithFilters(equipmentFilters, activeTab);
+    } else if (activeTab === 'spare-parts') {
+      syncUrlWithFilters(sparePartFilters, activeTab);
+    }
+  }, [materialFilters, equipmentFilters, sparePartFilters, activeTab, syncUrlWithFilters]);
 
   // Manejo de errores con toast
   useEffect(() => {
@@ -192,19 +234,16 @@ export function ProductsView() {
       
       setCreateDialogOpen(false);
       
-      // Resetear paginación y búsqueda del tab correspondiente
+      // Resetear paginación del tab correspondiente
       switch (product.kind) {
         case 'MATERIAL':
-          setPageMaterials(1);
-          setSearchMaterials("");
+          setMaterialFilters(prev => ({ ...prev, page: 1 }));
           break;
         case 'EQUIPMENT':
-          setPageEquipments(1);
-          setSearchEquipments("");
+          setEquipmentFilters(prev => ({ ...prev, page: 1 }));
           break;
         case 'SPARE_PART':
-          setPageSpareParts(1);
-          setSearchSpareParts("");
+          setSparePartFilters(prev => ({ ...prev, page: 1 }));
           break;
       }
     } catch (error) {
@@ -214,6 +253,32 @@ export function ProductsView() {
         description: (error as Error).message || "No se pudo crear el producto",
       });
     }
+  };
+  
+  // ✅ Handlers para actualizar filtros (resetean page a 1)
+  const updateMaterialFilters = (updates: Partial<MaterialQuery>) => {
+    setMaterialFilters(prev => ({
+      ...prev,
+      ...updates,
+      // Resetear página cuando cambia cualquier filtro distinto de page
+      page: ('page' in updates) ? updates.page! : 1,
+    }));
+  };
+  
+  const updateEquipmentFilters = (updates: Partial<EquipmentQuery>) => {
+    setEquipmentFilters(prev => ({
+      ...prev,
+      ...updates,
+      page: ('page' in updates) ? updates.page! : 1,
+    }));
+  };
+  
+  const updateSparePartFilters = (updates: Partial<SparePartQuery>) => {
+    setSparePartFilters(prev => ({
+      ...prev,
+      ...updates,
+      page: ('page' in updates) ? updates.page! : 1,
+    }));
   };
 
   return (
@@ -241,28 +306,21 @@ export function ProductsView() {
         {/* Tab de Materiales */}
         <TabsContent value="materials" className="space-y-4">
           {/* Filtros */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Filtros de Búsqueda
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="w-full">
-                {/* Búsqueda */}
-                <Input
-                  placeholder="Buscar por nombre o descripción..."
-                  value={searchMaterials}
-                  onChange={(e) => {
-                    setSearchMaterials(e.target.value);
-                    setPageMaterials(1);
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <ProductFilterBar
+            type="MATERIAL"
+            search={materialFilters.search}
+            onSearchChange={(search) => updateMaterialFilters({ search })}
+            isActive={materialFilters.isActive}
+            onIsActiveChange={(isActive) => updateMaterialFilters({ isActive })}
+            currencyId={materialFilters.currencyId}
+            onCurrencyIdChange={(currencyId) => updateMaterialFilters({ currencyId })}
+            currencies={currencies}
+            unitOfMeasureId={materialFilters.unitOfMeasureId}
+            onUnitOfMeasureIdChange={(unitOfMeasureId) => updateMaterialFilters({ unitOfMeasureId })}
+            unitsOfMeasure={unitsOfMeasure}
+            isHazardous={materialFilters.isHazardous}
+            onIsHazardousChange={(isHazardous) => updateMaterialFilters({ isHazardous })}
+          />
 
           {/* Tabla de Materiales */}
           <Card>
@@ -401,19 +459,19 @@ export function ProductsView() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPageMaterials(pageMaterials - 1)}
-                        disabled={pageMaterials === 1}
+                        onClick={() => updateMaterialFilters({ page: materialFilters.page! - 1 })}
+                        disabled={materialFilters.page === 1}
                       >
                         Anterior
                       </Button>
                       <span className="text-sm text-muted-foreground">
-                        Página {pageMaterials} de {totalPagesMaterials}
+                        Página {materialFilters.page} de {totalPagesMaterials}
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPageMaterials(pageMaterials + 1)}
-                        disabled={pageMaterials === totalPagesMaterials}
+                        onClick={() => updateMaterialFilters({ page: materialFilters.page! + 1 })}
+                        disabled={materialFilters.page === totalPagesMaterials}
                       >
                         Siguiente
                       </Button>
@@ -428,27 +486,16 @@ export function ProductsView() {
         {/* Tab de Equipos */}
         <TabsContent value="equipments" className="space-y-4">
           {/* Filtros */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Filtros de Búsqueda
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="w-full">
-                <Input
-                  placeholder="Buscar por nombre, modelo o descripción..."
-                  value={searchEquipments}
-                  onChange={(e) => {
-                    setSearchEquipments(e.target.value);
-                    setPageEquipments(1);
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <ProductFilterBar
+            type="EQUIPMENT"
+            search={equipmentFilters.search}
+            onSearchChange={(search) => updateEquipmentFilters({ search })}
+            isActive={equipmentFilters.isActive}
+            onIsActiveChange={(isActive) => updateEquipmentFilters({ isActive })}
+            currencyId={equipmentFilters.currencyId}
+            onCurrencyIdChange={(currencyId) => updateEquipmentFilters({ currencyId })}
+            currencies={currencies}
+          />
 
           {/* Tabla de Equipos */}
           <Card>
@@ -565,19 +612,19 @@ export function ProductsView() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPageEquipments(pageEquipments - 1)}
-                        disabled={pageEquipments === 1}
+                        onClick={() => updateEquipmentFilters({ page: equipmentFilters.page! - 1 })}
+                        disabled={equipmentFilters.page === 1}
                       >
                         Anterior
                       </Button>
                       <span className="text-sm text-muted-foreground">
-                        Página {pageEquipments} de {totalPagesEquipments}
+                        Página {equipmentFilters.page} de {totalPagesEquipments}
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPageEquipments(pageEquipments + 1)}
-                        disabled={pageEquipments === totalPagesEquipments}
+                        onClick={() => updateEquipmentFilters({ page: equipmentFilters.page! + 1 })}
+                        disabled={equipmentFilters.page === totalPagesEquipments}
                       >
                         Siguiente
                       </Button>
@@ -592,27 +639,21 @@ export function ProductsView() {
         {/* Tab de Repuestos */}
         <TabsContent value="spare-parts" className="space-y-4">
           {/* Filtros */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Filtros de Búsqueda
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="w-full">
-                <Input
-                  placeholder="Buscar por nombre, modelo o descripción..."
-                  value={searchSpareParts}
-                  onChange={(e) => {
-                    setSearchSpareParts(e.target.value);
-                    setPageSpareParts(1);
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <ProductFilterBar
+            type="SPARE_PART"
+            search={sparePartFilters.search}
+            onSearchChange={(search) => updateSparePartFilters({ search })}
+            isActive={sparePartFilters.isActive}
+            onIsActiveChange={(isActive) => updateSparePartFilters({ isActive })}
+            currencyId={sparePartFilters.currencyId}
+            onCurrencyIdChange={(currencyId) => updateSparePartFilters({ currencyId })}
+            currencies={currencies}
+            category={sparePartFilters.category}
+            onCategoryChange={(category) => updateSparePartFilters({ category })}
+            equipmentId={sparePartFilters.equipmentId}
+            onEquipmentIdChange={(equipmentId) => updateSparePartFilters({ equipmentId })}
+            equipments={equipments.map(e => ({ id: e.id, name: e.name }))}
+          />
 
           {/* Tabla de Repuestos */}
           <Card>
@@ -723,19 +764,19 @@ export function ProductsView() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPageSpareParts(pageSpareParts - 1)}
-                        disabled={pageSpareParts === 1}
+                        onClick={() => updateSparePartFilters({ page: sparePartFilters.page! - 1 })}
+                        disabled={sparePartFilters.page === 1}
                       >
                         Anterior
                       </Button>
                       <span className="text-sm text-muted-foreground">
-                        Página {pageSpareParts} de {totalPagesSpareParts}
+                        Página {sparePartFilters.page} de {totalPagesSpareParts}
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPageSpareParts(pageSpareParts + 1)}
-                        disabled={pageSpareParts === totalPagesSpareParts}
+                        onClick={() => updateSparePartFilters({ page: sparePartFilters.page! + 1 })}
+                        disabled={sparePartFilters.page === totalPagesSpareParts}
                       >
                         Siguiente
                       </Button>

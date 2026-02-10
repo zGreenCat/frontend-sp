@@ -9,6 +9,11 @@ import { UpdateProduct } from '@/application/usecases/product/UpdateProduct';
 import { DeleteProduct } from '@/application/usecases/product/DeleteProduct';
 import { GetProductHistory } from '@/application/usecases/product/GetProductHistory';
 import { TENANT_ID } from '@/shared/constants';
+import { 
+  EquipmentQuery, 
+  MaterialQuery, 
+  SparePartQuery 
+} from '@/shared/types/product-filters.types';
 
 // Query Keys
 export const productKeys = {
@@ -24,6 +29,16 @@ export interface UseProductsParams {
   limit?: number;
   search?: string;
   status?: string;
+  isActive?: boolean;
+  currencyId?: string;
+  
+  // Spare part specific
+  category?: 'COMPONENT' | 'SPARE';
+  equipmentId?: string;
+  
+  // Material specific
+  unitOfMeasureId?: string;
+  isHazardous?: boolean;
 }
 
 /**
@@ -63,12 +78,10 @@ export const useProductDetail = (id: string | undefined, kind: ProductKind) => {
 
 // ====== Hooks de conveniencia (wrappers) ======
 
-export interface UseEquipmentsParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: string;
-}
+/**
+ * Params específicos para equipos
+ */
+export interface UseEquipmentsParams extends Omit<EquipmentQuery, 'kind'> {}
 
 /**
  * Hook de conveniencia para listar equipos
@@ -82,12 +95,10 @@ export const useEquipments = (params: UseEquipmentsParams = {}) =>
 export const useEquipmentById = (id: string | undefined) =>
   useProductDetail(id, 'EQUIPMENT');
 
-export interface UseMaterialsParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: string;
-}
+/**
+ * Params específicos para materiales
+ */
+export interface UseMaterialsParams extends Omit<MaterialQuery, 'kind'> {}
 
 /**
  * Hook de conveniencia para listar materiales
@@ -101,12 +112,10 @@ export const useMaterials = (params: UseMaterialsParams = {}) =>
 export const useMaterialById = (id: string | undefined) =>
   useProductDetail(id, 'MATERIAL');
 
-export interface UseSparePartsParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: string;
-}
+/**
+ * Params específicos para repuestos
+ */
+export interface UseSparePartsParams extends Omit<SparePartQuery, 'kind'> {}
 
 /**
  * Hook de conveniencia para listar repuestos

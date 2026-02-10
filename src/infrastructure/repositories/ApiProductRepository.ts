@@ -114,7 +114,20 @@ export class ApiProductRepository implements IProductRepository {
    * Lista productos según el tipo especificado
    */
   async list(params: ListProductsParams): Promise<PaginatedResponse<Product>> {
-    const { kind, page = 1, limit = 10, search, isActive } = params;
+    const { 
+      kind, 
+      page = 1, 
+      limit = 10, 
+      search, 
+      isActive,
+      currencyId,
+      // Spare part specific
+      category,
+      equipmentId,
+      // Material specific
+      unitOfMeasureId,
+      isHazardous
+    } = params;
 
     // Si no se especifica kind, retornamos error controlado
     if (!kind) {
@@ -129,12 +142,22 @@ export class ApiProductRepository implements IProductRepository {
     }
 
     try {
-      // Construir query params
+      // Construir query params - omitir undefined/null
       const queryParams = new URLSearchParams();
       queryParams.append('page', page.toString());
       queryParams.append('limit', limit.toString());
+      
       if (search) queryParams.append('search', search);
       if (isActive !== undefined) queryParams.append('isActive', isActive.toString());
+      if (currencyId) queryParams.append('currencyId', currencyId);
+      
+      // Filtros específicos de Spare Parts
+      if (category) queryParams.append('category', category);
+      if (equipmentId) queryParams.append('equipmentId', equipmentId);
+      
+      // Filtros específicos de Materials
+      if (unitOfMeasureId) queryParams.append('unitOfMeasureId', unitOfMeasureId);
+      if (isHazardous !== undefined) queryParams.append('isHazardous', isHazardous.toString());
 
       // Determinar endpoint según el tipo
       const endpoint = this.getEndpointForKind(kind);

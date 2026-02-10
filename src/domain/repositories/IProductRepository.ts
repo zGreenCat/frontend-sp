@@ -4,7 +4,8 @@ import { PaginatedResponse } from '@/shared/types/pagination.types';
 import { CreateProductInput, UpdateProductInput } from '@/shared/schemas';
 
 /**
- * Filtros para listar productos
+ * Filtros para listar productos (base)
+ * Compatible con backend DTOs
  */
 export interface ListProductsParams {
   kind?: ProductKind; // Tipo de producto: EQUIPMENT, MATERIAL, SPARE_PART
@@ -12,6 +13,15 @@ export interface ListProductsParams {
   limit?: number;
   search?: string; // Busca en nombre o descripción
   isActive?: boolean; // Filtro por estado activo/inactivo
+  currencyId?: string; // Filtro por moneda (UUID)
+  
+  // Filtros específicos de Spare Parts
+  category?: 'COMPONENT' | 'SPARE'; // Solo para SPARE_PART
+  equipmentId?: string; // Solo para SPARE_PART (UUID)
+  
+  // Filtros específicos de Materials
+  unitOfMeasureId?: string; // Solo para MATERIAL (UUID)
+  isHazardous?: boolean; // Solo para MATERIAL
 }
 
 /**
