@@ -377,11 +377,11 @@ export class ApiBoxRepository implements IBoxRepository {
     tenantId: string,
     reason?: string
   ): Promise<void> {
-    await apiClient.delete<void>(
-      `/boxes/${boxId}/equipments/${assignmentId}`,
-      reason ? { reason } : undefined,
-      true // ✅ Auth: Requiere Bearer token
-    );
+    const endpoint = reason 
+      ? `/boxes/${boxId}/equipments/${assignmentId}?reason=${encodeURIComponent(reason)}`
+      : `/boxes/${boxId}/equipments/${assignmentId}`;
+    
+    await apiClient.delete<void>(endpoint, true);
   }
 
   async removeMaterial(
@@ -390,10 +390,10 @@ export class ApiBoxRepository implements IBoxRepository {
     tenantId: string,
     reason?: string
   ): Promise<void> {
-    await apiClient.delete<void>(
-      `/boxes/${boxId}/materials/${assignmentId}`,
-      reason ? { reason } : undefined,
-      true // ✅ Auth: Requiere Bearer token
-    );
+    const endpoint = reason 
+      ? `/boxes/${boxId}/materials/${assignmentId}?reason=${encodeURIComponent(reason)}`
+      : `/boxes/${boxId}/materials/${assignmentId}`;
+    
+    await apiClient.delete<void>(endpoint, true);
   }
 }

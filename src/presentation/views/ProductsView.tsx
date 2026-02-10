@@ -151,8 +151,6 @@ export function ProductsView() {
         return 'material';
       case 'SPARE_PART':
         return 'spare-part';
-      default:
-        return kind.toLowerCase();
     }
   };
 

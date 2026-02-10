@@ -324,7 +324,9 @@ export class ApiProductRepository implements IProductRepository {
       kind: 'MATERIAL',
       name: material.name,
       description: material.description,
-      unitOfMeasure: material.unitOfMeasure?.abbreviation || material.unitOfMeasure?.code || (material as any).unitOfMeasure,
+      unitOfMeasure: typeof material.unitOfMeasure === 'object' 
+        ? (material.unitOfMeasure?.abbreviation || material.unitOfMeasure?.code) 
+        : material.unitOfMeasure,
       unitOfMeasureId: typeof material.unitOfMeasure === 'object' ? material.unitOfMeasure?.id : undefined,
       // Soportar ambas estructuras
       isHazardous: material.flags?.isHazardous ?? (material as any).isHazardous ?? false,
@@ -362,7 +364,7 @@ export class ApiProductRepository implements IProductRepository {
       unitOfMeasureId: sparePart.unitOfMeasure?.id,
       // Dimensiones del backend
       dimensions: (sparePart as any).dimensions,
-      isActive: sparePart.status?.isActive ?? sparePart.flags?.isActive ?? (sparePart as any).isActive ?? true,
+      isActive: sparePart.flags?.isActive ?? (sparePart as any).isActive ?? true,
       createdAt: sparePart.audit?.createdAt || (sparePart as any).createdAt,
       updatedAt: sparePart.audit?.updatedAt || (sparePart as any).updatedAt,
     };
