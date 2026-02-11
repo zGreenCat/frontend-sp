@@ -27,6 +27,24 @@ import { BOX_STATUS } from "@/shared/constants";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+// Mapa de estilos por estado de caja
+const STATUS_STYLES: Record<string, { barColor: string; bgTrack: string }> = {
+  [BOX_STATUS.DISPONIBLE]: { barColor: "#4CAF50", bgTrack: "#E0E0E0" },
+  [BOX_STATUS.EN_REPARACION]: { barColor: "#F59E0B", bgTrack: "#E0E0E0" },
+  [BOX_STATUS.DANADA]: { barColor: "#EF4444", bgTrack: "#E0E0E0" },
+  [BOX_STATUS.RETIRADA]: { barColor: "#9CA3AF", bgTrack: "#E0E0E0" },
+};
+
+// Mapa de estilos para íconos de KPI (chips sutiles)
+const KPI_ICON_STYLES: Record<string, { bg: string; fg: string }> = {
+  "Cajas totales": { bg: "bg-[#2196F3]/10", fg: "text-[#2196F3]" },
+  "Disponibles": { bg: "bg-[#4CAF50]/12", fg: "text-[#4CAF50]" },
+  "Incidencias": { bg: "bg-[#EF4444]/10", fg: "text-[#EF4444]" },
+  "Disponibilidad": { bg: "bg-[#2196F3]/10", fg: "text-[#2196F3]" },
+  "Bodegas": { bg: "bg-[#2196F3]/10", fg: "text-[#2196F3]" },
+  "Áreas": { bg: "bg-[#2196F3]/10", fg: "text-[#2196F3]" },
+};
+
 function safeTotal(data: any) {
   return (
     data?.total ??
@@ -228,21 +246,25 @@ export function DashboardView() {
 
       {/* KPIs ejecutivos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {kpis.map((kpi) => (
-          <Card
-            key={kpi.title}
-            className="shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            onClick={kpi.onClick}
-          >
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {kpi.title}
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">{kpi.helper}</p>
-              </div>
-              <kpi.icon className={`h-5 w-5 ${kpi.tone}`} />
-            </CardHeader>
+        {kpis.map((kpi) => {
+          const iconStyle = KPI_ICON_STYLES[kpi.title] || { bg: "bg-gray-100", fg: "text-[#333333]" };
+          return (
+            <Card
+              key={kpi.title}
+              className="shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={kpi.onClick}
+            >
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {kpi.title}
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">{kpi.helper}</p>
+                </div>
+                <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg ${iconStyle.bg}`}>
+                  <kpi.icon className={`h-5 w-5 ${iconStyle.fg}`} />
+                </span>
+              </CardHeader>
             <CardContent>
               {kpi.loading ? (
                 <Skeleton className="h-9 w-24" />
@@ -264,7 +286,8 @@ export function DashboardView() {
               </Button>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Paneles de decisión */}
@@ -280,6 +303,7 @@ export function DashboardView() {
           <CardContent className="space-y-3">
             {statusRows.map((row) => {
               const pct = Math.round((row.count / totalForBars) * 100);
+              const styles = STATUS_STYLES[row.status] || { barColor: "#2196F3", bgTrack: "#E0E0E0" };
               return (
                 <div
                   key={row.status}
@@ -296,10 +320,10 @@ export function DashboardView() {
                     </div>
                   </div>
 
-                  <div className="mt-2 h-2 w-full rounded-full bg-[#E0E0E0] overflow-hidden">
+                  <div className="mt-2 h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: styles.bgTrack }}>
                     <div
-                      className="h-full rounded-full bg-[#2196F3]"
-                      style={{ width: `${pct}%` }}
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: styles.barColor }}
                     />
                   </div>
                 </div>

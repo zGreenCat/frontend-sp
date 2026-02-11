@@ -29,6 +29,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { hasPermission, PERMISSIONS } from "@/shared/permissions";
 import type { Permission } from "@/shared/permissions";
 
+// Helper classes para nav items (estilo pill azul)
+const navItemBase = "transition-all duration-200 rounded-lg focus-visible:ring-2 focus-visible:ring-[#2196F3]/40 focus-visible:ring-offset-2 focus-visible:outline-none";
+const navItemInactive = "text-[#333333]/70 hover:bg-[#2196F3]/10 hover:text-[#2196F3]";
+const navItemActive = "bg-[#2196F3]/15 text-[#2196F3] font-medium";
+
 type Item = {
   title: string;
   url: string;
@@ -133,12 +138,16 @@ export function AppSidebar() {
                         <Link
                           href={item.url}
                           className={cn(
+                            navItemBase,
                             isActive(item.url)
-                              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                              : "hover:bg-sidebar-accent/50"
+                              ? navItemActive
+                              : navItemInactive
                           )}
                         >
-                          <item.icon className="h-5 w-5" />
+                          <item.icon className={cn(
+                            "h-5 w-5",
+                            isActive(item.url) ? "text-[#2196F3]" : ""
+                          )} />
                           {open && <span className="ml-2">{item.title}</span>}
                         </Link>
                       </SidebarMenuButton>
