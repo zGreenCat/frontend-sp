@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRepositories } from '@/presentation/providers/RepositoryProvider';
 import { Warehouse } from '@/domain/entities/Warehouse';
 import { WarehouseSupervisor } from '@/domain/entities/WarehouseSupervisor';
-import { PaginatedResponse } from '@/domain/repositories/IWarehouseRepository';
+import { PaginatedResponse, ListWarehousesParams } from '@/domain/repositories/IWarehouseRepository';
 import { CreateWarehouseInput, UpdateWarehouseInput } from '@/shared/schemas';
 import { TENANT_ID } from '@/shared/constants';
 import { CreateWarehouse } from '@/application/usecases/warehouse/CreateWarehouse';
@@ -10,10 +10,12 @@ import { UpdateWarehouse } from '@/application/usecases/warehouse/UpdateWarehous
 import { ListWarehouses } from '@/application/usecases/warehouse/ListWarehouses';
 import { GetWarehouseDetail } from '@/application/usecases/warehouse/GetWarehouseDetail';
 import { ListWarehouseSupervisors } from '@/application/usecases/warehouse/ListWarehouseSupervisors';
+import { WarehouseQuery } from '@/shared/types/warehouse-filters.types';
 
 // Query Keys
 export const warehouseKeys = {
   all: ['warehouses', TENANT_ID] as const,
+  list: (params: Partial<WarehouseQuery>) => ['warehouses', TENANT_ID, 'list', params] as const,
   byArea: (areaId: string) => ['warehouses', TENANT_ID, 'area', areaId] as const,
   detail: (id: string) => ['warehouses', TENANT_ID, id] as const,
 };
@@ -43,6 +45,31 @@ export const useWarehouses = () => {
       return result.value;
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+};
+
+/**
+ * Hook para obtener warehouses con filtros y paginación
+ * @param params - Parámetros de filtrado (page, limit, search, isEnabled, sortBy, order)
+ */
+export const useWarehousesWithFilters = (params: WarehouseQuery) => {
+  const { warehouseRepo } = useRepositories();
+
+  return useQuery({
+    queryKey: warehouseKeys.list(params),
+    queryFn: async (): Promise<PaginatedResponse<Warehouse>> => {
+      const listParams: ListWarehousesParams = {
+        page: params.page,
+        limit: params.limit,
+        search: params.search,
+        isEnabled: params.isEnabled,
+        sortBy: params.sortBy,
+        order: params.order,
+      };
+      
+      return await warehouseRepo.list(listParams);
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 };
 

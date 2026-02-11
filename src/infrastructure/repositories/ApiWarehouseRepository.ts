@@ -1,4 +1,4 @@
-import { IWarehouseRepository, PaginatedResponse } from '@/domain/repositories/IWarehouseRepository';
+import { IWarehouseRepository, PaginatedResponse, ListWarehousesParams } from '@/domain/repositories/IWarehouseRepository';
 import { Warehouse } from '@/domain/entities/Warehouse';
 import { WarehouseSupervisor } from '@/domain/entities/WarehouseSupervisor';
 import { Result, success, failure } from '@/shared/types/Result';
@@ -88,6 +88,68 @@ export class ApiWarehouseRepository implements IWarehouseRepository {
     } catch (error) {
       console.error('Error fetching warehouses:', error);
       return [];
+    }
+  }
+
+  async list(params: ListWarehousesParams): Promise<PaginatedResponse<Warehouse>> {
+    try {
+      const { page, limit, search, isEnabled, sortBy, order } = params;
+      
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      if (limit !== undefined) queryParams.append('limit', limit.toString());
+      if (search) queryParams.append('search', search);
+      if (isEnabled !== undefined) queryParams.append('isEnabled', isEnabled.toString());
+      if (sortBy) queryParams.append('sortBy', sortBy);
+      if (order) queryParams.append('order', order);
+
+      const response = await apiClient.get<any>(`/warehouses?${queryParams.toString()}`, true);
+      console.log('📥 GET /warehouses (filtered) response:', response);
+
+      // Handle different response structures
+      let data: BackendWarehouse[] = [];
+      let pagination = {
+        page: params.page,
+        limit: params.limit || 10,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      };
+
+      if (response.data && Array.isArray(response.data)) {
+        data = response.data;
+        pagination = {
+          page: response.page || params.page,
+          limit: response.limit || params.limit || 10,
+          total: response.total || data.length,
+          totalPages: response.totalPages || Math.ceil((response.total || data.length) / (response.limit || params.limit || 10)),
+          hasNext: response.hasNext || false,
+          hasPrev: response.hasPrev || false,
+        };
+      } else if (Array.isArray(response)) {
+        data = response;
+        pagination.total = data.length;
+        pagination.totalPages = Math.ceil(data.length / pagination.limit);
+      }
+
+      const warehouses = data.map(w => this.mapBackendWarehouse(w));
+
+      return {
+        data: warehouses,
+        ...pagination,
+      };
+    } catch (error) {
+      console.error('Error fetching filtered warehouses:', error);
+      return {
+        data: [],
+        page: params.page,
+        limit: params.limit || 10,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      };
     }
   }
 

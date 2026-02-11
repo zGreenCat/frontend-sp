@@ -12,8 +12,18 @@ export interface PaginatedResponse<T> {
   hasPrev: boolean;
 }
 
+export interface ListWarehousesParams {
+  page: number;
+  limit?: number;
+  search?: string;
+  isEnabled?: boolean;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+}
+
 export interface IWarehouseRepository {
   findAll(tenantId: string): Promise<Warehouse[]>;
+  list(params: ListWarehousesParams): Promise<PaginatedResponse<Warehouse>>;
   findById(id: string, tenantId: string): Promise<Warehouse | null>;
   create(warehouse: Omit<Warehouse, 'id'>): Promise<Warehouse>;
   update(id: string, warehouse: Partial<Warehouse>, tenantId: string): Promise<Warehouse>;

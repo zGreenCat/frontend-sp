@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Link2 } from "lucide-react";
+import { Plus, Edit, Link2, ChevronLeft, ChevronRight } from "lucide-react";
 import { EntityBadge } from "@/presentation/components/EntityBadge";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { WarehouseDialog } from "@/presentation/components/WarehouseDialog";
 import { WarehouseAssignmentsDialog } from "@/presentation/components/WarehouseAssignmentsDialog";
+import { WarehouseFilterBar } from "@/presentation/components/WarehouseFilterBar";
 import {
-  useWarehouses,
+  useWarehousesWithFilters,
   useCreateWarehouse,
   useUpdateWarehouse,
   useWarehouseSupervisors,
@@ -20,17 +20,46 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { CreateWarehouseInput } from "@/shared/schemas";
 import { Warehouse } from "@/domain/entities/Warehouse";
+import { WarehouseQuery } from "@/shared/types/warehouse-filters.types";
+
+// Helper para parsear query params desde URL
+const parseQueryParams = (searchParams: URLSearchParams): WarehouseQuery => {
+  return {
+    page: parseInt(searchParams.get("page") || "1", 10),
+    limit: searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 10,
+    search: searchParams.get("search") || undefined,
+    isEnabled: searchParams.get("isEnabled") === "true" ? true : searchParams.get("isEnabled") === "false" ? false : undefined,
+    sortBy: (searchParams.get("sortBy") as any) || "createdAt",
+    order: (searchParams.get("order") as any) || "desc",
+  };
+};
+
+// Helper para construir query params hacia URL
+const buildQueryParams = (filters: WarehouseQuery): URLSearchParams => {
+  const params = new URLSearchParams();
+  params.set("page", filters.page.toString());
+  if (filters.limit) params.set("limit", filters.limit.toString());
+  if (filters.search) params.set("search", filters.search);
+  if (filters.isEnabled !== undefined) params.set("isEnabled", filters.isEnabled.toString());
+  if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters.order) params.set("order", filters.order);
+  return params;
+};
 
 export function WarehousesView() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  
+  // Estado de filtros inicializado desde URL
+  const [filters, setFilters] = useState<WarehouseQuery>(() => parseQueryParams(searchParams));
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [assignmentsDialogOpen, setAssignmentsDialogOpen] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [warehouseForAssignments, setWarehouseForAssignments] = useState<Warehouse | null>(null);
 
-  // React Query hooks
-  const { data: warehouses = [], isLoading: loading } = useWarehouses();
+  // React Query hooks con filtros
+  const { data: warehousesData, isLoading: loading } = useWarehousesWithFilters(filters);
   const createWarehouseMutation = useCreateWarehouse();
   const updateWarehouseMutation = useUpdateWarehouse();
   
@@ -38,7 +67,7 @@ export function WarehousesView() {
   const { data: supervisorsData } = useWarehouseSupervisors(
     warehouseForAssignments?.id || '',
     1,
-    100, // Obtener todos los supervisores
+    100,
   );
 
   // Permisos y toasts
@@ -48,9 +77,33 @@ export function WarehousesView() {
   const canCreate = can("warehouses:create");
   const canEdit = can("warehouses:edit");
 
-  const filteredWarehouses = warehouses.filter((w) =>
-    w.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Sincronizar filtros con URL
+  const syncUrlWithFilters = useCallback(() => {
+    const params = buildQueryParams(filters);
+    router.push(`/warehouses?${params.toString()}`, { scroll: false });
+  }, [filters, router]);
+
+  useEffect(() => {
+    syncUrlWithFilters();
+  }, [syncUrlWithFilters]);
+
+  // Handler para cambios de filtros (con reset de página)
+  const handleFiltersChange = useCallback((newFilters: Partial<WarehouseQuery>) => {
+    setFilters((prev) => {
+      // Si cambió algo diferente a page, resetear page a 1
+      const shouldResetPage = Object.keys(newFilters).some(key => key !== 'page');
+      return {
+        ...prev,
+        ...newFilters,
+        page: shouldResetPage && !newFilters.page ? 1 : (newFilters.page || prev.page),
+      };
+    });
+  }, []);
+
+  // Handler para cambio de página
+  const handlePageChange = useCallback((newPage: number) => {
+    setFilters((prev) => ({ ...prev, page: newPage }));
+  }, []);
 
   const handleCreate = async (data: CreateWarehouseInput) => {
     try {
@@ -128,6 +181,10 @@ export function WarehousesView() {
     setAssignmentsDialogOpen(true);
   };
 
+  const warehouses = warehousesData?.data || [];
+  const totalPages = warehousesData?.totalPages || 0;
+  const currentPage = warehousesData?.page || 1;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -146,22 +203,14 @@ export function WarehousesView() {
         )}
       </div>
 
+      {/* Barra de filtros */}
+      <WarehouseFilterBar filters={filters} onFiltersChange={handleFiltersChange} />
+
       <Card className="shadow-sm">
-        <CardHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar bodega..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-10 bg-secondary/30"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-          ) : filteredWarehouses.length === 0 ? (
+          ) : warehouses.length === 0 ? (
             <EmptyState message="No se encontraron bodegas" />
           ) : (
             <div className="overflow-x-auto">
@@ -188,7 +237,7 @@ export function WarehousesView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredWarehouses.map((warehouse) => (
+                  {warehouses.map((warehouse) => (
                     <tr
                       key={warehouse.id}
                       className="border-b border-border hover:bg-secondary/20 transition-colors"
@@ -246,6 +295,35 @@ export function WarehousesView() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              <span className="text-sm text-muted-foreground px-4">
+                Página {currentPage} de {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="gap-2"
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </CardContent>
