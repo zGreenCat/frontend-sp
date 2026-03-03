@@ -5,6 +5,9 @@ export interface Project {
   name: string;
   code: string;
   status: ProjectStatus;
+  isActive?: boolean;
   productsCount: number;
   tenantId: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

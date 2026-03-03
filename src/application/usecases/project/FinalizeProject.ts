@@ -7,7 +7,12 @@ export class FinalizeProject {
   async execute(id: string, tenantId: string): Promise<Result<void>> {
     try {
       // Finalizar proyecto (cambiar status a 'FINALIZADO')
-      await this.projectRepo.update(id, { status: 'FINALIZADO' }, tenantId);
+      const result = await this.projectRepo.updateProject(id, { status: 'FINALIZADO' });
+      
+      if (!result.ok) {
+        return failure(result.error);
+      }
+      
       return success(undefined);
     } catch {
       return failure('Error al finalizar proyecto');

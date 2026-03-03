@@ -342,9 +342,28 @@ export type UpdateProviderInput = z.infer<typeof updateProviderSchema>;
 // PROJECT SCHEMAS
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Schema del formulario de creación (solo campos que ingresa el usuario)
+ */
+export const createProjectFormSchema = z.object({
+  name: z
+    .string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(120, 'El nombre no puede exceder 120 caracteres')
+    .transform((v) => v.trim()),
+  code: z
+    .string()
+    .min(2, 'El código debe tener al menos 2 caracteres')
+    .max(50, 'El código no puede exceder 50 caracteres')
+    .transform((v) => v.trim().toUpperCase().replace(/\s+/g, '-')),
+});
+
+export type CreateProjectFormInput = z.infer<typeof createProjectFormSchema>;
+
+// Schema completo (incluye campos internos para el DTO al backend)
 export const createProjectSchema = z.object({
-  name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(100),
-  code: z.string().min(1, 'Código es requerido').max(50),
+  name: z.string().min(2, 'Nombre debe tener al menos 2 caracteres').max(120),
+  code: z.string().min(2, 'Código es requerido').max(50),
   status: z.enum([PROJECT_STATUS.ACTIVO, PROJECT_STATUS.INACTIVO, PROJECT_STATUS.FINALIZADO])
     .default(PROJECT_STATUS.ACTIVO),
   productsCount: z.number().default(0),

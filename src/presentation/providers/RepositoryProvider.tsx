@@ -15,9 +15,9 @@ import { ApiProductRepository } from '@/infrastructure/repositories/ApiProductRe
 import { ApiUnitOfMeasureRepository } from '@/infrastructure/repositories/ApiUnitOfMeasureRepository';
 import { ApiCurrencyRepository } from '@/infrastructure/repositories/ApiCurrencyRepository';
 import { ApiMaterialCategoryRepository } from '@/infrastructure/repositories/ApiMaterialCategoryRepository';
+import { ApiProjectRepository } from '@/infrastructure/repositories/ApiProjectRepository';
 // Mock Repositories (mantener para módulos no conectados)
 import { MockProviderRepository } from '@/infrastructure/repositories/MockProviderRepository';
-import { MockProjectRepository } from '@/infrastructure/repositories/MockProjectRepository';
 // Interfaces
 import { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { IAreaRepository } from '@/domain/repositories/IAreaRepository';
@@ -32,6 +32,7 @@ import { IProductRepository } from '@/domain/repositories/IProductRepository';
 import { IUnitOfMeasureRepository } from '@/domain/repositories/IUnitOfMeasureRepository';
 import { ICurrencyRepository } from '@/domain/repositories/ICurrencyRepository';
 import { IMaterialCategoryRepository } from '@/domain/repositories/IMaterialCategoryRepository';
+import { IProjectRepository } from '@/domain/repositories/IProjectRepository';
 
 /**
  * Repositorios disponibles en la aplicación
@@ -47,7 +48,7 @@ interface Repositories {
   currencyRepo: ICurrencyRepository;
   materialCategoryRepo: IMaterialCategoryRepository;
   providerRepo: MockProviderRepository;
-  projectRepo: MockProjectRepository;
+  projectRepo: IProjectRepository; // ✅ Ahora usa interface, no Mock directo
   assignmentHistoryRepo: IAssignmentHistoryRepository;
   assignmentRepo: IAssignmentRepository;
   auditLogRepo: IAuditLogRepository;
@@ -77,9 +78,11 @@ export const RepositoryProvider = ({ children }: { children: ReactNode }) => {
     currencyRepo: new ApiCurrencyRepository(),
     materialCategoryRepo: new ApiMaterialCategoryRepository(),
     
+    // ✅ PROYECTOS: Conectado a backend real
+    projectRepo: new ApiProjectRepository(),
+    
     // Repositorios Mock (pendientes de conectar)
     providerRepo: new MockProviderRepository(),
-    projectRepo: new MockProjectRepository(),
   };
 
   return (
